@@ -1,7 +1,10 @@
 # Requirements Document: Multi-tenant Information Security GRC SaaS Application
 
 **Document Version:** Version 1.0.0
-**Date:** 2023-11-08
+<br>
+**Created Date:** 2023-11-08
+<br>
+**Updated Date:** 2023-11-08
 
 ## Project Overview
 
