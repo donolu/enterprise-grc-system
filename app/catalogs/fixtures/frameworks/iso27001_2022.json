@@ -1,0 +1,143 @@
+{
+  "name": "ISO/IEC 27001:2022",
+  "short_name": "ISO27001",
+  "version": "2022",
+  "description": "Information Security Management Systems - Requirements. This international standard provides requirements for establishing, implementing, maintaining and continually improving an information security management system.",
+  "framework_type": "security",
+  "external_id": "ISO27001-2022",
+  "issuing_organization": "International Organization for Standardization (ISO)",
+  "official_url": "https://www.iso.org/standard/27001",
+  "effective_date": "2022-10-25",
+  "status": "active",
+  "is_mandatory": false,
+  "clauses": [
+    {
+      "clause_id": "A.8.1.1",
+      "title": "Inventory of information assets",
+      "description": "Information assets associated with information and information processing facilities should be identified and an inventory of these assets should be drawn up and maintained.",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 10,
+      "implementation_guidance": "Create comprehensive asset registers covering hardware, software, data, documentation, people, premises, and services. Assign ownership and classification to each asset.",
+      "testing_procedures": "Review asset inventory completeness, verify asset ownership assignments, and validate classification accuracy.",
+      "external_references": {
+        "nist_csf": ["ID.AM-1", "ID.AM-2"],
+        "soc2": ["CC6.1"]
+      }
+    },
+    {
+      "clause_id": "A.8.1.2",
+      "title": "Ownership of assets",
+      "description": "Assets maintained in the inventory should be owned.",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 20,
+      "implementation_guidance": "Assign clear ownership responsibilities for all information assets. Owners should be accountable for appropriate protection throughout the asset lifecycle.",
+      "testing_procedures": "Verify that all assets in inventory have designated owners and that owners understand their responsibilities.",
+      "external_references": {
+        "nist_csf": ["ID.AM-1"],
+        "soc2": ["CC6.1"]
+      }
+    },
+    {
+      "clause_id": "A.8.1.3",
+      "title": "Acceptable use of assets",
+      "description": "Rules for the acceptable use of information and of assets associated with information and information processing facilities should be identified, documented and implemented.",
+      "clause_type": "policy",
+      "criticality": "medium",
+      "sort_order": 30,
+      "implementation_guidance": "Develop and communicate acceptable use policies covering appropriate use of organizational assets, including personal use guidelines and prohibited activities.",
+      "testing_procedures": "Review acceptable use policies for completeness, verify communication to users, and test compliance monitoring mechanisms."
+    },
+    {
+      "clause_id": "A.8.1.4",
+      "title": "Return of assets",
+      "description": "All employees and external party users should return all of the organizational assets in their possession upon termination of their employment, contract or agreement.",
+      "clause_type": "procedure",
+      "criticality": "medium",
+      "sort_order": 40,
+      "implementation_guidance": "Implement formal asset return procedures as part of termination processes. Maintain checklists and obtain signed confirmations.",
+      "testing_procedures": "Sample termination cases to verify asset return completion and documentation."
+    },
+    {
+      "clause_id": "A.8.2.1",
+      "title": "Classification of information",
+      "description": "Information should be classified in terms of legal requirements, value, criticality and sensitivity to unauthorized disclosure or modification.",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 50,
+      "implementation_guidance": "Establish information classification scheme (e.g., Public, Internal, Confidential, Restricted) with clear criteria and handling requirements.",
+      "testing_procedures": "Review classification scheme adequacy, test classification assignments, and verify appropriate handling controls are applied."
+    },
+    {
+      "clause_id": "A.9.1.1",
+      "title": "Access control policy",
+      "description": "An access control policy should be established, documented and reviewed based on business and information security requirements.",
+      "clause_type": "policy",
+      "criticality": "high",
+      "sort_order": 60,
+      "implementation_guidance": "Develop comprehensive access control policy covering user access provisioning, authorization principles, and access review requirements.",
+      "testing_procedures": "Review policy completeness against business requirements and verify regular policy reviews and updates."
+    },
+    {
+      "clause_id": "A.9.1.2",
+      "title": "Access to networks and network services",
+      "description": "Users should only be provided with access to the network and network services that they have been specifically authorized to use.",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 70,
+      "implementation_guidance": "Implement network access controls including user authentication, authorization mechanisms, and network segmentation based on business needs.",
+      "testing_procedures": "Test network access controls effectiveness, verify user authorization documentation, and validate network segmentation implementation."
+    },
+    {
+      "clause_id": "A.9.2.1",
+      "title": "User registration and de-registration",
+      "description": "A formal user registration and de-registration process should be implemented to enable assignment of access rights.",
+      "clause_type": "procedure",
+      "criticality": "high",
+      "sort_order": 80,
+      "implementation_guidance": "Establish formal joiner/mover/leaver processes with proper approval, access provisioning, and timely de-provisioning procedures.",
+      "testing_procedures": "Sample user lifecycle processes to verify proper approvals, timely provisioning/de-provisioning, and documentation completeness."
+    },
+    {
+      "clause_id": "A.9.4.3",
+      "title": "Password management system",
+      "description": "Password management systems should be interactive and should ensure quality passwords.",
+      "clause_type": "control",
+      "criticality": "medium",
+      "sort_order": 90,
+      "implementation_guidance": "Implement password management systems with complexity requirements, regular password changes, and password reuse prevention.",
+      "testing_procedures": "Test password policy enforcement, verify password quality requirements, and validate password management system functionality."
+    },
+    {
+      "clause_id": "A.12.6.1",
+      "title": "Management of technical vulnerabilities",
+      "description": "Information about technical vulnerabilities of information systems being used should be obtained in a timely fashion, the organization's exposure to such vulnerabilities evaluated and appropriate measures taken to address the associated risk.",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 100,
+      "implementation_guidance": "Establish vulnerability management program including vulnerability scanning, assessment, prioritization, and remediation processes.",
+      "testing_procedures": "Review vulnerability management processes, test scanning coverage and frequency, and verify timely remediation of critical vulnerabilities."
+    },
+    {
+      "clause_id": "A.13.1.1",
+      "title": "Network controls",
+      "description": "Networks should be controlled and protected to protect information in systems and applications.",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 110,
+      "implementation_guidance": "Implement network security controls including firewalls, intrusion detection/prevention systems, network monitoring, and secure network architecture.",
+      "testing_procedures": "Test network security controls effectiveness, verify network monitoring capabilities, and validate security architecture implementation."
+    },
+    {
+      "clause_id": "A.18.1.1",
+      "title": "Identification of applicable legislation and contractual requirements",
+      "description": "All relevant legislative, statutory, regulatory, contractual requirements and the organization's approach to meet these requirements should be explicitly identified, documented and kept up to date for each information system and the organization.",
+      "clause_type": "documentation",
+      "criticality": "medium",
+      "sort_order": 120,
+      "implementation_guidance": "Maintain register of applicable legal and regulatory requirements, assess compliance obligations, and document compliance approach.",
+      "testing_procedures": "Review legal requirements register completeness and currency, verify compliance assessment processes, and validate documentation adequacy."
+    }
+  ]
+}
