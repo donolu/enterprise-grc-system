@@ -1,0 +1,149 @@
+{
+  "name": "SOC 2 Type II",
+  "short_name": "SOC2",
+  "version": "2017",
+  "description": "Service Organization Control 2 Type II - Trust Services Criteria for Security, Availability, Processing Integrity, Confidentiality, and Privacy. Evaluates controls at a service organization relevant to security, availability, processing integrity, confidentiality, or privacy.",
+  "framework_type": "security",
+  "external_id": "SOC2-2017",
+  "issuing_organization": "American Institute of Certified Public Accountants (AICPA)",
+  "official_url": "https://www.aicpa.org/interestareas/frc/assuranceadvisoryservices/aicpasoc2report.html",
+  "effective_date": "2017-05-01",
+  "status": "active",
+  "is_mandatory": false,
+  "clauses": [
+    {
+      "clause_id": "CC1.1",
+      "title": "Control Environment - Tone at the Top",
+      "description": "The entity demonstrates a commitment to integrity and ethical values through policies that are communicated and consistently enforced.",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 10,
+      "implementation_guidance": "Establish code of conduct, ethical policies, and demonstrate management commitment through consistent communication and enforcement.",
+      "testing_procedures": "Review ethics policies, test communication mechanisms, and verify consistent enforcement of ethical standards."
+    },
+    {
+      "clause_id": "CC2.1",
+      "title": "Communication and Information - Internal Communication",
+      "description": "The entity obtains or generates and uses relevant, quality information to support the functioning of internal control.",
+      "clause_type": "control",
+      "criticality": "medium",
+      "sort_order": 20,
+      "implementation_guidance": "Implement processes to identify, capture, and communicate relevant information to support control objectives.",
+      "testing_procedures": "Test information identification, capture, and communication processes for completeness and timeliness."
+    },
+    {
+      "clause_id": "CC3.1",
+      "title": "Risk Assessment - Specifies Objectives",
+      "description": "The entity specifies objectives with sufficient clarity to enable the identification and assessment of risks relating to objectives.",
+      "clause_type": "control",
+      "criticality": "medium",
+      "sort_order": 30,
+      "implementation_guidance": "Define clear, measurable objectives that enable effective risk identification and assessment processes.",
+      "testing_procedures": "Review objective clarity and measurability, verify risk identification processes are based on objectives."
+    },
+    {
+      "clause_id": "CC4.1",
+      "title": "Monitoring Activities - Ongoing Monitoring",
+      "description": "The entity selects, develops, and performs ongoing and/or separate evaluations to ascertain whether the components of internal control are present and functioning.",
+      "clause_type": "monitoring",
+      "criticality": "medium",
+      "sort_order": 40,
+      "implementation_guidance": "Implement ongoing monitoring activities and periodic assessments to evaluate internal control effectiveness.",
+      "testing_procedures": "Test monitoring activities frequency and effectiveness, verify assessment documentation and follow-up actions."
+    },
+    {
+      "clause_id": "CC5.1",
+      "title": "Control Activities - Selection and Development",
+      "description": "The entity selects and develops control activities that contribute to the mitigation of risks to the achievement of objectives to acceptable levels.",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 50,
+      "implementation_guidance": "Design and implement control activities that effectively address identified risks and support objective achievement.",
+      "testing_procedures": "Evaluate control design adequacy and test operating effectiveness of key controls."
+    },
+    {
+      "clause_id": "CC6.1",
+      "title": "Logical and Physical Access Controls",
+      "description": "The entity implements logical and physical access controls to protect against threats from sources outside its system boundaries.",
+      "clause_type": "control",
+      "criticality": "critical",
+      "sort_order": 60,
+      "implementation_guidance": "Implement comprehensive access controls including user authentication, authorization, physical security, and boundary protection.",
+      "testing_procedures": "Test logical access controls, physical security measures, and boundary protection mechanisms.",
+      "external_references": {
+        "iso27001": ["A.9.1.1", "A.9.1.2", "A.11.1.1"],
+        "nist_csf": ["PR.AC-1", "PR.AC-4"]
+      }
+    },
+    {
+      "clause_id": "CC6.2",
+      "title": "Access Control Management",
+      "description": "Prior to issuing system credentials and granting system access, the entity registers and authorizes new internal and external users whose access is administered by the entity.",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 70,
+      "implementation_guidance": "Establish formal user registration, authorization, and access provisioning processes with appropriate approval workflows.",
+      "testing_procedures": "Test user provisioning processes, verify approval documentation, and validate access authorization mechanisms."
+    },
+    {
+      "clause_id": "CC6.3",
+      "title": "Network Access Controls",
+      "description": "The entity authorizes, modifies, or removes access to data, software, functions, and other protected information assets based on roles, responsibilities, or the system design and changes.",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 80,
+      "implementation_guidance": "Implement role-based access control with regular access reviews and appropriate segregation of duties.",
+      "testing_procedures": "Test role-based access implementation, verify regular access reviews, and validate segregation of duties."
+    },
+    {
+      "clause_id": "CC7.1",
+      "title": "Detection of Unauthorized Access",
+      "description": "To meet its objectives, the entity uses detection and monitoring procedures to identify (1) changes to configurations that result in the introduction of new vulnerabilities, and (2) susceptibilities to newly discovered vulnerabilities.",
+      "clause_type": "monitoring",
+      "criticality": "high",
+      "sort_order": 90,
+      "implementation_guidance": "Implement monitoring systems to detect unauthorized access attempts, configuration changes, and vulnerability exposure.",
+      "testing_procedures": "Test detection capabilities, verify monitoring coverage, and validate response procedures for detected incidents."
+    },
+    {
+      "clause_id": "CC7.2",
+      "title": "Monitoring of Controls",
+      "description": "The entity monitors system components and the operation of controls at a frequency sufficient to prevent or detect processing deviations and security violations.",
+      "clause_type": "monitoring",
+      "criticality": "medium",
+      "sort_order": 100,
+      "implementation_guidance": "Establish continuous or frequent monitoring of critical system components and security controls.",
+      "testing_procedures": "Verify monitoring frequency adequacy, test detection capabilities, and review incident response effectiveness."
+    },
+    {
+      "clause_id": "A1.1",
+      "title": "Availability Performance Monitoring",
+      "description": "The entity maintains, monitors, and evaluates current processing capacity and use of system components (infrastructure, data, and software) to manage capacity demand and to enable the implementation of additional capacity to help meet its objectives.",
+      "clause_type": "monitoring",
+      "criticality": "medium",
+      "sort_order": 110,
+      "implementation_guidance": "Implement capacity monitoring and management processes to ensure system availability and performance.",
+      "testing_procedures": "Test capacity monitoring tools, verify threshold settings, and review capacity planning processes."
+    },
+    {
+      "clause_id": "A1.2",
+      "title": "System Recovery and Backup",
+      "description": "The entity authorizes, designs, develops or acquires, implements, operates, approves, maintains, and monitors environmental protections, software, data backup processes, and recovery infrastructure to meet its objectives.",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 120,
+      "implementation_guidance": "Implement comprehensive backup and recovery procedures with regular testing and environmental protection measures.",
+      "testing_procedures": "Test backup procedures, verify recovery capabilities, and validate environmental protection controls."
+    },
+    {
+      "clause_id": "A1.3",
+      "title": "Change Management for Availability",
+      "description": "The entity authorizes, designs, develops or acquires, implements, operates, approves, maintains, and monitors changes to meet its objectives.",
+      "clause_type": "procedure",
+      "criticality": "medium",
+      "sort_order": 130,
+      "implementation_guidance": "Establish change management processes that consider availability impact and include appropriate testing and rollback procedures.",
+      "testing_procedures": "Review change management procedures, test change approval processes, and verify availability impact assessment."
+    }
+  ]
+}

@@ -1,0 +1,293 @@
+name: CI - Test and Lint
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '18'
+
+jobs:
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: grc_test
+          POSTGRES_USER: grc
+          POSTGRES_PASSWORD: grc
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      
+      azurite:
+        image: mcr.microsoft.com/azure-storage/azurite:latest
+        ports:
+          - 10000:10000
+          - 10001:10001
+          - 10002:10002
+        options: >-
+          --health-cmd "curl -f http://localhost:10000"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libpq-dev \
+          gettext \
+          build-essential \
+          python3-dev \
+          libffi-dev \
+          libssl-dev \
+          libxml2-dev \
+          libxslt1-dev \
+          libjpeg-dev \
+          libfreetype6-dev \
+          zlib1g-dev
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-django pytest-cov black flake8 mypy
+
+    - name: Set up environment variables
+      run: |
+        cp .env.dev.example .env.test
+        # Override for test environment
+        cat >> .env.test << EOF
+        DJANGO_SETTINGS_MODULE=app.settings.test
+        DATABASE_URL=postgres://grc:grc@localhost:5432/grc_test
+        CELERY_BROKER_URL=redis://localhost:6379/0
+        CELERY_RESULT_BACKEND=redis://localhost:6379/1
+        AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://localhost:10000/devstoreaccount1;
+        SECRET_KEY=test-secret-key-for-ci
+        DEBUG=0
+        EOF
+
+    - name: Wait for services
+      run: |
+        # Wait for PostgreSQL
+        until pg_isready -h localhost -p 5432 -U grc; do
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done
+        
+        # Wait for Redis
+        until redis-cli -h localhost -p 6379 ping; do
+          echo "Waiting for Redis..."
+          sleep 2
+        done
+        
+        # Wait for Azurite
+        until curl -f http://localhost:10000; do
+          echo "Waiting for Azurite..."
+          sleep 3
+        done
+
+    - name: Run database migrations
+      working-directory: ./app
+      env:
+        DJANGO_SETTINGS_MODULE: app.settings.test
+      run: |
+        # Load environment variables
+        set -a && source ../.env.test && set +a
+        
+        # Create public schema migrations
+        python manage.py migrate_schemas --shared
+        
+        # Create test tenant
+        python manage.py shell << EOF
+        from core.models import Tenant, Domain
+        from django_tenants.utils import schema_context
+        
+        # Create test tenant
+        tenant = Tenant(name='Test Company', slug='test', schema_name='test')
+        tenant.save()
+        
+        # Create domain
+        domain = Domain(domain='test.localhost', tenant=tenant, is_primary=True)
+        domain.save()
+        
+        # Run tenant migrations
+        with schema_context(tenant.schema_name):
+            from django.core.management import execute_from_command_line
+            execute_from_command_line(['manage.py', 'migrate'])
+        
+        print("Test tenant created successfully")
+        EOF
+
+    - name: Code quality checks
+      working-directory: ./app
+      env:
+        DJANGO_SETTINGS_MODULE: app.settings.test
+      run: |
+        set -a && source ../.env.test && set +a
+        
+        echo "Running Black formatter check..."
+        black --check --diff .
+        
+        echo "Running flake8 linter..."
+        flake8 --max-line-length=100 --exclude=migrations,venv,node_modules .
+        
+        echo "Django system check..."
+        python manage.py check
+
+    - name: Run tests
+      working-directory: ./app
+      env:
+        DJANGO_SETTINGS_MODULE: app.settings.test
+      run: |
+        set -a && source ../.env.test && set +a
+        
+        # Run pytest with coverage
+        python -m pytest \
+          --cov=. \
+          --cov-report=xml \
+          --cov-report=term-missing \
+          --cov-fail-under=70 \
+          --verbose
+
+    - name: Upload coverage reports
+      if: always()
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./app/coverage.xml
+        flags: backend
+        name: backend-coverage
+
+  test-frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Lint code
+      run: npm run lint
+
+    - name: Type check
+      run: npm run type-check
+
+    - name: Run tests
+      run: npm test -- --coverage --watchAll=false
+
+    - name: Build application
+      run: npm run build
+
+    - name: Upload coverage reports
+      if: always()
+      uses: codecov/codecov-action@v3
+      with:
+        directory: ./frontend/coverage
+        flags: frontend
+        name: frontend-coverage
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      if: always()
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Python security check with bandit
+      run: |
+        pip install bandit
+        bandit -r app/ -f json -o bandit-report.json || true
+
+    - name: Node.js security audit
+      working-directory: ./frontend
+      run: npm audit --audit-level moderate
+
+  build-test:
+    name: Test Docker Build
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: grc-platform:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          BUILD_ENV=test
