@@ -1,9 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include
 
+# Public schema URLs (for tenant management, etc.)
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('api.urls')),
-    path('', include('billing.urls')),
-    path('', include('core.urls')),
+    # Add public API endpoints here if needed
 ]

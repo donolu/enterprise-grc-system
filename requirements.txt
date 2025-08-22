@@ -20,3 +20,5 @@ PyJWT==2.9.0
 django-tenants==3.6.1
 gunicorn==22.0.0
 flower==2.0.1
+qrcode==7.4.2
+stripe==10.8.0

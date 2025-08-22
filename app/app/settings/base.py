@@ -11,20 +11,32 @@ DEBUG = bool(int(os.environ.get("DEBUG", "0")))
 
 ALLOWED_HOSTS = ["*"]
 
-INSTALLED_APPS = [
+SHARED_APPS = [
+    "django_tenants", # Must be first
     "django.contrib.admin",
-    "django.contrib.auth",
+    "django.contrib.auth", 
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "core", # Moved core here
     "rest_framework",
-    "django_filters",
+    "django_filters", 
     "drf_spectacular",
+    "core", # Needed here for Tenant and Domain models
+]
+
+TENANT_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes", 
+    "django.contrib.sessions",
+    "django.contrib.messages",
     "django_otp",
     "django_otp.plugins.otp_email",
+    "django_otp.plugins.otp_totp",
+    "core", 
     "authn",
+    "billing",
     "catalogs",
     "compliance",
     "risk",
@@ -39,16 +51,20 @@ INSTALLED_APPS = [
     "api",
 ]
 
+INSTALLED_APPS = list(SHARED_APPS) + list(
+    [app for app in TENANT_APPS if app not in SHARED_APPS]
+)
+
 AUTH_USER_MODEL = "core.User"
 
 MIDDLEWARE = [
+    "django_tenants.middleware.main.TenantMainMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "core.middleware.TenantResolveMiddleware",
     "django_otp.middleware.OTPMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -59,6 +75,14 @@ ASGI_APPLICATION = "app.asgi.application"
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "static"
+# File Storage Configuration
+# Using Azure Blob Storage with Azurite for development
+DEFAULT_FILE_STORAGE = 'core.storage.TenantAwareBlobStorage'
+
+# Azure Storage settings (configured but not used in development due to Azurite connectivity)
+AZURE_STORAGE_CONNECTION_STRING = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
+
+# Media files configuration
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -80,7 +104,7 @@ TEMPLATES = [
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
+        "ENGINE": "django_tenants.postgresql_backend",
         "NAME": os.environ.get("POSTGRES_DB","grc"),
         "USER": os.environ.get("POSTGRES_USER","grc"),
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD","grc"),
@@ -116,4 +140,60 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(hour=8, minute=0), 
     },
 }
+
+# Stripe Configuration
+STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY")
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
+STRIPE_PRICE_FREE = os.environ.get("STRIPE_PRICE_FREE")
+STRIPE_PRICE_BASIC = os.environ.get("STRIPE_PRICE_BASIC")
+STRIPE_PRICE_ENTERPRISE = os.environ.get("STRIPE_PRICE_ENTERPRISE")
+
+# Limit Override Approval Settings
+LIMIT_OVERRIDE_APPROVER_EMAILS = [
+    email.strip() for email in os.environ.get("LIMIT_OVERRIDE_APPROVER_EMAILS", "admin@example.com").split(",")
+    if email.strip()
+]
+ADMIN_NOTIFICATION_EMAILS = [
+    email.strip() for email in os.environ.get("ADMIN_NOTIFICATION_EMAILS", "admin@example.com").split(",")
+    if email.strip()
+]
+
+# Password validation
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+# Session settings
+SESSION_COOKIE_AGE = 86400  # 24 hours
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+# CSRF settings
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Django-tenants settings
+DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
+TENANT_MODEL = "core.Tenant"
+TENANT_DOMAIN_MODEL = "core.Domain" 
+PUBLIC_SCHEMA_URLCONF = "app.public_urls"
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
