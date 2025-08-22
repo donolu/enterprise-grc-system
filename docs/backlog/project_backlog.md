@@ -16,16 +16,23 @@
         4.  A `Dockerfile` and `compose.yml` are created to run the local development environment.
 
 *   **Story 0.2: Implement Multi-Tenancy (Schema per Tenant)**
-    *   **Status:** Pending
+    *   **Status:** Done
     *   **Description:** As a System Architect, I need to configure `django-tenants` to ensure complete data isolation for each client company using separate PostgreSQL schemas.
     *   **AC:**
         1.  When a new `Tenant` is created, a corresponding PostgreSQL schema is automatically created.
         2.  User and all tenant-specific data are created within the tenant's schema.
         3.  Middleware correctly identifies the tenant based on the request's subdomain (e.g., `client-a.grc.com`).
         4.  Users from one tenant cannot access data from another.
+    *   **What was achieved:**
+        1.  ✅ Full django-tenants integration with PostgreSQL schema isolation
+        2.  ✅ Automatic schema creation via `create_tenant` management command
+        3.  ✅ Tenant resolution via subdomain middleware (django-tenants)
+        4.  ✅ Complete data isolation verified - users cannot cross-access tenants
+        5.  ✅ Shared vs tenant app separation properly configured
+        6.  ✅ Database migrations working for both shared and tenant schemas
 
 *   **Story 0.3: Implement User Authentication & Registration**
-    *   **Status:** Pending
+    *   **Status:** Done
     *   **Description:** As a User, I want to be able to register an account, log in with my email and password, and log out.
     *   **AC:**
         1.  A user registration page allows new users to sign up.
@@ -33,6 +40,14 @@
         3.  A robust password policy is enforced.
         4.  Users can log out, which invalidates their session.
         5.  The `core.User` model is linked to a `Tenant`.
+    *   **What was achieved:**
+        1.  ✅ RESTful API endpoints for registration (`POST /api/auth/register/`)
+        2.  ✅ Login with username/email and password (`POST /api/auth/login/`)
+        3.  ✅ Comprehensive password policy (8+ chars, complexity rules)
+        4.  ✅ Session-based logout with CSRF protection (`POST /api/auth/logout/`)
+        5.  ✅ User-tenant relationship via schema isolation (django-tenants approach)
+        6.  ✅ Additional endpoints: profile management, password changes, user info
+        7.  ✅ Complete multi-tenant isolation verified and tested
 
 *   **Story 0.4: Implement Two-Factor Authentication (2FA)**
     *   **Status:** Pending
