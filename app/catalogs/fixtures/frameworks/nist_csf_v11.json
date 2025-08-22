@@ -1,0 +1,146 @@
+{
+  "name": "NIST Cybersecurity Framework",
+  "short_name": "NIST-CSF",
+  "version": "1.1",
+  "description": "Framework for Improving Critical Infrastructure Cybersecurity. A risk-based approach to managing cybersecurity risk, composed of three parts: the Framework Core, Implementation Tiers, and Profiles.",
+  "framework_type": "security",
+  "external_id": "NIST-CSF-1.1",
+  "issuing_organization": "National Institute of Standards and Technology (NIST)",
+  "official_url": "https://www.nist.gov/cyberframework",
+  "effective_date": "2018-04-16",
+  "status": "active",
+  "is_mandatory": false,
+  "clauses": [
+    {
+      "clause_id": "ID.AM-1",
+      "title": "Physical devices and systems inventory",
+      "description": "Physical devices and systems within the organization are inventoried",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 10,
+      "implementation_guidance": "Maintain comprehensive inventory of all physical devices and systems including hardware assets, network devices, and IoT devices.",
+      "testing_procedures": "Verify inventory completeness, test asset discovery processes, and validate inventory accuracy and currency.",
+      "external_references": {
+        "iso27001": ["A.8.1.1"],
+        "soc2": ["CC6.1"]
+      }
+    },
+    {
+      "clause_id": "ID.AM-2",
+      "title": "Software platforms and applications inventory",
+      "description": "Software platforms and applications within the organization are inventoried",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 20,
+      "implementation_guidance": "Maintain inventory of all software platforms, applications, operating systems, and software licenses.",
+      "testing_procedures": "Test software inventory processes, verify license tracking, and validate unauthorized software detection."
+    },
+    {
+      "clause_id": "ID.AM-3",
+      "title": "Organizational communication and data flows",
+      "description": "Organizational communication and data flows are mapped",
+      "clause_type": "documentation",
+      "criticality": "medium",
+      "sort_order": 30,
+      "implementation_guidance": "Document and maintain maps of organizational communication paths and data flows to understand information movement.",
+      "testing_procedures": "Review data flow documentation accuracy, verify communication pathway mapping, and test data flow controls."
+    },
+    {
+      "clause_id": "ID.RA-1",
+      "title": "Asset vulnerabilities identification",
+      "description": "Asset vulnerabilities are identified and documented",
+      "clause_type": "assessment",
+      "criticality": "high",
+      "sort_order": 40,
+      "implementation_guidance": "Implement vulnerability identification processes including scanning, assessments, and threat intelligence integration.",
+      "testing_procedures": "Test vulnerability identification processes, verify documentation completeness, and validate risk assessment accuracy."
+    },
+    {
+      "clause_id": "PR.AC-1",
+      "title": "Identity management and authentication",
+      "description": "Identities and credentials are issued, managed, verified, revoked, and audited for authorized devices, users and processes",
+      "clause_type": "control",
+      "criticality": "critical",
+      "sort_order": 50,
+      "implementation_guidance": "Implement comprehensive identity and access management including user lifecycle, strong authentication, and regular access reviews.",
+      "testing_procedures": "Test identity management processes, verify authentication mechanisms, and validate access review procedures.",
+      "external_references": {
+        "iso27001": ["A.9.2.1", "A.9.4.3"],
+        "soc2": ["CC6.2"]
+      }
+    },
+    {
+      "clause_id": "PR.AC-4",
+      "title": "Access permissions and authorizations",
+      "description": "Access permissions and authorizations are managed, incorporating the principles of least privilege and separation of duties",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 60,
+      "implementation_guidance": "Implement least privilege and separation of duties principles with regular access reviews and proper authorization workflows.",
+      "testing_procedures": "Test access permission management, verify least privilege implementation, and validate separation of duties."
+    },
+    {
+      "clause_id": "PR.DS-1",
+      "title": "Data-at-rest protection",
+      "description": "Data-at-rest is protected",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 70,
+      "implementation_guidance": "Implement encryption and access controls to protect data stored in databases, files systems, and backup media.",
+      "testing_procedures": "Test encryption implementation, verify access controls for stored data, and validate key management procedures."
+    },
+    {
+      "clause_id": "PR.DS-2",
+      "title": "Data-in-transit protection",
+      "description": "Data-in-transit is protected",
+      "clause_type": "control",
+      "criticality": "high",
+      "sort_order": 80,
+      "implementation_guidance": "Implement encryption and secure protocols to protect data during transmission across networks and communications channels.",
+      "testing_procedures": "Test encryption for data transmission, verify secure protocol usage, and validate certificate management."
+    },
+    {
+      "clause_id": "DE.CM-1",
+      "title": "Network monitoring",
+      "description": "The network is monitored to detect potential cybersecurity events",
+      "clause_type": "monitoring",
+      "criticality": "high",
+      "sort_order": 90,
+      "implementation_guidance": "Deploy network monitoring tools and processes to detect anomalous activity and potential security incidents.",
+      "testing_procedures": "Test network monitoring capabilities, verify detection rules effectiveness, and validate alerting mechanisms.",
+      "external_references": {
+        "soc2": ["CC7.1", "CC7.2"]
+      }
+    },
+    {
+      "clause_id": "DE.AE-1",
+      "title": "Baseline network and systems activity",
+      "description": "A baseline of network operations and expected data flows for users and systems is established and managed",
+      "clause_type": "monitoring",
+      "criticality": "medium",
+      "sort_order": 100,
+      "implementation_guidance": "Establish baselines for normal network and system behavior to enable effective anomaly detection.",
+      "testing_procedures": "Review baseline establishment processes, verify baseline accuracy, and test anomaly detection capabilities."
+    },
+    {
+      "clause_id": "RS.RP-1",
+      "title": "Response plan execution",
+      "description": "Response plan is executed during or after an incident",
+      "clause_type": "procedure",
+      "criticality": "high",
+      "sort_order": 110,
+      "implementation_guidance": "Develop and maintain incident response plans with clear procedures, roles, and communication protocols.",
+      "testing_procedures": "Test incident response plan execution, verify communication procedures, and validate response team coordination."
+    },
+    {
+      "clause_id": "RC.RP-1",
+      "title": "Recovery plan execution",
+      "description": "Recovery plan is executed during or after a cybersecurity incident",
+      "clause_type": "procedure",
+      "criticality": "high",
+      "sort_order": 120,
+      "implementation_guidance": "Implement recovery procedures to restore systems and operations following cybersecurity incidents.",
+      "testing_procedures": "Test recovery plan execution, verify recovery time objectives, and validate business continuity procedures."
+    }
+  ]
+}
