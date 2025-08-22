@@ -1,0 +1,81 @@
+services:
+  web:
+    build: .
+    command: gunicorn app.wsgi:application -b 0.0.0.0:8000
+    working_dir: /workspace/app
+    env_file: .env.dev
+    volumes: [".:/workspace:cached"]
+    depends_on: [postgres, redis, azurite, onlyoffice, mailhog]
+    ports: ["8000:8000"]
+
+  worker:
+    build: .
+    command: celery -A app worker -l info --concurrency=4
+    working_dir: /workspace/app
+    env_file: .env.dev
+    volumes: [".:/workspace:cached"]
+    depends_on: [postgres, redis]
+
+  beat:
+    build: .
+    command: celery -A app beat -l info
+    working_dir: /workspace/app
+    env_file: .env.dev
+    volumes: [".:/workspace:cached"]
+    depends_on: [postgres, redis]
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: grc
+      POSTGRES_USER: grc
+      POSTGRES_PASSWORD: grc
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    command: "azurite -l /data -s"
+    ports: ["10000:10000","10001:10001","10002:10002"]
+    volumes: ["azurite:/data"]
+
+  mailhog:
+    image: mailhog/mailhog
+    ports: ["8025:8025"]
+
+  onlyoffice:
+    image: onlyoffice/documentserver
+    ports: ["8085:80"]
+
+  opensearch:
+    image: opensearchproject/opensearch:2
+    environment:
+      - discovery.type=single-node
+      - plugins.security.disabled=true
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=admin123
+    ports: ["9200:9200"]
+
+  flower:
+    build: .
+    command: celery -A app --broker=redis://redis:6379/0 flower
+    working_dir: /workspace/app
+    env_file: .env.dev
+    ports: ["5555:5555"]
+    depends_on: [redis]
+  
+  frontend:
+    build: ./frontend
+    env_file: ./frontend/.env.local
+    ports:
+      - "3000:3000"
+    depends_on: [web]
+    volumes:
+      - ./frontend:/app
+
+volumes:
+  pgdata:
+  azurite:
