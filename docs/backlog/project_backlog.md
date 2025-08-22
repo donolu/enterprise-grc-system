@@ -57,15 +57,35 @@
         7.  ✅ Complete multi-tenant isolation verified and tested
 
 *   **Story 0.4: Implement Two-Factor Authentication (2FA)**
-    *   **Status:** Pending
-    *   **Description:** As a User, I want to secure my account by enabling email-based Two-Factor Authentication.
+    *   **Status:** Done
+    *   **Description:** As a User, I want to secure my account by enabling comprehensive Two-Factor Authentication with multiple methods including email, TOTP authenticator apps, and push notifications.
     *   **AC:**
         1.  Users can enable/disable 2FA in their account settings.
         2.  If 2FA is enabled, after entering their password, the user is prompted for a one-time code sent to their email.
         3.  Login is successful only after providing the correct OTP.
+    *   **What was achieved:**
+        1.  ✅ **Email 2FA** - Complete email-based OTP system with django-otp
+        2.  ✅ **TOTP Authentication** - Authenticator app support (Google Authenticator, Authy, etc.)
+        3.  ✅ **Push Notifications** - Custom PushDevice model for mobile app approvals
+        4.  ✅ **Multi-method Support** - Users can enable multiple 2FA methods simultaneously
+        5.  ✅ **User Preferences** - Configurable primary method and fallback priorities
+        6.  ✅ **Intelligent Login Flow** - Automatic method selection based on user preferences
+        7.  ✅ **Comprehensive API** - 10+ RESTful endpoints for complete 2FA management:
+            - `/api/auth/2fa/status/` - Get current 2FA status and available methods
+            - `/api/auth/2fa/enable/` - Enable email or push 2FA
+            - `/api/auth/2fa/disable/` - Disable specific or all 2FA methods
+            - `/api/auth/2fa/verify/` - Verify OTP codes from any method
+            - `/api/auth/2fa/setup-totp/` - Generate QR codes for TOTP setup
+            - `/api/auth/2fa/confirm-totp/` - Confirm TOTP setup with verification
+            - `/api/auth/2fa/register-push/` - Register push notification devices
+            - `/api/auth/2fa/approve-push/` - Handle push challenge approvals
+            - `/api/auth/2fa/preferences/` - Manage user 2FA preferences
+        8.  ✅ **Enterprise Features** - Device management, challenge expiration, audit trails
+        9.  ✅ **Multi-tenant Integration** - Full compatibility with django-tenants isolation
+        10. ✅ **Security Best Practices** - Secure token generation, challenge expiration, proper validation
 
 *   **Story 0.5: Setup Subscription & Billing (Stripe)**
-    *   **Status:** Pending
+    *   **Status:** Done
     *   **Description:** As a Company Admin, I want to subscribe to a plan (Free, Basic, Enterprise) and manage my billing information.
     *   **AC:**
         1.  Integrate the Stripe API for subscription management.
@@ -73,15 +93,66 @@
         3.  The application correctly assigns a plan to a tenant based on their subscription.
         4.  Implement logic for grandfathering prices.
         5.  A "Billing Portal" allows admins to view invoices and manage their subscription.
+    *   **What was achieved:**
+        1.  ✅ **Complete Stripe Integration** - Full Stripe API integration with test products and pricing
+        2.  ✅ **Subscription Management Models** - Plan, Subscription, and BillingEvent models with tenant isolation
+        3.  ✅ **RESTful Billing API** - 5+ endpoints for subscription management:
+            - `GET /api/billing/current_subscription/` - View current tenant subscription
+            - `POST /api/billing/create_checkout_session/` - Initiate subscription upgrade/downgrade
+            - `POST /api/billing/cancel_subscription/` - Cancel subscription at period end
+            - `GET /api/billing/billing_portal/` - Access Stripe customer portal
+            - `GET /api/plans/` - List all available subscription plans
+        4.  ✅ **Comprehensive Webhook Processing** - Complete webhook handler for all Stripe events:
+            - `checkout.session.completed` - Process successful subscription purchases
+            - `customer.subscription.*` - Handle subscription lifecycle events
+            - `invoice.payment_succeeded/failed` - Track payment status
+            - Automatic local subscription synchronization with Stripe
+        5.  ✅ **Plan Feature Enforcement** - Robust plan limit system:
+            - Document upload limits (50/500/10000 based on plan)
+            - User limits (3/10/100 based on plan)
+            - Feature access control (API access, advanced reporting, priority support)
+            - Real-time usage tracking and limit validation
+        6.  ✅ **Grandfathering Support** - Custom pricing and legacy plan support for existing customers
+        7.  ✅ **Stripe Customer Portal** - Full integration with Stripe's hosted billing portal for invoice management
+        8.  ✅ **Three-Tier Plan Structure** - Free ($0), Basic ($49/month), Enterprise ($199/month)
+        9.  ✅ **Tenant Billing Isolation** - Complete billing separation per tenant with Stripe customer mapping
+        10. ✅ **Plan Usage Analytics** - Usage summary endpoints and upgrade recommendations
+        11. ✅ **Billing Event Audit Trail** - Complete logging of all billing events for compliance
+        12. ✅ **Production-Ready Configuration** - Secure API key management and error handling
+        13. ✅ **Enhanced Configurable Limits System** - Database-driven limit overrides with dual approval workflow:
+            - Custom per-tenant limit overrides (users, documents, frameworks, storage)
+            - Two-step approval process with different approvers required
+            - Business justification and urgency levels for all requests
+            - Temporary vs permanent overrides with expiration dates
+            - Comprehensive email notification system for all approval stages
+            - Full audit trail and administrative application controls
+            - API endpoints for request submission, approval, and management
+            - Integration with existing plan enforcement and usage tracking
 
 *   **Story 0.6: Setup Document Storage (Azure Blob)**
-    *   **Status:** Pending
+    *   **Status:** Done
     *   **Description:** As a Developer, I need to configure the application to use Azure Blob Storage for all user-uploaded files, with a local mock (Azurite) for development.
     *   **AC:**
         1.  The Django storage backend is configured to use `azure-storage-blob`.
         2.  File uploads in the application are stored in Azure Blob Storage in production.
         3.  Files are stored in tenant-specific containers or paths for security.
         4.  The local `compose.yml` includes the Azurite service for local file handling.
+    *   **What was achieved:**
+        1.  ✅ **Custom Azure Blob Storage Backend** - Implemented `TenantAwareBlobStorage` with complete Azure Blob Storage integration
+        2.  ✅ **Tenant Isolation** - Each tenant gets isolated container (`tenant-{slug}`) for complete data separation
+        3.  ✅ **Fallback Storage System** - Graceful fallback to local storage when Azure is unavailable
+        4.  ✅ **Document Management API** - Complete RESTful API for file upload, download, and management:
+            - `POST /api/documents/` - Upload files with validation and metadata
+            - `GET /api/documents/` - List tenant-specific documents
+            - `GET /api/documents/{id}/download/` - Secure file download with audit logging
+            - `GET /api/documents/{id}/access_logs/` - Access audit trail
+            - `GET /api/documents/storage_info/` - Storage backend information
+        5.  ✅ **File Validation** - Size limits (100MB), file type restrictions, security checks
+        6.  ✅ **Audit Logging** - Document access tracking with IP, user agent, timestamps
+        7.  ✅ **Production-Ready Configuration** - Azure Storage connection string setup for production deployment
+        8.  ✅ **Azurite Integration** - Local development environment with Azure Storage emulator
+        9.  ✅ **Multi-tenant Database Schema** - Document models with proper tenant isolation via django-tenants
+        10. ✅ **Comprehensive Testing** - Verified file upload, storage, retrieval, and tenant isolation
 
 *   **Story 0.7: Create CI/CD Pipeline (GitHub Actions)**
     *   **Status:** Pending

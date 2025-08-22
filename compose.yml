@@ -38,8 +38,10 @@ services:
     ports: ["6379:6379"]
 
   azurite:
-    image: mcr.microsoft.com/azure-storage/azurite
-    command: "azurite -l /data -s"
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    environment:
+      AZURITE_ACCOUNTS: "devstoreaccount1:Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
+    command: ["azurite", "--silent", "--location", "/data", "--blobHost", "0.0.0.0", "--queueHost", "0.0.0.0", "--tableHost", "0.0.0.0"]
     ports: ["10000:10000","10001:10001","10002:10002"]
     volumes: ["azurite:/data"]
 
