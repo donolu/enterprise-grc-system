@@ -251,16 +251,24 @@ jobs:
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
+        scan-type: fs
+        scan-ref: .
+        format: sarif
         output: 'trivy-results.sarif'
 
-    - name: Upload Trivy scan results
-      if: always()
-      uses: github/codeql-action/upload-sarif@v2
+      # only upload when the GITHUB_TOKEN can write (not forked PRs)
+    - name: Upload Trivy scan results to Code Scanning
+      if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+      uses: github/codeql-action/upload-sarif@v3
       with:
-        sarif_file: 'trivy-results.sarif'
+        sarif_file: trivy-results.sarif
+    # always keep an artifact so you can see results even on forks
+    - name: Upload SARIF as artifact (fallback)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: trivy-results.sarif
+        path: trivy-results.sarif
 
     - name: Python security check with bandit
       run: |
