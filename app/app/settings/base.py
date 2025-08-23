@@ -122,7 +122,119 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
 }
 
-SPECTACULAR_SETTINGS = {"TITLE": "GRC SaaS API", "VERSION": "0.1"}
+SPECTACULAR_SETTINGS = {
+    "TITLE": "GRC SaaS API",
+    "DESCRIPTION": """
+    Comprehensive API for Governance, Risk, and Compliance (GRC) management.
+    
+    This API provides complete functionality for compliance framework management,
+    control assessments, evidence collection, reporting, and automated reminders.
+    
+    ## Features
+    - **Framework Management**: Import and manage compliance frameworks (ISO 27001, NIST CSF, SOC 2, etc.)
+    - **Assessment Workflow**: Complete control assessment lifecycle with status tracking
+    - **Evidence Management**: Upload, link, and organize evidence with bulk operations
+    - **Automated Reporting**: Generate professional PDF reports for audits and compliance
+    - **Smart Reminders**: Configurable email notifications for due dates and overdue items
+    - **Multi-tenant Architecture**: Complete tenant isolation with secure data scoping
+    
+    ## Authentication
+    This API uses session-based authentication. Users must be authenticated to access endpoints.
+    
+    ## Tenant Scoping
+    All data is automatically scoped to the authenticated user's tenant. Cross-tenant access is prevented.
+    """,
+    "VERSION": "1.0.0",
+    "CONTACT": {
+        "name": "GRC SaaS Support",
+        "email": "support@grcsaas.com",
+    },
+    "LICENSE": {
+        "name": "Proprietary",
+    },
+    # OpenAPI 3.0 configuration
+    "OAS_VERSION": "3.0.3",
+    "USE_SESSION_AUTH": True,
+    "SCHEMA_PATH_PREFIX": "/api/",
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SORT_OPERATIONS": False,
+    
+    # Enhanced documentation
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": None,
+    "REDOC_DIST": "SIDECAR",
+    
+    # Security schemes
+    "APPEND_COMPONENTS": {
+        "securitySchemes": {
+            "SessionAuth": {
+                "type": "apiKey",
+                "in": "cookie",
+                "name": "sessionid",
+                "description": "Django session authentication"
+            }
+        }
+    },
+    "SECURITY": [{"SessionAuth": []}],
+    
+    # Tags for organizing endpoints
+    "TAGS": [
+        {
+            "name": "Authentication",
+            "description": "User authentication and session management"
+        },
+        {
+            "name": "Frameworks",
+            "description": "Compliance framework management (ISO 27001, NIST CSF, SOC 2, etc.)"
+        },
+        {
+            "name": "Clauses",
+            "description": "Framework clause management and hierarchy"
+        },
+        {
+            "name": "Controls",
+            "description": "Control definition and management"
+        },
+        {
+            "name": "Assessments",
+            "description": "Control assessment workflow and lifecycle management"
+        },
+        {
+            "name": "Evidence",
+            "description": "Evidence collection, management, and linking"
+        },
+        {
+            "name": "Reports",
+            "description": "Assessment reporting and PDF generation"
+        },
+        {
+            "name": "Documents",
+            "description": "File upload and document management"
+        },
+        {
+            "name": "Billing",
+            "description": "Subscription and billing management"
+        }
+    ],
+    
+    # Custom preprocessing for better documentation
+    "PREPROCESSING_HOOKS": [],
+    "POSTPROCESSING_HOOKS": [
+        "drf_spectacular.hooks.postprocess_schema_enums",
+    ],
+    
+    # Enum choices handling
+    "ENUM_NAME_OVERRIDES": {
+        "StatusEnum": "catalogs.models.ControlAssessment.STATUS_CHOICES",
+        "ImplementationStatusEnum": "catalogs.models.ControlAssessment.IMPLEMENTATION_STATUS_CHOICES",
+        "EvidenceTypeEnum": "catalogs.models.ControlEvidence.EVIDENCE_TYPES",
+        "ReminderTypeEnum": "catalogs.models.AssessmentReminderLog.REMINDER_TYPES",
+    },
+    
+    # Error response schemas
+    "DEFAULT_ERROR_RESPONSE_SCHEMA": "drf_spectacular.openapi.ErrorResponseSerializer",
+}
 
 CELERY_BROKER_URL = os.environ["CELERY_BROKER_URL"]
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
@@ -136,8 +248,12 @@ SITE_DOMAIN = os.environ.get("SITE_DOMAIN","localhost:8000")
 
 CELERY_BEAT_SCHEDULE = {
     "assessments_due_reminders_daily": {
-        "task": "compliance.tasks.send_due_reminders",
-        "schedule": crontab(hour=8, minute=0), 
+        "task": "catalogs.tasks.send_due_reminders",
+        "schedule": crontab(hour=8, minute=0),  # 8 AM daily
+    },
+    "cleanup_reminder_logs_weekly": {
+        "task": "catalogs.tasks.cleanup_old_reminder_logs",
+        "schedule": crontab(hour=2, minute=0, day_of_week=0),  # 2 AM every Sunday
     },
 }
 
