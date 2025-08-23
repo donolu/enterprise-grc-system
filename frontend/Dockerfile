@@ -1,4 +1,4 @@
-FROM node:22.2.0-slim
+FROM node:22-slim
 WORKDIR /app
 COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
 RUN npm install -g npm@latest && npm install
