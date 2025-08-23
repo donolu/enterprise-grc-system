@@ -34,7 +34,7 @@ jobs:
       redis:
         image: redis:7
         options: >-
-          --health-cmd "redis-cli ping"
+          --health-cmd "redis-cli ping || exit 1"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -48,10 +48,12 @@ jobs:
           - 10001:10001
           - 10002:10002
         options: >-
-          --health-cmd "curl -f http://localhost:10000"
-          --health-interval 30s
-          --health-timeout 10s
-          --health-retries 3
+          --health-cmd "node -e \"require('net').connect(10000,'127.0.0.1')
+          .on('connect',()=>process.exit(0))
+          .on('error',()=>process.exit(1))\""
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
     - name: Checkout code
@@ -109,19 +111,19 @@ jobs:
     - name: Wait for services
       run: |
         # Wait for PostgreSQL
-        until pg_isready -h localhost -p 5432 -U grc; do
+        until pg_isready -h localhost -p 5432 -U grc >/dev/null 2>&1; do
           echo "Waiting for PostgreSQL..."
           sleep 2
         done
         
         # Wait for Redis
-        until redis-cli -h localhost -p 6379 ping; do
+        until redis-cli -h localhost -p 6379 ping >/dev/null 2>&1; do
           echo "Waiting for Redis..."
           sleep 2
         done
         
         # Wait for Azurite
-        until curl -f http://localhost:10000; do
+        until (echo > /dev/tcp/127.0.0.1/10000) >/dev/null 2>&1; do
           echo "Waiting for Azurite..."
           sleep 3
         done
