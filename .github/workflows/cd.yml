@@ -123,8 +123,10 @@ jobs:
       run: |
         if [ -f "${{ env.COMPOSE_PATH }}" ]; then
           echo "mode=compose" >> "$GITHUB_OUTPUT"
+          echo "✅ Found Docker Compose config at ${{ env.COMPOSE_PATH }}"
         else
           echo "mode=single" >> "$GITHUB_OUTPUT"
+          echo "⚠️  No Docker Compose config found at ${{ env.COMPOSE_PATH }}, using single container mode"
         fi
 
     # If pulling private GHCR images WITHOUT Managed Identity:

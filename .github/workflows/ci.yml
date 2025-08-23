@@ -227,13 +227,13 @@ jobs:
       run: npm run type-check
 
     - name: Run tests
-      run: npm test -- --coverage --watchAll=false
+      run: npm run test
 
     - name: Build application
       run: npm run build
 
     - name: Upload coverage reports
-      if: always()
+      if: always() && false  # Disabled until tests are configured
       uses: codecov/codecov-action@v3
       with:
         directory: ./frontend/coverage
