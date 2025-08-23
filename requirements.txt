@@ -20,7 +20,7 @@ openpyxl==3.1.5
 reportlab==4.2.2
 PyJWT==2.9.0
 django-tenants==3.6.1
-gunicorn==22.0.0
+gunicorn==23.0.0
 packaging>=23.0
 flower==2.0.1
 qrcode==7.4.2
