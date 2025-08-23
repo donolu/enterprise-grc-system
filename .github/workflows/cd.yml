@@ -98,7 +98,7 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS_STAGING }}
 
     - name: Set up Azure CLI
-      uses: azure/CLI@v1
+      uses: azure/CLI@v2
       with:
         azcliversion: latest
 
@@ -109,7 +109,7 @@ jobs:
         images: ${{ needs.build-and-push.outputs.image-tag }}
 
     - name: Run Database Migrations (Staging)
-      uses: azure/CLI@v1
+      uses: azure/CLI@v2
       with:
         inlineScript: |
           # Run migrations via Azure CLI
@@ -168,7 +168,7 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
 
     - name: Create Backup (Production)
-      uses: azure/CLI@v1
+      uses: azure/CLI@v2
       with:
         inlineScript: |
           # Create database backup before deployment
@@ -192,7 +192,7 @@ jobs:
         images: ${{ needs.build-and-push.outputs.image-tag }}
         
     - name: Run Database Migrations (Production)
-      uses: azure/CLI@v1
+      uses: azure/CLI@v2
       with:
         inlineScript: |
           # Run migrations in production
@@ -262,7 +262,7 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
 
     - name: Rollback Production Deployment
-      uses: azure/CLI@v1
+      uses: azure/CLI@v2
       with:
         inlineScript: |
           echo "🔄 Rolling back production deployment..."
