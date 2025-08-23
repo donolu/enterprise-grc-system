@@ -9,9 +9,9 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 5
     reviewers:
-      - "your-team"  # Replace with actual GitHub usernames
+      - "donolu"  # Replace with actual GitHub usernames
     assignees:
-      - "your-team"  # Replace with actual GitHub usernames
+      - "donolu"  # Replace with actual GitHub usernames
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
@@ -34,9 +34,9 @@ updates:
       time: "10:00"
     open-pull-requests-limit: 5
     reviewers:
-      - "your-team"
+      - "donolu"
     assignees:
-      - "your-team"
+      - "donolu"
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
@@ -60,9 +60,9 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 3
     reviewers:
-      - "your-team"
+      - "donolu"
     assignees:
-      - "your-team"
+      - "donolu"
     commit-message:
       prefix: "docker"
     labels:
@@ -78,9 +78,9 @@ updates:
       time: "10:00"
     open-pull-requests-limit: 3
     reviewers:
-      - "your-team"
+      - "donolu"
     assignees:
-      - "your-team"
+      - "donolu"
     commit-message:
       prefix: "ci"
     labels:
