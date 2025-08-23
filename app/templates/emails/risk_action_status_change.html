@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Action Status Update</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            background-color: #0066cc;
+            color: white;
+        }
+        .status-change {
+            background-color: #f8f9fa;
+            border-left: 4px solid #0066cc;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+            text-align: center;
+        }
+        .status-change .old-status {
+            display: inline-block;
+            padding: 8px 12px;
+            background-color: #6c757d;
+            color: white;
+            border-radius: 4px;
+            margin: 0 10px;
+        }
+        .status-change .arrow {
+            font-size: 20px;
+            color: #0066cc;
+            margin: 0 10px;
+        }
+        .status-change .new-status {
+            display: inline-block;
+            padding: 8px 12px;
+            background-color: #28a745;
+            color: white;
+            border-radius: 4px;
+            margin: 0 10px;
+        }
+        .status-change .new-status.completed {
+            background-color: #28a745;
+        }
+        .status-change .new-status.in-progress {
+            background-color: #0066cc;
+        }
+        .status-change .new-status.pending {
+            background-color: #6c757d;
+        }
+        .status-change .new-status.cancelled {
+            background-color: #dc3545;
+        }
+        .status-change .new-status.deferred {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .action-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #0066cc;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .action-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        .action-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .detail-value {
+            color: #333;
+            font-size: 14px;
+        }
+        .action-button {
+            display: inline-block;
+            background-color: #0066cc;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .action-button:hover {
+            background-color: #0052a3;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .changed-by-info {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .risk-info {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .priority-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .priority-critical {
+            background-color: #dc3545;
+            color: white;
+        }
+        .priority-high {
+            background-color: #fd7e14;
+            color: white;
+        }
+        .priority-medium {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .priority-low {
+            background-color: #28a745;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="status-badge">
+                📢 STATUS UPDATE
+            </div>
+            <h1>Risk Action Status Changed</h1>
+            <p>Hello {{ user.get_full_name|default:user.username }},</p>
+            <p>The status of a risk action has been updated.</p>
+        </div>
+
+        <div class="status-change">
+            <h3>Status Changed</h3>
+            <div style="margin: 20px 0;">
+                <span class="old-status">{{ old_status|title }}</span>
+                <span class="arrow">→</span>
+                <span class="new-status {{ new_status }}">{{ new_status|title }}</span>
+            </div>
+        </div>
+
+        <div class="action-card">
+            <div class="action-title">
+                {{ action.action_id }}: {{ action.title }}
+            </div>
+            
+            <div class="action-details">
+                <div class="detail-item">
+                    <span class="detail-label">Priority</span>
+                    <span class="detail-value">
+                        <span class="priority-badge priority-{{ action.priority }}">{{ action.get_priority_display }}</span>
+                    </span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Action Type</span>
+                    <span class="detail-value">{{ action.get_action_type_display }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Due Date</span>
+                    <span class="detail-value">
+                        {{ action.due_date|date:"F d, Y" }}
+                        {% if action.days_until_due > 0 %}
+                            <span style="color: #28a745;">({{ action.days_until_due }} days remaining)</span>
+                        {% elif action.days_until_due == 0 %}
+                            <strong style="color: #fd7e14;">(Due Today)</strong>
+                        {% else %}
+                            <strong style="color: #dc3545;">({{ action.days_until_due|add:"-1" }} days overdue)</strong>
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Current Status</span>
+                    <span class="detail-value">{{ action.get_status_display }}</span>
+                </div>
+            </div>
+
+            {% if action.progress_percentage > 0 %}
+            <div style="margin-top: 15px;">
+                <div class="detail-label">Progress</div>
+                <div style="width: 100%; height: 10px; background-color: #e9ecef; border-radius: 5px; overflow: hidden; margin-top: 5px;">
+                    <div style="height: 100%; background-color: #28a745; width: {{ action.progress_percentage }}%;"></div>
+                </div>
+                <div style="font-size: 12px; color: #666; margin-top: 5px;">{{ action.progress_percentage }}% Complete</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="risk-info">
+            <strong>Related Risk: {{ action.risk.risk_id }}</strong><br>
+            <span style="font-size: 14px;">
+                {{ action.risk.title }}
+                <br><span style="font-size: 12px; color: #666;">
+                    Risk Level: <span style="font-weight: bold; color: {{ action.risk.get_risk_level_color }};">{{ action.risk.get_risk_level_display }}</span>
+                    | Owner: {{ action.risk.risk_owner.get_full_name|default:action.risk.risk_owner.username|default:"Unassigned" }}
+                </span>
+            </span>
+        </div>
+
+        {% if changed_by %}
+        <div class="changed-by-info">
+            <strong>Updated by:</strong> {{ changed_by.get_full_name|default:changed_by.username }}
+            <br><span style="font-size: 12px;">{{ "now"|date:"F d, Y \a\t g:i A" }}</span>
+        </div>
+        {% endif %}
+
+        <div style="text-align: center;">
+            <a href="{{ action_url }}" class="action-button">
+                View Action Details
+            </a>
+        </div>
+
+        {% if new_status == 'completed' %}
+        <div style="margin-top: 25px; padding: 15px; background-color: #d4edda; border-radius: 6px;">
+            <h3 style="margin-top: 0; color: #155724;">🎉 Action Completed!</h3>
+            <p style="margin: 10px 0;">
+                Great job on completing this risk action! The risk mitigation efforts are now in place.
+            </p>
+        </div>
+        {% elif new_status == 'in_progress' %}
+        <div style="margin-top: 25px; padding: 15px; background-color: #cce5ff; border-radius: 6px;">
+            <h3 style="margin-top: 0; color: #004085;">🔄 Action In Progress</h3>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Continue working on the required tasks</li>
+                <li>Update progress percentage regularly</li>
+                <li>Add notes to track your work</li>
+                <li>Upload evidence as tasks are completed</li>
+            </ul>
+        </div>
+        {% elif new_status == 'cancelled' %}
+        <div style="margin-top: 25px; padding: 15px; background-color: #f8d7da; border-radius: 6px;">
+            <h3 style="margin-top: 0; color: #721c24;">❌ Action Cancelled</h3>
+            <p style="margin: 10px 0;">
+                This action has been cancelled. Please review the risk to determine if alternative actions are needed.
+            </p>
+        </div>
+        {% elif new_status == 'deferred' %}
+        <div style="margin-top: 25px; padding: 15px; background-color: #fff3cd; border-radius: 6px;">
+            <h3 style="margin-top: 0; color: #856404;">⏸️ Action Deferred</h3>
+            <p style="margin: 10px 0;">
+                This action has been deferred. Work will resume when conditions allow or dependencies are resolved.
+            </p>
+        </div>
+        {% endif %}
+
+        <div class="footer">
+            <p>This notification was sent because the status of a risk action you're involved with has changed.</p>
+            <p style="margin-top: 15px;">
+                <a href="{{ site_domain }}/admin/risk/riskactionreminderconfiguration/" style="color: #0066cc;">Manage Risk Action Notification Preferences</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

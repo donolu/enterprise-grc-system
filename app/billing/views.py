@@ -12,6 +12,8 @@ from django.views import View
 import json
 import logging
 from datetime import datetime
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 
 from core.models import Tenant, Plan, Subscription, BillingEvent
 from .serializers import PlanSerializer, SubscriptionSerializer
@@ -22,9 +24,36 @@ logger = logging.getLogger(__name__)
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List subscription plans",
+        description="Retrieve all available subscription plans with pricing and feature details.",
+        tags=['Billing'],
+    ),
+    retrieve=extend_schema(
+        summary="Get plan details",
+        description="Retrieve detailed information about a specific subscription plan.",
+        tags=['Billing'],
+    ),
+)
 class PlanViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    ViewSet for viewing subscription plans.
+    **Subscription Plan Management**
+    
+    This ViewSet provides read-only access to available subscription plans including:
+    - Plan pricing and billing intervals
+    - Feature limits and capabilities
+    - Plan comparison information
+    
+    **Key Features:**
+    - Support for free, basic, and enterprise tiers
+    - Feature-based plan differentiation
+    - Stripe integration for payment processing
+    
+    **Common Use Cases:**
+    - Display plan options to users
+    - Compare plan features and pricing
+    - Validate plan availability for upgrades
     """
     queryset = Plan.objects.filter(is_active=True)
     serializer_class = PlanSerializer
@@ -33,13 +62,40 @@ class PlanViewSet(viewsets.ReadOnlyModelViewSet):
 
 class BillingViewSet(viewsets.ViewSet):
     """
-    ViewSet for billing operations including subscription management.
+    **Billing and Subscription Management**
+    
+    This ViewSet provides comprehensive billing operations including:
+    - Subscription status and management
+    - Payment processing with Stripe
+    - Billing portal access
+    - Plan upgrades and cancellations
+    
+    **Key Features:**
+    - Secure Stripe integration
+    - Tenant-aware billing isolation
+    - Automated subscription lifecycle management
+    - Self-service billing portal
+    
+    **Common Use Cases:**
+    - Check current subscription status
+    - Upgrade or downgrade plans
+    - Access billing history and invoices
+    - Cancel or modify subscriptions
     """
     permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        summary="Get current subscription",
+        description="Retrieve the current tenant's subscription details including plan, status, and billing information.",
+        responses={
+            200: SubscriptionSerializer,
+            500: OpenApiResponse(description='Failed to fetch subscription'),
+        },
+        tags=['Billing'],
+    )
     @action(detail=False, methods=['get'])
     def current_subscription(self, request):
-        """Get current tenant's subscription details."""
+        """Get current tenant's subscription details with automatic free plan creation if needed."""
         try:
             tenant = Tenant.objects.get(schema_name=request.tenant.schema_name)
             subscription = getattr(tenant, 'subscription', None)
@@ -65,9 +121,44 @@ class BillingViewSet(viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @extend_schema(
+        summary="Create checkout session",
+        description="Create a Stripe checkout session for subscription upgrade or purchase. Returns URL for payment processing.",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'plan': {
+                        'type': 'string',
+                        'description': 'Plan slug (basic, enterprise, etc.)'
+                    }
+                },
+                'required': ['plan']
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                description='Checkout session created successfully',
+                examples=[
+                    OpenApiExample(
+                        'Checkout Session',
+                        summary='Successful checkout session creation',
+                        value={
+                            'checkout_url': 'https://checkout.stripe.com/pay/cs_test_123...',
+                            'session_id': 'cs_test_123...'
+                        }
+                    ),
+                ]
+            ),
+            400: OpenApiResponse(description='Plan is required or not available for purchase'),
+            404: OpenApiResponse(description='Plan not found'),
+            500: OpenApiResponse(description='Failed to create checkout session'),
+        },
+        tags=['Billing'],
+    )
     @action(detail=False, methods=['post'])
     def create_checkout_session(self, request):
-        """Create Stripe checkout session for subscription upgrade."""
+        """Create Stripe checkout session for subscription upgrade with secure payment processing."""
         try:
             plan_slug = request.data.get('plan')
             if not plan_slug:

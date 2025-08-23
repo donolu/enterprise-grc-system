@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.db.models import Count
 from .models import (
     RegionalConfig, VendorCategory, Vendor, VendorContact, 
-    VendorService, VendorNote
+    VendorService, VendorNote, VendorTask
 )
 
 
@@ -542,3 +542,324 @@ class VendorNoteAdmin(admin.ModelAdmin):
             return format_html('<span style="color: #fd7e14; font-weight: bold;">🔒 Internal</span>')
         return '-'
     internal_indicator.short_description = 'Internal'
+
+
+@admin.register(VendorTask)
+class VendorTaskAdmin(admin.ModelAdmin):
+    """Professional admin interface for vendor task management."""
+    
+    list_display = [
+        'task_id', 'colored_title', 'vendor_link', 'colored_task_type',
+        'colored_status', 'colored_priority', 'due_date_display',
+        'assigned_to_name', 'days_until_due_display', 'auto_generated_indicator'
+    ]
+    list_filter = [
+        'task_type', 'status', 'priority', 'auto_generated', 'is_recurring',
+        'vendor__status', 'vendor__risk_level', 'due_date', 'created_at'
+    ]
+    search_fields = [
+        'task_id', 'title', 'description', 'vendor__name', 
+        'vendor__vendor_id', 'related_contract_number'
+    ]
+    list_editable = ['status', 'priority', 'assigned_to']
+    readonly_fields = [
+        'task_id', 'auto_generated', 'generation_source', 'completed_date',
+        'days_until_due', 'is_overdue', 'should_send_reminder', 'next_reminder_date',
+        'created_at', 'updated_at'
+    ]
+    date_hierarchy = 'due_date'
+    list_per_page = 25
+    ordering = ['due_date', '-priority']
+    
+    fieldsets = (
+        ('Task Information', {
+            'fields': (
+                'task_id', 'vendor', 'task_type', 'title', 'description'
+            )
+        }),
+        ('Scheduling', {
+            'fields': (
+                'due_date', 'start_date', 'completed_date', 'status', 'priority'
+            )
+        }),
+        ('Assignment', {
+            'fields': (
+                'assigned_to', 'created_by'
+            )
+        }),
+        ('Reminders', {
+            'fields': (
+                'reminder_days', 'last_reminder_sent', 'reminder_recipients'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Integration', {
+            'fields': (
+                'related_contract_number', 'service_reference'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Completion & Results', {
+            'fields': (
+                'completion_notes', 'attachments'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Recurrence', {
+            'fields': (
+                'is_recurring', 'recurrence_pattern', 'parent_task'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('System Information', {
+            'fields': (
+                'auto_generated', 'generation_source', 'days_until_due', 
+                'is_overdue', 'should_send_reminder', 'next_reminder_date',
+                'created_at', 'updated_at'
+            ),
+            'classes': ('collapse',)
+        })
+    )
+    
+    actions = [
+        'mark_as_completed', 'mark_as_in_progress', 'mark_as_pending',
+        'assign_to_me', 'send_reminders', 'mark_as_high_priority'
+    ]
+    
+    def get_queryset(self, request):
+        """Optimize queryset with related data."""
+        return super().get_queryset(request).select_related(
+            'vendor', 'assigned_to', 'created_by', 'service_reference', 'parent_task'
+        )
+    
+    def colored_title(self, obj):
+        """Display task title with color coding based on urgency."""
+        if obj.is_overdue:
+            color = '#dc3545'  # Red for overdue
+            icon = '🚨'
+        elif obj.days_until_due is not None and obj.days_until_due <= 1:
+            color = '#fd7e14'  # Orange for due soon
+            icon = '⚠️'
+        elif obj.status == 'completed':
+            color = '#28a745'  # Green for completed
+            icon = '✅'
+        else:
+            color = '#333'
+            icon = '📋'
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{} {}</span>',
+            color, icon, obj.title[:50] + ('...' if len(obj.title) > 50 else '')
+        )
+    colored_title.short_description = 'Task'
+    colored_title.admin_order_field = 'title'
+    
+    def vendor_link(self, obj):
+        """Display vendor with link to vendor admin."""
+        url = reverse('admin:vendors_vendor_change', args=[obj.vendor.pk])
+        return format_html(
+            '<a href="{}" style="text-decoration: none;">{}</a>',
+            url, obj.vendor.name
+        )
+    vendor_link.short_description = 'Vendor'
+    vendor_link.admin_order_field = 'vendor__name'
+    
+    def colored_task_type(self, obj):
+        """Display task type with color coding."""
+        colors = {
+            'contract_renewal': '#dc3545',
+            'contract_renegotiation': '#fd7e14',
+            'security_review': '#6f42c1',
+            'compliance_assessment': '#0d6efd',
+            'performance_review': '#198754',
+            'risk_assessment': '#fd7e14',
+            'audit': '#6610f2',
+            'certification_renewal': '#20c997',
+            'data_processing_agreement': '#0dcaf0',
+            'onboarding': '#28a745',
+            'offboarding': '#dc3545',
+            'custom': '#6c757d'
+        }
+        color = colors.get(obj.task_type, '#6c757d')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.get_task_type_display()
+        )
+    colored_task_type.short_description = 'Type'
+    colored_task_type.admin_order_field = 'task_type'
+    
+    def colored_status(self, obj):
+        """Display status with color coding."""
+        colors = {
+            'pending': '#6c757d',
+            'in_progress': '#0d6efd',
+            'completed': '#28a745',
+            'overdue': '#dc3545',
+            'cancelled': '#6c757d',
+            'on_hold': '#fd7e14'
+        }
+        icons = {
+            'pending': '⏳',
+            'in_progress': '🔄',
+            'completed': '✅',
+            'overdue': '🚨',
+            'cancelled': '❌',
+            'on_hold': '⏸️'
+        }
+        color = colors.get(obj.status, '#6c757d')
+        icon = icons.get(obj.status, '📋')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{} {}</span>',
+            color, icon, obj.get_status_display()
+        )
+    colored_status.short_description = 'Status'
+    colored_status.admin_order_field = 'status'
+    
+    def colored_priority(self, obj):
+        """Display priority with color coding."""
+        colors = {
+            'low': '#28a745',
+            'medium': '#fd7e14',
+            'high': '#dc3545',
+            'urgent': '#6f42c1',
+            'critical': '#dc3545'
+        }
+        icons = {
+            'low': '🟢',
+            'medium': '🟡',
+            'high': '🟠',
+            'urgent': '🔴',
+            'critical': '🚨'
+        }
+        color = colors.get(obj.priority, '#6c757d')
+        icon = icons.get(obj.priority, '📋')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{} {}</span>',
+            color, icon, obj.get_priority_display()
+        )
+    colored_priority.short_description = 'Priority'
+    colored_priority.admin_order_field = 'priority'
+    
+    def due_date_display(self, obj):
+        """Display due date with visual indicators."""
+        if not obj.due_date:
+            return '-'
+        
+        today = timezone.now().date()
+        if obj.due_date < today:
+            # Overdue
+            return format_html(
+                '<span style="color: #dc3545; font-weight: bold;">🚨 {} (OVERDUE)</span>',
+                obj.due_date.strftime('%b %d, %Y')
+            )
+        elif obj.due_date == today:
+            # Due today
+            return format_html(
+                '<span style="color: #fd7e14; font-weight: bold;">⚠️ {} (TODAY)</span>',
+                obj.due_date.strftime('%b %d, %Y')
+            )
+        elif obj.due_date <= today + timezone.timedelta(days=7):
+            # Due this week
+            return format_html(
+                '<span style="color: #fd7e14; font-weight: bold;">⏰ {}</span>',
+                obj.due_date.strftime('%b %d, %Y')
+            )
+        else:
+            # Normal
+            return obj.due_date.strftime('%b %d, %Y')
+    
+    due_date_display.short_description = 'Due Date'
+    due_date_display.admin_order_field = 'due_date'
+    
+    def assigned_to_name(self, obj):
+        """Display assigned user name."""
+        if obj.assigned_to:
+            return obj.assigned_to.get_full_name() or obj.assigned_to.username
+        return format_html('<span style="color: #fd7e14;">Unassigned</span>')
+    assigned_to_name.short_description = 'Assigned To'
+    assigned_to_name.admin_order_field = 'assigned_to__username'
+    
+    def days_until_due_display(self, obj):
+        """Display days until due with color coding."""
+        days = obj.days_until_due
+        if days is None:
+            return '-'
+        
+        if days < 0:
+            return format_html(
+                '<span style="color: #dc3545; font-weight: bold;">{} days overdue</span>',
+                abs(days)
+            )
+        elif days == 0:
+            return format_html(
+                '<span style="color: #fd7e14; font-weight: bold;">Due today</span>'
+            )
+        elif days <= 7:
+            return format_html(
+                '<span style="color: #fd7e14;">{} days</span>',
+                days
+            )
+        else:
+            return f"{days} days"
+    days_until_due_display.short_description = 'Days Until Due'
+    
+    def auto_generated_indicator(self, obj):
+        """Display auto-generated indicator."""
+        if obj.auto_generated:
+            return format_html(
+                '<span style="color: #0d6efd;" title="Auto-generated: {}">🤖 Auto</span>',
+                obj.generation_source or 'Unknown'
+            )
+        return format_html('<span style="color: #6c757d;">👤 Manual</span>')
+    auto_generated_indicator.short_description = 'Source'
+    
+    # Admin Actions
+    def mark_as_completed(self, request, queryset):
+        """Mark selected tasks as completed."""
+        count = 0
+        for task in queryset:
+            if task.status != 'completed':
+                task.status = 'completed'
+                task.save()
+                count += 1
+        
+        self.message_user(request, f'Successfully marked {count} tasks as completed.')
+    mark_as_completed.short_description = "Mark selected tasks as completed"
+    
+    def mark_as_in_progress(self, request, queryset):
+        """Mark selected tasks as in progress."""
+        count = queryset.exclude(status='in_progress').update(status='in_progress')
+        self.message_user(request, f'Successfully marked {count} tasks as in progress.')
+    mark_as_in_progress.short_description = "Mark selected tasks as in progress"
+    
+    def mark_as_pending(self, request, queryset):
+        """Mark selected tasks as pending."""
+        count = queryset.exclude(status='pending').update(status='pending')
+        self.message_user(request, f'Successfully marked {count} tasks as pending.')
+    mark_as_pending.short_description = "Mark selected tasks as pending"
+    
+    def assign_to_me(self, request, queryset):
+        """Assign selected tasks to current user."""
+        count = queryset.update(assigned_to=request.user)
+        self.message_user(request, f'Successfully assigned {count} tasks to you.')
+    assign_to_me.short_description = "Assign selected tasks to me"
+    
+    def send_reminders(self, request, queryset):
+        """Send reminders for selected tasks."""
+        from .task_notifications import get_notification_service
+        
+        notification_service = get_notification_service()
+        tasks = list(queryset.filter(status__in=['pending', 'in_progress']))
+        results = notification_service.send_batch_reminders(tasks)
+        
+        self.message_user(
+            request, 
+            f'Sent {results.get("sent", 0)} reminders, {results.get("failed", 0)} failed.'
+        )
+    send_reminders.short_description = "Send reminders for selected tasks"
+    
+    def mark_as_high_priority(self, request, queryset):
+        """Mark selected tasks as high priority."""
+        count = queryset.update(priority='high')
+        self.message_user(request, f'Successfully marked {count} tasks as high priority.')
+    mark_as_high_priority.short_description = "Mark selected tasks as high priority"

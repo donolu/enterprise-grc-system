@@ -12,12 +12,81 @@ from .models import Document, DocumentAccess, Tenant
 from .serializers import DocumentSerializer, DocumentListSerializer, DocumentAccessSerializer
 from billing.decorators import check_document_limits
 from billing.services import PlanEnforcementService
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List documents",
+        description="Retrieve a paginated list of documents uploaded by users in the current tenant with secure access control.",
+        tags=['Documents'],
+    ),
+    create=extend_schema(
+        summary="Upload document",
+        description="Upload a new document file to secure tenant-isolated storage with plan limit enforcement.",
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'file': {'type': 'string', 'format': 'binary', 'description': 'File to upload'},
+                    'title': {'type': 'string', 'description': 'Document title'},
+                    'description': {'type': 'string', 'description': 'Document description'},
+                    'is_public': {'type': 'boolean', 'description': 'Whether document is publicly accessible'},
+                }
+            }
+        },
+        responses={
+            201: DocumentSerializer,
+            400: OpenApiResponse(description='Invalid file or data'),
+            403: OpenApiResponse(description='Document limit exceeded for current plan'),
+        },
+        tags=['Documents'],
+    ),
+    retrieve=extend_schema(
+        summary="Get document details",
+        description="Retrieve detailed information about a specific document including metadata and access information.",
+        tags=['Documents'],
+    ),
+    update=extend_schema(
+        summary="Update document",
+        description="Update document metadata. File cannot be changed after upload.",
+        tags=['Documents'],
+    ),
+    destroy=extend_schema(
+        summary="Delete document",
+        description="Delete a document and its file from storage. Only the uploader can delete documents.",
+        tags=['Documents'],
+    ),
+)
 class DocumentViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for document upload and management.
-    Demonstrates Azure Blob Storage integration with tenant isolation.
+    **Document Management and File Storage**
+    
+    This ViewSet provides comprehensive document management with Azure Blob Storage integration:
+    - Secure file upload with tenant isolation
+    - Plan-based storage limits enforcement
+    - Access logging and audit trails
+    - Secure download with access control
+    
+    **Key Features:**
+    - Azure Blob Storage integration with tenant containers
+    - Plan-based document limits (Free: 100MB, Basic: 1GB, Enterprise: 10GB)
+    - Comprehensive access logging for security audit
+    - Support for various file types and sizes
+    - Secure download URLs with access control
+    
+    **Security Features:**
+    - Tenant isolation in storage containers
+    - Access control and permission checking
+    - Audit logging for all file access
+    - Secure file URL generation
+    
+    **Common Use Cases:**
+    - Upload evidence files for assessments
+    - Store compliance documentation
+    - Manage policy and procedure documents
+    - Download files with access tracking
     """
     serializer_class = DocumentSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -45,11 +114,34 @@ class DocumentViewSet(viewsets.ModelViewSet):
         
         serializer.save(uploaded_by=self.request.user)
     
+    @extend_schema(
+        summary="Download document",
+        description="Download a document file with access logging and security checks. Returns download URL or file stream.",
+        responses={
+            200: OpenApiResponse(
+                description='Download URL and file information',
+                examples=[
+                    OpenApiExample(
+                        'Download Response',
+                        summary='Successful download request',
+                        value={
+                            'download_url': 'https://storage.blob.core.windows.net/tenant-123/documents/file.pdf',
+                            'filename': 'compliance_report.pdf',
+                            'size': 2048576
+                        }
+                    ),
+                ]
+            ),
+            403: OpenApiResponse(description='Permission denied'),
+            404: OpenApiResponse(description='File not found or inaccessible'),
+        },
+        tags=['Documents'],
+    )
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
         """
-        Download a document file.
-        Creates an access log entry for audit purposes.
+        Download a document file with secure access control and audit logging.
+        Creates an access log entry for compliance and security audit purposes.
         """
         document = self.get_object()
         

@@ -1,0 +1,65 @@
+Risk Action Status Update
+
+Hello {{ user.get_full_name|default:user.username }},
+
+The status of a risk action has been updated.
+
+STATUS CHANGE:
+==============
+{{ old_status|title }} → {{ new_status|title }}
+
+ACTION DETAILS:
+===============
+Action ID: {{ action.action_id }}
+Title: {{ action.title }}
+Priority: {{ action.get_priority_display }}
+Action Type: {{ action.get_action_type_display }}
+Due Date: {{ action.due_date|date:"F d, Y" }}
+{% if action.days_until_due > 0 %}({{ action.days_until_due }} days remaining)
+{% elif action.days_until_due == 0 %}(Due Today)
+{% else %}({{ action.days_until_due|add:"-1" }} days overdue)
+{% endif %}
+Current Status: {{ action.get_status_display }}
+{% if action.progress_percentage > 0 %}Progress: {{ action.progress_percentage }}% Complete{% endif %}
+
+RELATED RISK:
+=============
+Risk ID: {{ action.risk.risk_id }}
+Title: {{ action.risk.title }}
+Risk Level: {{ action.risk.get_risk_level_display }}
+Risk Owner: {{ action.risk.risk_owner.get_full_name|default:action.risk.risk_owner.username|default:"Unassigned" }}
+
+{% if changed_by %}UPDATED BY:
+===========
+{{ changed_by.get_full_name|default:changed_by.username }}
+{{ "now"|date:"F d, Y \a\t g:i A" }}
+{% endif %}
+
+{% if new_status == 'completed' %}CONGRATULATIONS!
+================
+Great job on completing this risk action! The risk mitigation efforts are now in place.
+
+{% elif new_status == 'in_progress' %}NEXT STEPS:
+===========
+• Continue working on the required tasks
+• Update progress percentage regularly  
+• Add notes to track your work
+• Upload evidence as tasks are completed
+
+{% elif new_status == 'cancelled' %}ACTION CANCELLED:
+================
+This action has been cancelled. Please review the risk to determine if alternative actions are needed.
+
+{% elif new_status == 'deferred' %}ACTION DEFERRED:
+===============
+This action has been deferred. Work will resume when conditions allow or dependencies are resolved.
+{% endif %}
+
+To view the action details, visit:
+{{ action_url }}
+
+---
+This notification was sent because the status of a risk action you're involved with has changed.
+
+Manage your notification preferences at:
+{{ site_domain }}/admin/risk/riskactionreminderconfiguration/

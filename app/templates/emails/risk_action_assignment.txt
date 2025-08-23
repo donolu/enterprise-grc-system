@@ -1,0 +1,67 @@
+Risk Action Assignment
+
+Hello {{ user.get_full_name|default:user.username }},
+
+You have been assigned a new risk action that requires your attention.
+
+ACTION DETAILS:
+===============
+Action ID: {{ action.action_id }}
+Title: {{ action.title }}
+Priority: {{ action.get_priority_display }}
+Action Type: {{ action.get_action_type_display }}
+Due Date: {{ action.due_date|date:"F d, Y" }}
+{% if action.days_until_due > 0 %}({{ action.days_until_due }} days remaining)
+{% elif action.days_until_due == 0 %}(Due Today)
+{% else %}({{ action.days_until_due|add:"-1" }} days overdue)
+{% endif %}
+Start Date: {% if action.start_date %}{{ action.start_date|date:"F d, Y" }}{% else %}Not specified{% endif %}
+
+{% if action.description %}Description:
+{{ action.description }}
+{% endif %}
+
+{% if action.success_criteria %}Success Criteria:
+{{ action.success_criteria }}
+{% endif %}
+
+{% if action.dependencies %}Dependencies:
+{{ action.dependencies }}
+{% endif %}
+
+RELATED RISK:
+=============
+Risk ID: {{ risk.risk_id }}
+Title: {{ risk.title }}
+Risk Level: {{ risk.get_risk_level_display }}
+Risk Owner: {{ risk.risk_owner.get_full_name|default:risk.risk_owner.username|default:"Unassigned" }}
+
+{% if assigner %}ASSIGNED BY:
+============
+{{ assigner.get_full_name|default:assigner.username }}
+{% if assigner.email %}Contact: {{ assigner.email }}{% endif %}
+{% endif %}
+
+GETTING STARTED:
+================
+• Review the requirements - Understand what needs to be accomplished
+• Check the success criteria - Know what defines completion  
+• Review dependencies - Identify any prerequisites or blockers
+• Update status to "In Progress" - When you begin working
+• Track your progress - Update percentage completion regularly
+• Add notes - Document your progress and any issues
+• Upload evidence - Provide documentation as you complete tasks
+• Communicate - Reach out to the risk owner or assigner with questions
+
+To view and update this action, visit:
+{{ action_url }}
+
+To view the related risk, visit:
+{{ risk_url }}
+
+---
+This notification was sent because you were assigned a new risk action.
+If you have questions about this assignment, please contact {{ assigner.get_full_name|default:assigner.username|default:"the risk owner" }}.
+
+Manage your notification preferences at:
+{{ site_domain }}/admin/risk/riskactionreminderconfiguration/

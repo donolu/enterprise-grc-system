@@ -7,7 +7,7 @@ supporting CRUD operations, filtering, and data validation.
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Vendor, VendorCategory, VendorContact, VendorService, VendorNote
+from .models import Vendor, VendorCategory, VendorContact, VendorService, VendorNote, VendorTask
 
 User = get_user_model()
 
@@ -396,3 +396,276 @@ class BulkVendorCreateSerializer(serializers.Serializer):
             vendors.append(vendor)
         
         return vendors
+
+
+class VendorTaskListSerializer(serializers.ModelSerializer):
+    """Serializer for vendor task list view."""
+    
+    vendor_name = serializers.CharField(source='vendor.name', read_only=True)
+    vendor_id = serializers.CharField(source='vendor.vendor_id', read_only=True)
+    assigned_to_name = serializers.CharField(source='assigned_to.get_full_name', read_only=True)
+    task_type_display = serializers.CharField(source='get_task_type_display', read_only=True)
+    priority_display = serializers.CharField(source='get_priority_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    days_until_due = serializers.ReadOnlyField()
+    is_overdue = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = VendorTask
+        fields = [
+            'id', 'task_id', 'vendor', 'vendor_name', 'vendor_id',
+            'task_type', 'task_type_display', 'title', 'due_date',
+            'priority', 'priority_display', 'status', 'status_display',
+            'assigned_to', 'assigned_to_name', 'days_until_due', 'is_overdue',
+            'auto_generated', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'task_id', 'vendor_name', 'vendor_id', 'assigned_to_name',
+            'task_type_display', 'priority_display', 'status_display',
+            'days_until_due', 'is_overdue', 'auto_generated', 'created_at', 'updated_at'
+        ]
+
+
+class VendorTaskDetailSerializer(serializers.ModelSerializer):
+    """Serializer for vendor task detail view."""
+    
+    vendor_details = VendorListSerializer(source='vendor', read_only=True)
+    assigned_to_details = serializers.SerializerMethodField()
+    created_by_details = serializers.SerializerMethodField()
+    service_details = serializers.SerializerMethodField()
+    task_type_display = serializers.CharField(source='get_task_type_display', read_only=True)
+    priority_display = serializers.CharField(source='get_priority_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    
+    # Computed fields
+    days_until_due = serializers.ReadOnlyField()
+    is_overdue = serializers.ReadOnlyField()
+    should_send_reminder = serializers.ReadOnlyField()
+    next_reminder_date = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = VendorTask
+        fields = [
+            'id', 'task_id', 'vendor', 'vendor_details', 'task_type', 'task_type_display',
+            'title', 'description', 'due_date', 'start_date', 'completed_date',
+            'priority', 'priority_display', 'status', 'status_display',
+            'assigned_to', 'assigned_to_details', 'created_by', 'created_by_details',
+            'reminder_days', 'last_reminder_sent', 'reminder_recipients',
+            'related_contract_number', 'service_reference', 'service_details',
+            'completion_notes', 'attachments', 'is_recurring', 'recurrence_pattern',
+            'parent_task', 'auto_generated', 'generation_source',
+            'days_until_due', 'is_overdue', 'should_send_reminder', 'next_reminder_date',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'task_id', 'vendor_details', 'task_type_display', 'priority_display',
+            'status_display', 'assigned_to_details', 'created_by_details', 'service_details',
+            'days_until_due', 'is_overdue', 'should_send_reminder', 'next_reminder_date',
+            'auto_generated', 'generation_source', 'created_at', 'updated_at'
+        ]
+    
+    def get_assigned_to_details(self, obj):
+        """Get assigned user details."""
+        if obj.assigned_to:
+            return {
+                'id': obj.assigned_to.id,
+                'username': obj.assigned_to.username,
+                'full_name': obj.assigned_to.get_full_name(),
+                'email': obj.assigned_to.email,
+            }
+        return None
+    
+    def get_created_by_details(self, obj):
+        """Get creator user details."""
+        if obj.created_by:
+            return {
+                'id': obj.created_by.id,
+                'username': obj.created_by.username,
+                'full_name': obj.created_by.get_full_name(),
+            }
+        return None
+    
+    def get_service_details(self, obj):
+        """Get related service details."""
+        if obj.service_reference:
+            return {
+                'id': obj.service_reference.id,
+                'service_name': obj.service_reference.service_name,
+                'service_category': obj.service_reference.get_service_category_display(),
+            }
+        return None
+
+
+class VendorTaskCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating vendor tasks."""
+    
+    class Meta:
+        model = VendorTask
+        fields = [
+            'vendor', 'task_type', 'title', 'description', 'due_date', 'start_date',
+            'priority', 'status', 'assigned_to', 'reminder_days', 'reminder_recipients',
+            'related_contract_number', 'service_reference', 'completion_notes',
+            'attachments', 'is_recurring', 'recurrence_pattern'
+        ]
+    
+    def validate_due_date(self, value):
+        """Validate due date is not in the past for new tasks."""
+        from django.utils import timezone
+        
+        if not self.instance and value < timezone.now().date():
+            raise serializers.ValidationError("Due date cannot be in the past for new tasks.")
+        
+        return value
+    
+    def validate_recurrence_pattern(self, value):
+        """Validate recurrence pattern structure."""
+        if value:
+            required_fields = ['frequency']
+            for field in required_fields:
+                if field not in value:
+                    raise serializers.ValidationError(f"Recurrence pattern must include '{field}' field.")
+            
+            valid_frequencies = ['monthly', 'quarterly', 'yearly']
+            if value['frequency'] not in valid_frequencies:
+                raise serializers.ValidationError(f"Frequency must be one of: {', '.join(valid_frequencies)}")
+        
+        return value
+    
+    def validate_reminder_days(self, value):
+        """Validate reminder days configuration."""
+        if value:
+            if not isinstance(value, list):
+                raise serializers.ValidationError("Reminder days must be a list of integers.")
+            
+            if not all(isinstance(day, int) and day > 0 for day in value):
+                raise serializers.ValidationError("Reminder days must be positive integers.")
+            
+            if len(value) > 10:
+                raise serializers.ValidationError("Cannot have more than 10 reminder intervals.")
+        
+        return value
+    
+    def create(self, validated_data):
+        """Create a new vendor task."""
+        validated_data['created_by'] = self.context['request'].user
+        return super().create(validated_data)
+
+
+class VendorTaskStatusUpdateSerializer(serializers.Serializer):
+    """Serializer for updating task status."""
+    
+    status = serializers.ChoiceField(choices=VendorTask.STATUS_CHOICES)
+    completion_notes = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate(self, data):
+        """Validate status update."""
+        if data['status'] == 'completed' and not data.get('completion_notes'):
+            raise serializers.ValidationError({
+                'completion_notes': 'Completion notes are required when marking task as completed.'
+            })
+        
+        return data
+
+
+class VendorTaskBulkActionSerializer(serializers.Serializer):
+    """Serializer for bulk task actions."""
+    
+    task_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        min_length=1,
+        max_length=100
+    )
+    action = serializers.ChoiceField(choices=[
+        ('update_status', 'Update Status'),
+        ('assign_user', 'Assign User'),
+        ('update_priority', 'Update Priority'),
+        ('send_reminders', 'Send Reminders'),
+    ])
+    
+    # Action-specific fields
+    status = serializers.ChoiceField(choices=VendorTask.STATUS_CHOICES, required=False)
+    assigned_to = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        required=False
+    )
+    priority = serializers.ChoiceField(choices=VendorTask.PRIORITY_CHOICES, required=False)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate(self, data):
+        """Validate bulk action parameters."""
+        action = data['action']
+        
+        if action == 'update_status' and not data.get('status'):
+            raise serializers.ValidationError({'status': 'Status is required for status update action.'})
+        
+        if action == 'assign_user' and not data.get('assigned_to'):
+            raise serializers.ValidationError({'assigned_to': 'User is required for assign user action.'})
+        
+        if action == 'update_priority' and not data.get('priority'):
+            raise serializers.ValidationError({'priority': 'Priority is required for priority update action.'})
+        
+        return data
+
+
+class VendorTaskSummarySerializer(serializers.Serializer):
+    """Serializer for vendor task summary statistics."""
+    
+    # Total counts
+    total_tasks = serializers.IntegerField()
+    active_tasks = serializers.IntegerField()
+    completed_tasks = serializers.IntegerField()
+    overdue_tasks = serializers.IntegerField()
+    
+    # Status breakdown
+    status_breakdown = serializers.DictField()
+    
+    # Priority breakdown
+    priority_breakdown = serializers.DictField()
+    
+    # Task type breakdown
+    task_type_breakdown = serializers.DictField()
+    
+    # Due date analysis
+    due_this_week = serializers.IntegerField()
+    due_this_month = serializers.IntegerField()
+    due_next_month = serializers.IntegerField()
+    
+    # Assignment analysis
+    assigned_tasks = serializers.IntegerField()
+    unassigned_tasks = serializers.IntegerField()
+    
+    # Automation statistics
+    auto_generated_tasks = serializers.IntegerField()
+    manual_tasks = serializers.IntegerField()
+    
+    # Performance metrics
+    average_completion_time = serializers.DecimalField(max_digits=10, decimal_places=2, allow_null=True)
+    on_time_completion_rate = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True)
+
+
+class VendorTaskReminderSerializer(serializers.Serializer):
+    """Serializer for task reminder operations."""
+    
+    task_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        help_text="Specific task IDs to send reminders for (optional)"
+    )
+    force_send = serializers.BooleanField(
+        default=False,
+        help_text="Send reminders even if not scheduled for today"
+    )
+    additional_recipients = serializers.ListField(
+        child=serializers.EmailField(),
+        required=False,
+        help_text="Additional email addresses to include"
+    )
+    
+    def validate_task_ids(self, value):
+        """Validate task IDs exist and are accessible."""
+        if value:
+            existing_tasks = VendorTask.objects.filter(id__in=value).count()
+            if existing_tasks != len(value):
+                raise serializers.ValidationError("One or more task IDs are invalid.")
+        
+        return value
