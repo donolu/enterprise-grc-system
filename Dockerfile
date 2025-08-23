@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for production-ready GRC Platform
 
 # Build stage
-FROM python:3.12-slim as builder
+FROM python:3.13-slim as builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -29,7 +29,7 @@ RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
 # Production stage
-FROM python:3.12-slim as production
+FROM python:3.13-slim as production
 
 # Build arguments
 ARG BUILD_ENV=production
