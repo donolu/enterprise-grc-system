@@ -103,7 +103,7 @@ jobs:
         azcliversion: latest
 
     - name: Deploy to Azure App Service (Staging)
-      uses: azure/webapps-deploy@v2
+      uses: azure/webapps-deploy@v3
       with:
         app-name: ${{ secrets.AZURE_WEBAPP_NAME_STAGING }}
         images: ${{ needs.build-and-push.outputs.image-tag }}
@@ -186,7 +186,7 @@ jobs:
             --storage-uri "https://${{ secrets.AZURE_STORAGE_ACCOUNT }}.blob.core.windows.net/backups/$BACKUP_NAME.bacpac"
 
     - name: Deploy to Azure App Service (Production)
-      uses: azure/webapps-deploy@v2
+      uses: azure/webapps-deploy@v3
       with:
         app-name: ${{ secrets.AZURE_WEBAPP_NAME_PRODUCTION }}
         images: ${{ needs.build-and-push.outputs.image-tag }}
