@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assessment Reminder</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+        .urgency-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+        .urgency-critical {
+            background-color: #dc3545;
+            color: white;
+        }
+        .urgency-high {
+            background-color: #fd7e14;
+            color: white;
+        }
+        .urgency-medium {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .urgency-low {
+            background-color: #28a745;
+            color: white;
+        }
+        .assessment-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #0066cc;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .assessment-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        .assessment-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .detail-value {
+            color: #333;
+            font-size: 14px;
+        }
+        .action-button {
+            display: inline-block;
+            background-color: #0066cc;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .action-button:hover {
+            background-color: #0052a3;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .framework-badge {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="urgency-badge urgency-{{ urgency_class }}">
+                {{ urgency_message }}
+            </div>
+            <h1>Assessment Reminder</h1>
+            <p>Hello {{ user.get_full_name|default:user.username }},</p>
+            <p>This is a reminder about your assigned assessment that requires attention.</p>
+        </div>
+
+        <div class="assessment-card">
+            <div class="assessment-title">
+                {{ control.control_id }}: {{ control.title }}
+            </div>
+            
+            <div class="assessment-details">
+                <div class="detail-item">
+                    <span class="detail-label">Framework</span>
+                    <span class="detail-value">
+                        <span class="framework-badge">{{ framework.short_name }}</span>
+                        {{ framework.name }}
+                    </span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Current Status</span>
+                    <span class="detail-value">{{ assessment.get_status_display }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Due Date</span>
+                    <span class="detail-value">
+                        {% if assessment.due_date %}
+                            {{ assessment.due_date|date:"F d, Y" }}
+                            {% if is_overdue %}
+                                <strong style="color: #dc3545;">({{ assessment.days_until_due|add:"-1" }} days overdue)</strong>
+                            {% elif assessment.days_until_due == 0 %}
+                                <strong style="color: #fd7e14;">(Due Today)</strong>
+                            {% elif assessment.days_until_due > 0 %}
+                                <strong style="color: #28a745;">({{ assessment.days_until_due }} days remaining)</strong>
+                            {% endif %}
+                        {% else %}
+                            Not set
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Implementation Status</span>
+                    <span class="detail-value">{{ assessment.get_implementation_status_display }}</span>
+                </div>
+            </div>
+
+            {% if config.include_assessment_details and control.description %}
+            <div style="margin-top: 20px;">
+                <div class="detail-label">Control Description</div>
+                <div class="detail-value" style="margin-top: 8px;">
+                    {{ control.description|truncatewords:50 }}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if assessment.assessment_notes %}
+            <div style="margin-top: 15px;">
+                <div class="detail-label">Assessment Notes</div>
+                <div class="detail-value" style="margin-top: 8px; font-style: italic;">
+                    {{ assessment.assessment_notes|truncatewords:30 }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if config.include_remediation_items and assessment.remediation_due_date %}
+        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 0 6px 6px 0;">
+            <strong>Remediation Required</strong><br>
+            <span style="font-size: 14px;">
+                Remediation due: {{ assessment.remediation_due_date|date:"F d, Y" }}
+                {% if assessment.remediation_owner %}
+                    (Owner: {{ assessment.remediation_owner.get_full_name|default:assessment.remediation_owner.username }})
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
+
+        <div style="text-align: center;">
+            <a href="https://{{ site_domain }}/assessments/{{ assessment.id }}/" class="action-button">
+                View Assessment Details
+            </a>
+        </div>
+
+        <div style="margin-top: 25px; padding: 15px; background-color: #e7f3ff; border-radius: 6px;">
+            <h3 style="margin-top: 0; color: #0066cc;">Next Steps:</h3>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                {% if assessment.status == 'not_started' %}
+                    <li>Review the control requirements and begin assessment</li>
+                    <li>Update the assessment status to "In Progress"</li>
+                    <li>Document current implementation state</li>
+                {% elif assessment.status == 'in_progress' %}
+                    <li>Complete the gap analysis and implementation approach</li>
+                    <li>Gather evidence of control implementation</li>
+                    <li>Update status to "Under Review" when ready</li>
+                {% elif assessment.status == 'under_review' %}
+                    <li>Address any reviewer feedback</li>
+                    <li>Finalize assessment documentation</li>
+                    <li>Mark as "Complete" once all requirements are met</li>
+                {% endif %}
+                <li>Upload supporting evidence and documentation</li>
+                <li>Contact your reviewer if you have questions</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated reminder from your compliance management system.</p>
+            <p>If you no longer wish to receive these reminders, you can update your notification preferences in your account settings.</p>
+            <p style="margin-top: 15px;">
+                <a href="https://{{ site_domain }}/settings/notifications/" style="color: #0066cc;">Manage Notification Preferences</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

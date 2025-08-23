@@ -1,0 +1,63 @@
+WEEKLY ASSESSMENT DIGEST
+
+Hello {{ user.get_full_name|default:user.username }},
+
+Here's your weekly summary of upcoming and overdue assessments from {{ week_start|date:"F d" }} to {{ week_end|date:"F d, Y" }}.
+
+SUMMARY
+=======
+Overdue Assessments: {{ overdue_assessments.count }}
+Upcoming Assessments: {{ upcoming_assessments.count }}
+Total Items: {{ overdue_assessments.count|add:upcoming_assessments.count }}
+
+{% if overdue_assessments %}
+OVERDUE ASSESSMENTS ({{ overdue_assessments.count }})
+================================
+{% for assessment in overdue_assessments %}
+🚨 {{ assessment.control.control_id }}: {{ assessment.control.title|truncatechars:60 }}
+   Framework: {{ assessment.control.clause.framework.short_name }}
+   Status: {{ assessment.get_status_display }}
+   Due Date: {{ assessment.due_date|date:"M d, Y" }} ({{ assessment.days_until_due|add:"-1" }} days overdue)
+
+{% endfor %}
+{% endif %}
+
+{% if upcoming_assessments %}
+UPCOMING ASSESSMENTS ({{ upcoming_assessments.count }})
+==============================
+{% for assessment in upcoming_assessments %}
+📋 {{ assessment.control.control_id }}: {{ assessment.control.title|truncatechars:60 }}
+   Framework: {{ assessment.control.clause.framework.short_name }}
+   Status: {{ assessment.get_status_display }}
+   Due Date: {{ assessment.due_date|date:"M d, Y" }}{% if assessment.days_until_due == 0 %} (DUE TODAY){% else %} ({{ assessment.days_until_due }} days remaining){% endif %}
+
+{% endfor %}
+{% endif %}
+
+{% if not overdue_assessments and not upcoming_assessments %}
+🎉 GREAT WORK!
+==============
+You don't have any upcoming or overdue assessments this week.
+Keep up the excellent compliance management!
+
+{% endif %}
+WEEKLY TIPS
+===========
+• Prioritize overdue items: Focus on completing overdue assessments first
+• Plan ahead: Review upcoming assessments and schedule time for completion
+• Gather evidence: Collect supporting documentation as you work
+• Ask for help: Reach out to reviewers or team members if needed
+• Update status: Keep assessment status current to reflect your progress
+
+VIEW ALL ASSESSMENTS
+====================
+Visit: https://{{ site_domain }}/assessments/
+
+NOTIFICATION SETTINGS
+=====================
+This weekly digest is sent every {{ config.digest_day_of_week|yesno:"Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday" }}.
+To manage your notification preferences, visit:
+https://{{ site_domain }}/settings/notifications/
+
+---
+This is an automated digest from your compliance management system.

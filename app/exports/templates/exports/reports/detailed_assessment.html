@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ report.title }}</title>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ report.title }}</h1>
+        <div class="subtitle">
+            Detailed Assessment Report
+            <br>
+            Generated: {{ generated_at|date:"F d, Y g:i A" }}
+            <br>
+            Requested by: {{ report.requested_by.get_full_name|default:report.requested_by.username }}
+        </div>
+    </div>
+
+    {% for assessment in assessments %}
+    <div class="section {% if not forloop.first %}page-break{% endif %}">
+        <h2>{{ assessment.control.control_id }}: {{ assessment.control.title }}</h2>
+        
+        <div class="assessment-details">
+            <table style="width: 100%; margin-bottom: 1em;">
+                <tr>
+                    <td style="font-weight: bold; width: 150px;">Status:</td>
+                    <td>
+                        <span class="status-badge status-{{ assessment.status }}">
+                            {{ assessment.get_status_display }}
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold;">Assigned To:</td>
+                    <td>{{ assessment.assigned_to.get_full_name|default:assessment.assigned_to.username|default:"Unassigned" }}</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold;">Due Date:</td>
+                    <td>
+                        {% if assessment.due_date %}
+                            {{ assessment.due_date|date:"F d, Y" }}
+                            {% if assessment.status != 'completed' and assessment.due_date < today %}
+                                <span class="status-badge status-overdue">OVERDUE</span>
+                            {% endif %}
+                        {% else %}
+                            Not Set
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold;">Implementation Status:</td>
+                    <td>{{ assessment.get_implementation_status_display }}</td>
+                </tr>
+                {% if assessment.started_date %}
+                <tr>
+                    <td style="font-weight: bold;">Started:</td>
+                    <td>{{ assessment.started_date|date:"F d, Y" }}</td>
+                </tr>
+                {% endif %}
+                {% if assessment.completed_date %}
+                <tr>
+                    <td style="font-weight: bold;">Completed:</td>
+                    <td>{{ assessment.completed_date|date:"F d, Y" }}</td>
+                </tr>
+                {% endif %}
+            </table>
+        </div>
+
+        {% if assessment.control.description %}
+        <div style="margin: 1em 0;">
+            <h3 style="color: #0066cc; font-size: 12pt;">Control Description</h3>
+            <p>{{ assessment.control.description }}</p>
+        </div>
+        {% endif %}
+
+        {% if report.include_implementation_notes and assessment.implementation_notes %}
+        <div style="margin: 1em 0;">
+            <h3 style="color: #0066cc; font-size: 12pt;">Implementation Notes</h3>
+            <div style="background-color: #f8f9fa; padding: 1em; border-left: 4px solid #0066cc;">
+                {{ assessment.implementation_notes|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if assessment.testing_notes %}
+        <div style="margin: 1em 0;">
+            <h3 style="color: #0066cc; font-size: 12pt;">Testing Notes</h3>
+            <div style="background-color: #f8f9fa; padding: 1em; border-left: 4px solid #28a745;">
+                {{ assessment.testing_notes|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if report.include_evidence_summary and assessment.evidence_links.exists %}
+        <div style="margin: 1em 0;">
+            <h3 style="color: #0066cc; font-size: 12pt;">Evidence Summary ({{ assessment.evidence_links.count }} items)</h3>
+            <table class="assessment-table">
+                <thead>
+                    <tr>
+                        <th>Evidence Title</th>
+                        <th>Type</th>
+                        <th>Purpose</th>
+                        <th>Primary</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for evidence_link in assessment.evidence_links.all %}
+                    <tr>
+                        <td>{{ evidence_link.evidence.title }}</td>
+                        <td>{{ evidence_link.evidence.get_evidence_type_display }}</td>
+                        <td>{{ evidence_link.evidence_purpose|default:"General Evidence" }}</td>
+                        <td>
+                            {% if evidence_link.is_primary_evidence %}
+                                <span class="status-badge" style="background-color: #28a745;">PRIMARY</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ evidence_link.evidence.evidence_date|date:"M d, Y" }}</td>
+                    </tr>
+                    {% if evidence_link.evidence.description %}
+                    <tr>
+                        <td colspan="5" style="font-style: italic; padding-left: 2em; color: #666;">
+                            {{ evidence_link.evidence.description }}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% elif report.include_evidence_summary %}
+        <div style="margin: 1em 0;">
+            <h3 style="color: #dc3545; font-size: 12pt;">⚠️ No Evidence Provided</h3>
+            <p style="color: #666;">This assessment does not have any supporting evidence attached.</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    {% if not assessments %}
+    <div class="section">
+        <p>No assessments found for the specified criteria.</p>
+    </div>
+    {% endif %}
+</body>
+</html>

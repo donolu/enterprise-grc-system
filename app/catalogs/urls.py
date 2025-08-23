@@ -9,6 +9,8 @@ router.register(r'clauses', views.ClauseViewSet)
 router.register(r'controls', views.ControlViewSet)
 router.register(r'evidence', views.ControlEvidenceViewSet)
 router.register(r'mappings', views.FrameworkMappingViewSet)
+router.register(r'assessments', views.ControlAssessmentViewSet)
+router.register(r'assessment-evidence', views.AssessmentEvidenceViewSet)
 
 app_name = 'catalogs'
 

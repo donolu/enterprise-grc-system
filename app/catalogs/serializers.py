@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Framework, Clause, Control, ControlEvidence, FrameworkMapping
+from .models import Framework, Clause, Control, ControlEvidence, FrameworkMapping, ControlAssessment, AssessmentEvidence
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -262,3 +262,246 @@ class ControlTestingSerializer(serializers.Serializer):
         control.add_change_log_entry(user, change_description)
         
         return control
+
+
+class ControlAssessmentListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for assessment listings."""
+    control_id = serializers.CharField(source='control.control_id', read_only=True)
+    control_name = serializers.CharField(source='control.name', read_only=True)
+    framework_name = serializers.CharField(source='control.clauses.first.framework.name', read_only=True)
+    assigned_to_name = serializers.CharField(source='assigned_to.get_full_name', read_only=True)
+    reviewer_name = serializers.CharField(source='reviewer.get_full_name', read_only=True)
+    is_overdue = serializers.ReadOnlyField()
+    is_complete = serializers.ReadOnlyField()
+    completion_percentage = serializers.ReadOnlyField()
+    days_until_due = serializers.ReadOnlyField()
+    evidence_count = serializers.SerializerMethodField()
+    has_primary_evidence = serializers.SerializerMethodField()
+    
+    def get_evidence_count(self, obj):
+        """Get count of evidence linked to this assessment."""
+        return obj.evidence_links.count()
+    
+    def get_has_primary_evidence(self, obj):
+        """Check if assessment has primary evidence."""
+        return obj.evidence_links.filter(is_primary_evidence=True).exists()
+    
+    class Meta:
+        model = ControlAssessment
+        fields = [
+            'id', 'assessment_id', 'control_id', 'control_name', 'framework_name',
+            'applicability', 'status', 'implementation_status', 'assigned_to_name',
+            'reviewer_name', 'due_date', 'completion_percentage', 'is_overdue',
+            'is_complete', 'days_until_due', 'risk_rating', 'compliance_score',
+            'evidence_count', 'has_primary_evidence', 'created_at', 'updated_at'
+        ]
+
+
+class ControlAssessmentDetailSerializer(serializers.ModelSerializer):
+    """Detailed assessment serializer with full information."""
+    control_details = ControlListSerializer(source='control', read_only=True)
+    assigned_to_name = serializers.CharField(source='assigned_to.get_full_name', read_only=True)
+    reviewer_name = serializers.CharField(source='reviewer.get_full_name', read_only=True)
+    remediation_owner_name = serializers.CharField(source='remediation_owner.get_full_name', read_only=True)
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+    
+    # Computed properties
+    is_overdue = serializers.ReadOnlyField()
+    is_complete = serializers.ReadOnlyField()
+    completion_percentage = serializers.ReadOnlyField()
+    days_until_due = serializers.ReadOnlyField()
+    
+    # Related evidence
+    evidence_count = serializers.SerializerMethodField()
+    primary_evidence = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ControlAssessment
+        fields = [
+            'id', 'assessment_id', 'control', 'control_details', 'applicability',
+            'applicability_rationale', 'status', 'implementation_status',
+            'assigned_to', 'assigned_to_name', 'reviewer', 'reviewer_name',
+            'due_date', 'started_date', 'completed_date', 'current_state_description',
+            'target_state_description', 'gap_analysis', 'implementation_approach',
+            'maturity_level', 'risk_rating', 'compliance_score', 'assessment_notes',
+            'reviewer_comments', 'remediation_plan', 'remediation_due_date',
+            'remediation_owner', 'remediation_owner_name', 'version', 'change_log',
+            'is_overdue', 'is_complete', 'completion_percentage', 'days_until_due',
+            'evidence_count', 'primary_evidence', 'created_by_username',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'assessment_id', 'started_date', 'completed_date', 'version',
+            'change_log', 'created_at', 'updated_at'
+        ]
+    
+    def get_evidence_count(self, obj):
+        return obj.evidence_links.count()
+    
+    def get_primary_evidence(self, obj):
+        primary_evidence = obj.evidence_links.filter(is_primary_evidence=True)
+        if primary_evidence.exists():
+            return ControlEvidenceSerializer(primary_evidence.first().evidence).data
+        return None
+
+
+class ControlAssessmentCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating assessments."""
+    
+    class Meta:
+        model = ControlAssessment
+        fields = [
+            'control', 'applicability', 'applicability_rationale', 'status',
+            'implementation_status', 'assigned_to', 'reviewer', 'due_date',
+            'current_state_description', 'target_state_description', 'gap_analysis',
+            'implementation_approach', 'maturity_level', 'risk_rating',
+            'compliance_score', 'assessment_notes', 'reviewer_comments',
+            'remediation_plan', 'remediation_due_date', 'remediation_owner'
+        ]
+    
+    def create(self, validated_data):
+        validated_data['created_by'] = self.context['request'].user
+        return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        # Track significant changes for change log
+        significant_fields = [
+            'applicability', 'status', 'implementation_status', 'assigned_to',
+            'due_date', 'risk_rating', 'compliance_score'
+        ]
+        
+        changes = []
+        for field in significant_fields:
+            if field in validated_data and getattr(instance, field) != validated_data[field]:
+                old_value = getattr(instance, field)
+                new_value = validated_data[field]
+                changes.append(f'{field}: "{old_value}" → "{new_value}"')
+        
+        # Update the instance
+        updated_instance = super().update(instance, validated_data)
+        
+        # Log changes if any
+        if changes:
+            user = self.context['request'].user
+            change_description = f'Assessment updated: {", ".join(changes)}'
+            updated_instance.add_change_log_entry(user, change_description)
+        
+        return updated_instance
+
+
+class AssessmentStatusUpdateSerializer(serializers.Serializer):
+    """Serializer for updating assessment status with notes."""
+    status = serializers.ChoiceField(choices=ControlAssessment.STATUS_CHOICES)
+    notes = serializers.CharField(max_length=1000, required=False, allow_blank=True)
+    
+    def update_assessment_status(self, assessment):
+        """Update assessment status with logging."""
+        new_status = self.validated_data['status']
+        notes = self.validated_data.get('notes', '')
+        user = self.context['request'].user
+        
+        assessment.update_status(new_status, user, notes)
+        return assessment
+
+
+class BulkAssessmentCreateSerializer(serializers.Serializer):
+    """Serializer for creating assessments in bulk for a framework."""
+    framework_id = serializers.IntegerField()
+    default_due_date = serializers.DateField(required=False)
+    default_assigned_to = serializers.IntegerField(required=False)
+    default_applicability = serializers.ChoiceField(
+        choices=ControlAssessment.APPLICABILITY_CHOICES,
+        default='to_be_determined'
+    )
+    controls = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        help_text="Specific control IDs to create assessments for. If empty, creates for all framework controls."
+    )
+    
+    def validate_framework_id(self, value):
+        try:
+            Framework.objects.get(id=value)
+        except Framework.DoesNotExist:
+            raise serializers.ValidationError("Framework not found")
+        return value
+    
+    def validate_default_assigned_to(self, value):
+        if value:
+            try:
+                User.objects.get(id=value)
+            except User.DoesNotExist:
+                raise serializers.ValidationError("User not found")
+        return value
+    
+    def create_bulk_assessments(self):
+        """Create assessments in bulk."""
+        framework = Framework.objects.get(id=self.validated_data['framework_id'])
+        user = self.context['request'].user
+        
+        # Get controls to create assessments for
+        if self.validated_data.get('controls'):
+            controls = Control.objects.filter(
+                id__in=self.validated_data['controls'],
+                clauses__framework=framework
+            ).distinct()
+        else:
+            controls = Control.objects.filter(clauses__framework=framework).distinct()
+        
+        created_assessments = []
+        defaults = {
+            'created_by': user,
+            'applicability': self.validated_data['default_applicability']
+        }
+        
+        if self.validated_data.get('default_due_date'):
+            defaults['due_date'] = self.validated_data['default_due_date']
+        
+        if self.validated_data.get('default_assigned_to'):
+            defaults['assigned_to_id'] = self.validated_data['default_assigned_to']
+        
+        for control in controls:
+            # Check if assessment already exists
+            existing = ControlAssessment.objects.filter(control=control).first()
+            if not existing:
+                assessment = ControlAssessment.objects.create(
+                    control=control,
+                    **defaults
+                )
+                created_assessments.append(assessment)
+        
+        return created_assessments
+
+
+class AssessmentEvidenceSerializer(serializers.ModelSerializer):
+    """Serializer for assessment evidence links."""
+    evidence_details = ControlEvidenceSerializer(source='evidence', read_only=True)
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+    
+    class Meta:
+        model = AssessmentEvidence
+        fields = [
+            'id', 'assessment', 'evidence', 'evidence_details', 'evidence_purpose',
+            'is_primary_evidence', 'created_by_username', 'created_at'
+        ]
+        read_only_fields = ['created_at']
+    
+    def create(self, validated_data):
+        validated_data['created_by'] = self.context['request'].user
+        return super().create(validated_data)
+
+
+class AssessmentProgressSerializer(serializers.Serializer):
+    """Serializer for assessment progress reporting."""
+    framework_id = serializers.IntegerField(required=False)
+    total_assessments = serializers.IntegerField()
+    completed_assessments = serializers.IntegerField()
+    overdue_assessments = serializers.IntegerField()
+    completion_percentage = serializers.FloatField()
+    
+    status_breakdown = serializers.DictField()
+    applicability_breakdown = serializers.DictField()
+    risk_breakdown = serializers.DictField()
+    
+    upcoming_due_dates = serializers.ListField()
+    assignments_by_user = serializers.DictField()

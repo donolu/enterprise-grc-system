@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ report.title }}</title>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ report.title }}</h1>
+        <div class="subtitle">
+            {% if framework %}
+                Framework: {{ framework.name }} ({{ framework.short_name }})
+            {% else %}
+                Assessment Summary Report
+            {% endif %}
+            <br>
+            Generated: {{ generated_at|date:"F d, Y g:i A" }}
+            <br>
+            Requested by: {{ report.requested_by.get_full_name|default:report.requested_by.username }}
+        </div>
+    </div>
+
+    {% if framework %}
+    <div class="section">
+        <h2>Executive Summary</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="number">{{ completion_percentage }}%</div>
+                <div class="label">Overall Completion</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ total_assessments }}</div>
+                <div class="label">Total Assessments</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ completed_assessments }}</div>
+                <div class="label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ overdue_assessments }}</div>
+                <div class="label">Overdue</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ evidence_stats.total_evidence }}</div>
+                <div class="label">Evidence Items</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ evidence_stats.primary_evidence }}</div>
+                <div class="label">Primary Evidence</div>
+            </div>
+        </div>
+    </div>
+
+    {% if risk_analytics %}
+    <div class="section">
+        <h2>Risk Analytics Integration</h2>
+        <p style="color: #666; font-size: 10pt; margin-bottom: 1em;">
+            Integrated risk management data providing comprehensive security posture insights alongside compliance status.
+        </p>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.overview.total_risks|default:0 }}</div>
+                <div class="label">Total Risks</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.overview.active_risks|default:0 }}</div>
+                <div class="label">Active Risks</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.actions.total_actions|default:0 }}</div>
+                <div class="label">Mitigation Actions</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.actions.completed_actions|default:0 }}</div>
+                <div class="label">Completed Actions</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.compliance_correlation.risk_mitigation_coverage|floatformat:0|default:0 }}%</div>
+                <div class="label">Risk Coverage</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.compliance_correlation.risk_action_completion_rate|default:0 }}%</div>
+                <div class="label">Action Completion</div>
+            </div>
+        </div>
+        
+        {% if risk_analytics.compliance_correlation.integration_insights %}
+        <div style="margin-top: 1em; padding: 1em; background-color: #f8f9fa; border-left: 4px solid #0066cc;">
+            <h4 style="margin-top: 0; color: #0066cc;">Risk-Compliance Integration Insights</h4>
+            <ul style="margin: 0.5em 0; padding-left: 1.5em; font-size: 10pt;">
+                {% if risk_analytics.compliance_correlation.integration_insights.risk_driven_compliance %}
+                <li style="color: #28a745;">✓ Risk-driven compliance approach detected - risks have associated mitigation actions</li>
+                {% endif %}
+                {% if risk_analytics.compliance_correlation.integration_insights.action_based_mitigation %}
+                <li style="color: #28a745;">✓ Action-based risk mitigation in place - structured treatment approach</li>
+                {% endif %}
+                {% if risk_analytics.compliance_correlation.integration_insights.comprehensive_coverage %}
+                <li style="color: #28a745;">✓ Comprehensive risk coverage (70%+) - strong integration between risk and compliance</li>
+                {% else %}
+                <li style="color: #ffc107;">⚠ Risk coverage below 70% - consider expanding risk-based compliance approach</li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="section">
+        <h2>Assessment Status Breakdown</h2>
+        <table class="assessment-table">
+            <thead>
+                <tr>
+                    <th>Control ID</th>
+                    <th>Control Title</th>
+                    <th>Status</th>
+                    <th>Assigned To</th>
+                    <th>Due Date</th>
+                    <th>Evidence Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assessment in assessments %}
+                <tr>
+                    <td>{{ assessment.control.control_id }}</td>
+                    <td>{{ assessment.control.title|truncatechars:60 }}</td>
+                    <td>
+                        <span class="status-badge status-{{ assessment.status }}">
+                            {{ assessment.get_status_display }}
+                        </span>
+                    </td>
+                    <td>{{ assessment.assigned_to.get_full_name|default:assessment.assigned_to.username|default:"Unassigned" }}</td>
+                    <td>
+                        {% if assessment.due_date %}
+                            {{ assessment.due_date|date:"M d, Y" }}
+                            {% if assessment.status != 'completed' and assessment.due_date < today %}
+                                <span class="status-badge status-overdue">OVERDUE</span>
+                            {% endif %}
+                        {% else %}
+                            Not Set
+                        {% endif %}
+                    </td>
+                    <td>{{ assessment.evidence_links.count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if report.include_overdue_items and overdue_assessments > 0 %}
+    <div class="section page-break">
+        <h2>Overdue Items Requiring Attention</h2>
+        <p>The following assessments are past their due dates and require immediate attention:</p>
+        <table class="assessment-table">
+            <thead>
+                <tr>
+                    <th>Control ID</th>
+                    <th>Control Title</th>
+                    <th>Assigned To</th>
+                    <th>Due Date</th>
+                    <th>Days Overdue</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assessment in assessments %}
+                    {% if assessment.status != 'completed' and assessment.due_date < today %}
+                    <tr>
+                        <td>{{ assessment.control.control_id }}</td>
+                        <td>{{ assessment.control.title|truncatechars:80 }}</td>
+                        <td>{{ assessment.assigned_to.get_full_name|default:assessment.assigned_to.username|default:"Unassigned" }}</td>
+                        <td>{{ assessment.due_date|date:"M d, Y" }}</td>
+                        <td>{{ assessment.due_date|timesince|truncatewords:1 }}</td>
+                    </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% endif %}
+</body>
+</html>

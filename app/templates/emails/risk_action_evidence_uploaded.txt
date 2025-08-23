@@ -1,0 +1,53 @@
+Risk Action Evidence Uploaded
+
+Hello {{ user.get_full_name|default:user.username }},
+
+New evidence has been uploaded for a risk action.
+
+EVIDENCE DETAILS:
+=================
+Title: {{ evidence.title }}
+Evidence Type: {{ evidence.get_evidence_type_display }}
+Upload Date: {{ evidence.created_at|date:"F d, Y \a\t g:i A" }}
+
+{% if evidence.description %}Description:
+{{ evidence.description }}
+{% endif %}
+
+{% if evidence.file %}File: {{ evidence.file.name|slice:"20:" }}
+View file: {{ evidence.file.url }}
+{% endif %}
+
+{% if evidence.external_link %}External Link: {{ evidence.external_link }}
+{% endif %}
+
+RELATED ACTION:
+===============
+Action ID: {{ action.action_id }}
+Title: {{ action.title }}
+Status: {{ action.get_status_display }}
+Priority: {{ action.get_priority_display }}
+Due Date: {{ action.due_date|date:"M d, Y" }}
+
+{% if uploader %}UPLOADED BY:
+============
+{{ uploader.get_full_name|default:uploader.username }}
+{% if uploader.email %}Contact: {{ uploader.email }}{% endif %}
+{% endif %}
+
+NEXT STEPS:
+===========
+• Review the evidence - Check that it supports the action requirements
+• Validate if required - Mark evidence as validated if you have the authority
+• Provide feedback - Add notes if additional evidence is needed
+• Update action progress - Reflect the completion of this milestone
+• Continue monitoring - Track overall action progress toward completion
+
+To view the action and evidence, visit:
+{{ action_url }}
+
+---
+This notification was sent because evidence was uploaded for a risk action you're involved with.
+
+Manage your notification preferences at:
+{{ site_domain }}/admin/risk/riskactionreminderconfiguration/

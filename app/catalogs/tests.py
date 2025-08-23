@@ -10,7 +10,7 @@ from rest_framework import status
 from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
 from core.models import Tenant
-from .models import Framework, Clause, Control, ControlEvidence, FrameworkMapping
+from .models import Framework, Clause, Control, ControlEvidence, FrameworkMapping, ControlAssessment, AssessmentEvidence
 from .management.commands.import_framework import Command as ImportCommand
 import tempfile
 import os
@@ -651,3 +651,721 @@ class CatalogsAPITest(APITestCase):
         """Test that unauthorized users cannot access the API."""
         response = self.client.get('/api/catalogs/frameworks/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class ControlAssessmentModelTest(TenantTestCase):
+    """Test ControlAssessment model functionality."""
+    
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.tenant = Tenant(name="Test Tenant", schema_name="test")
+        cls.tenant.save()
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        
+        self.assigned_user = User.objects.create_user(
+            username='assigned_user',
+            email='assigned@example.com',
+            password='testpass123'
+        )
+        
+        self.framework = Framework.objects.create(
+            name='Test Framework',
+            version='1.0',
+            issuing_organization='Test Org',
+            effective_date=date.today()
+        )
+        
+        self.clause = Clause.objects.create(
+            framework=self.framework,
+            clause_id='1.1',
+            title='Test Clause',
+            description='Test clause description'
+        )
+        
+        self.control = Control.objects.create(
+            control_id='CTRL-001',
+            name='Test Control',
+            description='Test control description',
+            control_type='preventive',
+            created_by=self.user
+        )
+        
+        self.control.clauses.add(self.clause)
+    
+    def test_assessment_creation(self):
+        """Test creating a control assessment with required fields."""
+        assessment = ControlAssessment.objects.create(
+            control=self.control,
+            applicability='applicable',
+            implementation_status='not_implemented',
+            status='pending',
+            assigned_to=self.assigned_user,
+            due_date=date.today() + timedelta(days=30),
+            created_by=self.user
+        )
+        
+        self.assertEqual(assessment.control, self.control)
+        self.assertEqual(assessment.applicability, 'applicable')
+        self.assertEqual(assessment.implementation_status, 'not_implemented')
+        self.assertEqual(assessment.status, 'pending')
+        self.assertEqual(assessment.assigned_to, self.assigned_user)
+        self.assertIsNotNone(assessment.assessment_id)
+        self.assertTrue(assessment.assessment_id.startswith('ASSESS-'))
+    
+    def test_assessment_str_representation(self):
+        """Test string representation of assessment."""
+        assessment = ControlAssessment.objects.create(
+            control=self.control,
+            applicability='applicable',
+            created_by=self.user
+        )
+        
+        expected_str = f"{self.control.control_id} - Assessment ({assessment.status})"
+        self.assertEqual(str(assessment), expected_str)
+    
+    def test_assessment_is_overdue_property(self):
+        """Test is_overdue property."""
+        # Future due date - not overdue
+        assessment = ControlAssessment.objects.create(
+            control=self.control,
+            due_date=date.today() + timedelta(days=10),
+            created_by=self.user
+        )
+        self.assertFalse(assessment.is_overdue)
+        
+        # Past due date - overdue
+        assessment.due_date = date.today() - timedelta(days=1)
+        assessment.save()
+        self.assertTrue(assessment.is_overdue)
+        
+        # No due date - not overdue
+        assessment.due_date = None
+        assessment.save()
+        self.assertFalse(assessment.is_overdue)
+    
+    def test_assessment_days_until_due_property(self):
+        """Test days_until_due property."""
+        # Future due date
+        assessment = ControlAssessment.objects.create(
+            control=self.control,
+            due_date=date.today() + timedelta(days=5),
+            created_by=self.user
+        )
+        self.assertEqual(assessment.days_until_due, 5)
+        
+        # Past due date
+        assessment.due_date = date.today() - timedelta(days=3)
+        assessment.save()
+        self.assertEqual(assessment.days_until_due, -3)
+        
+        # No due date
+        assessment.due_date = None
+        assessment.save()
+        self.assertIsNone(assessment.days_until_due)
+    
+    def test_assessment_framework_info_property(self):
+        """Test framework_info property."""
+        assessment = ControlAssessment.objects.create(
+            control=self.control,
+            created_by=self.user
+        )
+        
+        framework_info = assessment.framework_info
+        self.assertEqual(len(framework_info), 1)
+        self.assertEqual(framework_info[0]['framework'], self.framework.name)
+        self.assertEqual(framework_info[0]['version'], self.framework.version)
+    
+    def test_assessment_add_change_log_entry(self):
+        """Test adding change log entries."""
+        assessment = ControlAssessment.objects.create(
+            control=self.control,
+            created_by=self.user
+        )
+        
+        assessment.add_change_log_entry(self.user, 'Initial assessment created')
+        
+        self.assertEqual(len(assessment.change_log), 1)
+        self.assertEqual(assessment.change_log[0]['user'], self.user.username)
+        self.assertEqual(assessment.change_log[0]['description'], 'Initial assessment created')
+        self.assertIn('timestamp', assessment.change_log[0])
+    
+    def test_assessment_update_status(self):
+        """Test updating assessment status."""
+        assessment = ControlAssessment.objects.create(
+            control=self.control,
+            status='pending',
+            created_by=self.user
+        )
+        
+        assessment.update_status('in_progress', self.user, 'Started working on assessment')
+        
+        self.assertEqual(assessment.status, 'in_progress')
+        self.assertEqual(len(assessment.change_log), 1)
+        self.assertIn('Status changed to in_progress', assessment.change_log[0]['description'])
+    
+    def test_assessment_unique_constraint(self):
+        """Test that control assessment is unique per control."""
+        ControlAssessment.objects.create(
+            control=self.control,
+            created_by=self.user
+        )
+        
+        with self.assertRaises(IntegrityError):
+            ControlAssessment.objects.create(
+                control=self.control,
+                created_by=self.assigned_user
+            )
+    
+    def test_assessment_status_transitions(self):
+        """Test valid status transitions."""
+        assessment = ControlAssessment.objects.create(
+            control=self.control,
+            status='not_started',
+            created_by=self.user
+        )
+        
+        # Valid transitions
+        valid_transitions = [
+            ('not_started', 'pending'),
+            ('pending', 'in_progress'),
+            ('in_progress', 'under_review'),
+            ('under_review', 'complete'),
+        ]
+        
+        for from_status, to_status in valid_transitions:
+            assessment.status = from_status
+            assessment.save()
+            assessment.update_status(to_status, self.user)
+            self.assertEqual(assessment.status, to_status)
+
+
+class AssessmentEvidenceModelTest(TenantTestCase):
+    """Test AssessmentEvidence model functionality."""
+    
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.tenant = Tenant(name="Test Tenant", schema_name="test")
+        cls.tenant.save()
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        
+        self.framework = Framework.objects.create(
+            name='Test Framework',
+            version='1.0',
+            issuing_organization='Test Org',
+            effective_date=date.today()
+        )
+        
+        self.clause = Clause.objects.create(
+            framework=self.framework,
+            clause_id='1.1',
+            title='Test Clause',
+            description='Test clause description'
+        )
+        
+        self.control = Control.objects.create(
+            control_id='CTRL-001',
+            name='Test Control',
+            description='Test control description',
+            control_type='preventive',
+            created_by=self.user
+        )
+        
+        self.control.clauses.add(self.clause)
+        
+        self.assessment = ControlAssessment.objects.create(
+            control=self.control,
+            applicability='applicable',
+            created_by=self.user
+        )
+        
+        self.evidence = ControlEvidence.objects.create(
+            control=self.control,
+            title='Test Evidence',
+            evidence_type='document',
+            description='Test evidence description',
+            evidence_date=date.today(),
+            collected_by=self.user
+        )
+    
+    def test_assessment_evidence_creation(self):
+        """Test creating assessment evidence link."""
+        assessment_evidence = AssessmentEvidence.objects.create(
+            assessment=self.assessment,
+            evidence=self.evidence,
+            relevance_score=85,
+            notes='This evidence supports the assessment',
+            linked_by=self.user
+        )
+        
+        self.assertEqual(assessment_evidence.assessment, self.assessment)
+        self.assertEqual(assessment_evidence.evidence, self.evidence)
+        self.assertEqual(assessment_evidence.relevance_score, 85)
+        self.assertEqual(assessment_evidence.notes, 'This evidence supports the assessment')
+        self.assertEqual(assessment_evidence.linked_by, self.user)
+    
+    def test_assessment_evidence_str_representation(self):
+        """Test string representation of assessment evidence."""
+        assessment_evidence = AssessmentEvidence.objects.create(
+            assessment=self.assessment,
+            evidence=self.evidence,
+            linked_by=self.user
+        )
+        
+        expected_str = f"{self.assessment.assessment_id} - {self.evidence.title}"
+        self.assertEqual(str(assessment_evidence), expected_str)
+    
+    def test_assessment_evidence_unique_constraint(self):
+        """Test that assessment and evidence combination must be unique."""
+        AssessmentEvidence.objects.create(
+            assessment=self.assessment,
+            evidence=self.evidence,
+            linked_by=self.user
+        )
+        
+        with self.assertRaises(IntegrityError):
+            AssessmentEvidence.objects.create(
+                assessment=self.assessment,
+                evidence=self.evidence,
+                linked_by=self.user
+            )
+    
+    def test_assessment_evidence_relevance_score_validation(self):
+        """Test relevance score constraints."""
+        # Valid score
+        assessment_evidence = AssessmentEvidence.objects.create(
+            assessment=self.assessment,
+            evidence=self.evidence,
+            relevance_score=75,
+            linked_by=self.user
+        )
+        self.assertEqual(assessment_evidence.relevance_score, 75)
+
+
+class ControlAssessmentAPITest(APITestCase):
+    """Test the control assessment API endpoints."""
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        
+        self.assigned_user = User.objects.create_user(
+            username='assigned_user',
+            email='assigned@example.com',
+            password='testpass123'
+        )
+        
+        self.framework = Framework.objects.create(
+            name='API Test Framework',
+            version='1.0',
+            issuing_organization='Test Org',
+            effective_date=date.today(),
+            created_by=self.user
+        )
+        
+        self.clause = Clause.objects.create(
+            framework=self.framework,
+            clause_id='API-1',
+            title='API Test Clause',
+            description='API test description'
+        )
+        
+        self.control = Control.objects.create(
+            control_id='API-CTRL-001',
+            name='API Test Control',
+            description='API control description',
+            control_type='preventive',
+            created_by=self.user
+        )
+        
+        self.control.clauses.add(self.clause)
+        
+        self.assessment = ControlAssessment.objects.create(
+            control=self.control,
+            applicability='applicable',
+            implementation_status='partially_implemented',
+            status='pending',
+            assigned_to=self.assigned_user,
+            due_date=date.today() + timedelta(days=30),
+            created_by=self.user
+        )
+    
+    def test_assessment_list_endpoint(self):
+        """Test the assessment list API endpoint."""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get('/api/catalogs/assessments/')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['control']['control_id'], 'API-CTRL-001')
+    
+    def test_assessment_detail_endpoint(self):
+        """Test the assessment detail API endpoint."""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(f'/api/catalogs/assessments/{self.assessment.id}/')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['applicability'], 'applicable')
+        self.assertEqual(response.data['implementation_status'], 'partially_implemented')
+        self.assertEqual(response.data['status'], 'pending')
+    
+    def test_assessment_create_endpoint(self):
+        """Test creating assessment via API."""
+        control2 = Control.objects.create(
+            control_id='API-CTRL-002',
+            name='Second API Control',
+            description='Second control description',
+            control_type='detective',
+            created_by=self.user
+        )
+        control2.clauses.add(self.clause)
+        
+        self.client.force_authenticate(user=self.user)
+        
+        assessment_data = {
+            'control': control2.id,
+            'applicability': 'applicable',
+            'implementation_status': 'implemented',
+            'status': 'in_progress',
+            'assigned_to': self.assigned_user.id,
+            'due_date': (date.today() + timedelta(days=60)).isoformat(),
+            'assessment_notes': 'New assessment via API'
+        }
+        
+        response = self.client.post('/api/catalogs/assessments/', assessment_data)
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['applicability'], 'applicable')
+        self.assertEqual(response.data['implementation_status'], 'implemented')
+    
+    def test_assessment_update_endpoint(self):
+        """Test updating assessment via API."""
+        self.client.force_authenticate(user=self.user)
+        
+        update_data = {
+            'status': 'in_progress',
+            'implementation_status': 'implemented',
+            'assessment_notes': 'Updated assessment status'
+        }
+        
+        response = self.client.patch(f'/api/catalogs/assessments/{self.assessment.id}/', update_data)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'in_progress')
+        self.assertEqual(response.data['implementation_status'], 'implemented')
+    
+    def test_assessment_status_update_endpoint(self):
+        """Test the assessment status update endpoint."""
+        self.client.force_authenticate(user=self.user)
+        
+        status_data = {
+            'status': 'complete',
+            'notes': 'Assessment completed successfully'
+        }
+        
+        response = self.client.post(
+            f'/api/catalogs/assessments/{self.assessment.id}/update_status/',
+            status_data
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'complete')
+        
+        # Verify change log was updated
+        self.assessment.refresh_from_db()
+        self.assertEqual(len(self.assessment.change_log), 1)
+        self.assertIn('Status changed to complete', self.assessment.change_log[0]['description'])
+    
+    def test_bulk_assessment_creation_endpoint(self):
+        """Test bulk assessment creation endpoint."""
+        # Create additional controls
+        for i in range(3):
+            control = Control.objects.create(
+                control_id=f'BULK-CTRL-{i:03d}',
+                name=f'Bulk Control {i}',
+                description=f'Bulk control {i} description',
+                control_type='preventive',
+                created_by=self.user
+            )
+            control.clauses.add(self.clause)
+        
+        self.client.force_authenticate(user=self.user)
+        
+        bulk_data = {
+            'framework_id': self.framework.id,
+            'default_due_date': (date.today() + timedelta(days=90)).isoformat(),
+            'default_assigned_to': self.assigned_user.id
+        }
+        
+        response = self.client.post('/api/catalogs/assessments/bulk_create/', bulk_data)
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['created_count'], 3)  # Excluding existing assessment
+        self.assertEqual(len(response.data['assessments']), 3)
+    
+    def test_assessment_progress_endpoint(self):
+        """Test assessment progress reporting endpoint."""
+        # Create additional assessments with different statuses
+        for i, status_val in enumerate(['in_progress', 'complete', 'not_applicable']):
+            control = Control.objects.create(
+                control_id=f'PROG-CTRL-{i:03d}',
+                name=f'Progress Control {i}',
+                description=f'Progress control {i} description',
+                control_type='preventive',
+                created_by=self.user
+            )
+            control.clauses.add(self.clause)
+            
+            ControlAssessment.objects.create(
+                control=control,
+                status=status_val,
+                applicability='applicable' if status_val != 'not_applicable' else 'not_applicable',
+                created_by=self.user
+            )
+        
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get('/api/catalogs/assessments/progress/')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['total_assessments'], 4)
+        self.assertIn('status_breakdown', response.data)
+        self.assertIn('applicability_breakdown', response.data)
+        self.assertIn('implementation_breakdown', response.data)
+    
+    def test_assessment_filtering(self):
+        """Test assessment filtering options."""
+        self.client.force_authenticate(user=self.user)
+        
+        # Filter by status
+        response = self.client.get('/api/catalogs/assessments/?status=pending')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        
+        # Filter by applicability
+        response = self.client.get('/api/catalogs/assessments/?applicability=applicable')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        
+        # Filter by assigned user
+        response = self.client.get(f'/api/catalogs/assessments/?assigned_to={self.assigned_user.id}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+    
+    def test_assessment_evidence_endpoints(self):
+        """Test assessment evidence API endpoints."""
+        evidence = ControlEvidence.objects.create(
+            control=self.control,
+            title='API Test Evidence',
+            evidence_type='document',
+            description='API evidence description',
+            evidence_date=date.today(),
+            collected_by=self.user
+        )
+        
+        self.client.force_authenticate(user=self.user)
+        
+        # Create assessment evidence link
+        evidence_data = {
+            'assessment': self.assessment.id,
+            'evidence': evidence.id,
+            'relevance_score': 90,
+            'notes': 'Highly relevant evidence'
+        }
+        
+        response = self.client.post('/api/catalogs/assessment-evidence/', evidence_data)
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['relevance_score'], 90)
+        self.assertEqual(response.data['notes'], 'Highly relevant evidence')
+        
+        # List assessment evidence
+        response = self.client.get('/api/catalogs/assessment-evidence/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+    
+    def test_unauthorized_assessment_access(self):
+        """Test that unauthorized users cannot access assessments."""
+        response = self.client.get('/api/catalogs/assessments/')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class EvidenceManagementAPITest(APITestCase):
+    """Test the evidence management API endpoints for assessments."""
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        
+        self.framework = Framework.objects.create(
+            name='Evidence Test Framework',
+            version='1.0',
+            issuing_organization='Test Org',
+            effective_date=date.today(),
+            created_by=self.user
+        )
+        
+        self.clause = Clause.objects.create(
+            framework=self.framework,
+            clause_id='EV-1',
+            title='Evidence Test Clause',
+            description='Evidence test description'
+        )
+        
+        self.control = Control.objects.create(
+            control_id='EV-CTRL-001',
+            name='Evidence Test Control',
+            description='Evidence control description',
+            control_type='preventive',
+            created_by=self.user
+        )
+        
+        self.control.clauses.add(self.clause)
+        
+        self.assessment = ControlAssessment.objects.create(
+            control=self.control,
+            applicability='applicable',
+            status='pending',
+            created_by=self.user
+        )
+    
+    def test_direct_evidence_upload(self):
+        """Test uploading evidence directly to an assessment."""
+        self.client.force_authenticate(user=self.user)
+        
+        # Create a test file
+        from io import BytesIO
+        from django.core.files.uploadedfile import InMemoryUploadedFile
+        
+        file_content = b"Test evidence document content"
+        test_file = InMemoryUploadedFile(
+            BytesIO(file_content),
+            None,
+            'test_evidence.txt',
+            'text/plain',
+            len(file_content),
+            None
+        )
+        
+        data = {
+            'file': test_file,
+            'title': 'Test Evidence Document',
+            'description': 'Test document description',
+            'evidence_title': 'Assessment Evidence',
+            'evidence_type': 'document',
+            'evidence_description': 'Evidence for testing',
+            'evidence_purpose': 'Primary testing evidence',
+            'is_primary_evidence': True
+        }
+        
+        response = self.client.post(
+            f'/api/catalogs/assessments/{self.assessment.id}/upload_evidence/',
+            data,
+            format='multipart'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn('message', response.data)
+        self.assertIn('document', response.data)
+        self.assertIn('evidence', response.data)
+        self.assertIn('assessment_link', response.data)
+        
+        # Verify evidence was created and linked
+        self.assertEqual(AssessmentEvidence.objects.count(), 1)
+        evidence_link = AssessmentEvidence.objects.first()
+        self.assertEqual(evidence_link.assessment, self.assessment)
+        self.assertTrue(evidence_link.is_primary_evidence)
+    
+    def test_assessment_evidence_listing(self):
+        """Test getting all evidence for an assessment."""
+        self.client.force_authenticate(user=self.user)
+        
+        # Create some evidence manually
+        from core.models import Document
+        
+        document = Document.objects.create(
+            title='Test Evidence Doc',
+            uploaded_by=self.user
+        )
+        
+        evidence = ControlEvidence.objects.create(
+            control=self.control,
+            title='Test Evidence',
+            evidence_type='document',
+            document=document,
+            collected_by=self.user
+        )
+        
+        AssessmentEvidence.objects.create(
+            assessment=self.assessment,
+            evidence=evidence,
+            evidence_purpose='Testing purpose',
+            is_primary_evidence=True,
+            created_by=self.user
+        )
+        
+        response = self.client.get(
+            f'/api/catalogs/assessments/{self.assessment.id}/evidence/'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['evidence_count'], 1)
+        self.assertEqual(len(response.data['evidence']), 1)
+        self.assertEqual(response.data['evidence'][0]['evidence_purpose'], 'Testing purpose')
+        self.assertTrue(response.data['evidence'][0]['is_primary_evidence'])
+    
+    def test_assessment_list_includes_evidence_info(self):
+        """Test that assessment list includes evidence count and primary evidence flag."""
+        self.client.force_authenticate(user=self.user)
+        
+        # Create evidence linked to assessment
+        from core.models import Document
+        
+        document = Document.objects.create(
+            title='Test Evidence Doc',
+            uploaded_by=self.user
+        )
+        
+        evidence = ControlEvidence.objects.create(
+            control=self.control,
+            title='Test Evidence',
+            evidence_type='document',
+            document=document,
+            collected_by=self.user
+        )
+        
+        AssessmentEvidence.objects.create(
+            assessment=self.assessment,
+            evidence=evidence,
+            is_primary_evidence=True,
+            created_by=self.user
+        )
+        
+        response = self.client.get('/api/catalogs/assessments/')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        
+        assessment_data = response.data['results'][0]
+        self.assertIn('evidence_count', assessment_data)
+        self.assertIn('has_primary_evidence', assessment_data)
+        self.assertEqual(assessment_data['evidence_count'], 1)
+        self.assertTrue(assessment_data['has_primary_evidence'])

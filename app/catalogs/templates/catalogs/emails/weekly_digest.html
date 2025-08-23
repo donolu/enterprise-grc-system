@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Assessment Digest</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            border-left: 4px solid #0066cc;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0066cc;
+            display: block;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+        .section {
+            margin: 30px 0;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .assessment-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 4px solid #0066cc;
+        }
+        .assessment-item.overdue {
+            border-left-color: #dc3545;
+            background-color: #fdf2f2;
+        }
+        .assessment-item.due-soon {
+            border-left-color: #ffc107;
+            background-color: #fffdf2;
+        }
+        .assessment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        .assessment-title {
+            font-weight: bold;
+            color: #333;
+            flex-grow: 1;
+        }
+        .due-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-left: 10px;
+        }
+        .due-overdue {
+            background-color: #dc3545;
+            color: white;
+        }
+        .due-today {
+            background-color: #fd7e14;
+            color: white;
+        }
+        .due-soon {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .due-upcoming {
+            background-color: #28a745;
+            color: white;
+        }
+        .assessment-details {
+            font-size: 14px;
+            color: #666;
+            margin: 8px 0;
+        }
+        .framework-badge {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .action-button {
+            display: inline-block;
+            background-color: #0066cc;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .no-items {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📅 Weekly Assessment Digest</h1>
+            <p>Hello {{ user.get_full_name|default:user.username }},</p>
+            <p>Here's your weekly summary of upcoming and overdue assessments from {{ week_start|date:"F d" }} to {{ week_end|date:"F d, Y" }}.</p>
+        </div>
+
+        <div class="summary-stats">
+            <div class="stat-card">
+                <span class="stat-number">{{ overdue_assessments.count }}</span>
+                <div class="stat-label">Overdue</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">{{ upcoming_assessments.count }}</span>
+                <div class="stat-label">Upcoming</div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">{{ overdue_assessments.count|add:upcoming_assessments.count }}</span>
+                <div class="stat-label">Total Items</div>
+            </div>
+        </div>
+
+        {% if overdue_assessments %}
+        <div class="section">
+            <div class="section-title">🚨 Overdue Assessments ({{ overdue_assessments.count }})</div>
+            {% for assessment in overdue_assessments %}
+            <div class="assessment-item overdue">
+                <div class="assessment-header">
+                    <div class="assessment-title">
+                        {{ assessment.control.control_id }}: {{ assessment.control.title|truncatechars:60 }}
+                    </div>
+                    <span class="due-badge due-overdue">
+                        {{ assessment.days_until_due|add:"-1" }} days overdue
+                    </span>
+                </div>
+                <div class="assessment-details">
+                    <span class="framework-badge">{{ assessment.control.clause.framework.short_name }}</span>
+                    Status: {{ assessment.get_status_display }} • 
+                    Due: {{ assessment.due_date|date:"M d, Y" }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if upcoming_assessments %}
+        <div class="section">
+            <div class="section-title">📋 Upcoming Assessments ({{ upcoming_assessments.count }})</div>
+            {% for assessment in upcoming_assessments %}
+            <div class="assessment-item {% if assessment.days_until_due <= 3 %}due-soon{% endif %}">
+                <div class="assessment-header">
+                    <div class="assessment-title">
+                        {{ assessment.control.control_id }}: {{ assessment.control.title|truncatechars:60 }}
+                    </div>
+                    <span class="due-badge {% if assessment.days_until_due == 0 %}due-today{% elif assessment.days_until_due <= 3 %}due-soon{% else %}due-upcoming{% endif %}">
+                        {% if assessment.days_until_due == 0 %}
+                            Due Today
+                        {% else %}
+                            Due in {{ assessment.days_until_due }} days
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="assessment-details">
+                    <span class="framework-badge">{{ assessment.control.clause.framework.short_name }}</span>
+                    Status: {{ assessment.get_status_display }} • 
+                    Due: {{ assessment.due_date|date:"M d, Y" }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if not overdue_assessments and not upcoming_assessments %}
+        <div class="no-items">
+            <h3>🎉 Great work!</h3>
+            <p>You don't have any upcoming or overdue assessments this week.</p>
+            <p>Keep up the excellent compliance management!</p>
+        </div>
+        {% endif %}
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="https://{{ site_domain }}/assessments/" class="action-button">
+                View All My Assessments
+            </a>
+        </div>
+
+        <div style="background-color: #e7f3ff; padding: 20px; border-radius: 6px; margin: 25px 0;">
+            <h3 style="margin-top: 0; color: #0066cc;">💡 Weekly Tips</h3>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li><strong>Prioritize overdue items:</strong> Focus on completing overdue assessments first to get back on track</li>
+                <li><strong>Plan ahead:</strong> Review upcoming assessments and schedule time for completion</li>
+                <li><strong>Gather evidence:</strong> Collect supporting documentation as you work on assessments</li>
+                <li><strong>Ask for help:</strong> Reach out to reviewers or team members if you need assistance</li>
+                <li><strong>Update status:</strong> Keep assessment status current to reflect your progress</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>This weekly digest is sent every {{ config.digest_day_of_week|yesno:"Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday" }}.</p>
+            <p>To manage your notification preferences, visit your account settings.</p>
+            <p style="margin-top: 15px;">
+                <a href="https://{{ site_domain }}/settings/notifications/" style="color: #0066cc;">Manage Notification Preferences</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

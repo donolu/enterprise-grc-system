@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Action Evidence Uploaded</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 3px solid #17a2b8;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+        .evidence-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            background-color: #17a2b8;
+            color: white;
+        }
+        .evidence-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #17a2b8;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .evidence-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #17a2b8;
+            margin-bottom: 10px;
+        }
+        .action-card {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .action-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .detail-value {
+            color: #333;
+            font-size: 14px;
+        }
+        .action-button {
+            display: inline-block;
+            background-color: #17a2b8;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .action-button:hover {
+            background-color: #138496;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .uploader-info {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .evidence-type-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            background-color: #e9ecef;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="evidence-badge">
+                📎 NEW EVIDENCE
+            </div>
+            <h1>Evidence Uploaded</h1>
+            <p>Hello {{ user.get_full_name|default:user.username }},</p>
+            <p>New evidence has been uploaded for a risk action.</p>
+        </div>
+
+        <div class="evidence-card">
+            <div class="evidence-title">
+                {{ evidence.title }}
+            </div>
+            
+            <div class="action-details">
+                <div class="detail-item">
+                    <span class="detail-label">Evidence Type</span>
+                    <span class="detail-value">
+                        <span class="evidence-type-badge">{{ evidence.get_evidence_type_display }}</span>
+                    </span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Upload Date</span>
+                    <span class="detail-value">{{ evidence.created_at|date:"F d, Y \a\t g:i A" }}</span>
+                </div>
+            </div>
+
+            {% if evidence.description %}
+            <div style="margin-top: 20px;">
+                <div class="detail-label">Description</div>
+                <div class="detail-value" style="margin-top: 8px;">
+                    {{ evidence.description }}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if evidence.file %}
+            <div style="margin-top: 15px;">
+                <div class="detail-label">File</div>
+                <div class="detail-value" style="margin-top: 8px;">
+                    <a href="{{ evidence.file.url }}" style="color: #17a2b8; text-decoration: none;">
+                        📁 {{ evidence.file.name|slice:"20:" }}
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if evidence.external_link %}
+            <div style="margin-top: 15px;">
+                <div class="detail-label">External Link</div>
+                <div class="detail-value" style="margin-top: 8px;">
+                    <a href="{{ evidence.external_link }}" style="color: #17a2b8;">{{ evidence.external_link|truncatechars:50 }}</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="action-card">
+            <strong>Related Action: {{ action.action_id }}</strong><br>
+            <span style="font-size: 14px;">
+                {{ action.title }}
+                <br><span style="font-size: 12px; color: #666;">
+                    Status: {{ action.get_status_display }}
+                    | Priority: {{ action.get_priority_display }}
+                    | Due: {{ action.due_date|date:"M d, Y" }}
+                </span>
+            </span>
+        </div>
+
+        {% if uploader %}
+        <div class="uploader-info">
+            <strong>Uploaded by:</strong> {{ uploader.get_full_name|default:uploader.username }}
+            {% if uploader.email %}
+            <br><span style="font-size: 12px;">Contact: {{ uploader.email }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div style="text-align: center;">
+            <a href="{{ action_url }}" class="action-button">
+                View Action & Evidence
+            </a>
+        </div>
+
+        <div style="margin-top: 25px; padding: 15px; background-color: #d1ecf1; border-radius: 6px;">
+            <h3 style="margin-top: 0; color: #0c5460;">📋 Next Steps:</h3>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li><strong>Review the evidence</strong> - Check that it supports the action requirements</li>
+                <li><strong>Validate if required</strong> - Mark evidence as validated if you have the authority</li>
+                <li><strong>Provide feedback</strong> - Add notes if additional evidence is needed</li>
+                <li><strong>Update action progress</strong> - Reflect the completion of this milestone</li>
+                <li><strong>Continue monitoring</strong> - Track overall action progress toward completion</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>This notification was sent because evidence was uploaded for a risk action you're involved with.</p>
+            <p style="margin-top: 15px;">
+                <a href="{{ site_domain }}/admin/risk/riskactionreminderconfiguration/" style="color: #17a2b8;">Manage Risk Action Notification Preferences</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

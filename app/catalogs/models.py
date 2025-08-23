@@ -528,3 +528,493 @@ class FrameworkMapping(models.Model):
     
     def __str__(self):
         return f"{self.source_clause.framework.short_name} {self.source_clause.clause_id} ↔ {self.target_clause.framework.short_name} {self.target_clause.clause_id}"
+
+
+class ControlAssessment(models.Model):
+    """
+    Tenant-specific assessments of controls for compliance frameworks.
+    Links controls to organizational implementation and compliance status.
+    """
+    APPLICABILITY_CHOICES = [
+        ('applicable', 'Applicable'),
+        ('not_applicable', 'Not Applicable'),
+        ('to_be_determined', 'To Be Determined'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('not_started', 'Not Started'),
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('under_review', 'Under Review'),
+        ('complete', 'Complete'),
+        ('not_applicable', 'Not Applicable'),
+        ('deferred', 'Deferred'),
+    ]
+    
+    IMPLEMENTATION_STATUS_CHOICES = [
+        ('not_implemented', 'Not Implemented'),
+        ('partially_implemented', 'Partially Implemented'),
+        ('implemented', 'Implemented'),
+        ('not_applicable', 'Not Applicable'),
+    ]
+    
+    MATURITY_LEVELS = [
+        ('ad_hoc', 'Ad Hoc'),
+        ('repeatable', 'Repeatable'),
+        ('defined', 'Defined'),
+        ('managed', 'Managed'),
+        ('optimized', 'Optimized'),
+    ]
+    
+    # Core relationships
+    control = models.ForeignKey(
+        Control, 
+        on_delete=models.CASCADE, 
+        related_name='assessments',
+        help_text="The control being assessed"
+    )
+    
+    # Assessment metadata
+    assessment_id = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Unique assessment identifier"
+    )
+    
+    # Applicability determination
+    applicability = models.CharField(
+        max_length=20,
+        choices=APPLICABILITY_CHOICES,
+        default='to_be_determined',
+        help_text="Whether this control applies to the organization"
+    )
+    applicability_rationale = models.TextField(
+        blank=True,
+        help_text="Explanation of why the control is/isn't applicable"
+    )
+    
+    # Assessment status and progress
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='not_started',
+        help_text="Current assessment status"
+    )
+    implementation_status = models.CharField(
+        max_length=25,
+        choices=IMPLEMENTATION_STATUS_CHOICES,
+        default='not_implemented',
+        help_text="Current implementation status of the control"
+    )
+    
+    # Ownership and responsibility
+    assigned_to = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_assessments',
+        help_text="Person responsible for completing this assessment"
+    )
+    reviewer = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='review_assessments',
+        help_text="Person responsible for reviewing this assessment"
+    )
+    
+    # Timeline management
+    due_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Target completion date for this assessment"
+    )
+    started_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date when assessment work began"
+    )
+    completed_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date when assessment was completed"
+    )
+    
+    # Assessment details
+    current_state_description = models.TextField(
+        blank=True,
+        help_text="Description of the current state of control implementation"
+    )
+    target_state_description = models.TextField(
+        blank=True,
+        help_text="Description of the desired future state"
+    )
+    gap_analysis = models.TextField(
+        blank=True,
+        help_text="Analysis of gaps between current and target state"
+    )
+    
+    # Implementation details
+    implementation_approach = models.TextField(
+        blank=True,
+        help_text="Planned or implemented approach for addressing this control"
+    )
+    maturity_level = models.CharField(
+        max_length=20,
+        choices=MATURITY_LEVELS,
+        blank=True,
+        help_text="Current maturity level of control implementation"
+    )
+    
+    # Risk and compliance
+    risk_rating = models.CharField(
+        max_length=10,
+        choices=[('low', 'Low'), ('medium', 'Medium'), ('high', 'High'), ('critical', 'Critical')],
+        blank=True,
+        help_text="Risk level if this control is not properly implemented"
+    )
+    compliance_score = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Compliance score (0-100) for this control"
+    )
+    
+    # Notes and comments
+    assessment_notes = models.TextField(
+        blank=True,
+        help_text="General notes and observations about this assessment"
+    )
+    reviewer_comments = models.TextField(
+        blank=True,
+        help_text="Comments from the reviewer"
+    )
+    
+    # Remediation planning
+    remediation_plan = models.TextField(
+        blank=True,
+        help_text="Plan for addressing gaps and improving control implementation"
+    )
+    remediation_due_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Target date for completing remediation activities"
+    )
+    remediation_owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='remediation_assignments',
+        help_text="Person responsible for remediation activities"
+    )
+    
+    # Audit and tracking
+    created_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True,
+        related_name='created_assessments',
+        help_text="Person who created this assessment"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Assessment history and versioning
+    version = models.PositiveIntegerField(default=1, help_text="Assessment version number")
+    change_log = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="History of changes to this assessment"
+    )
+    
+    class Meta:
+        ordering = ['control__control_id', 'due_date']
+        indexes = [
+            models.Index(fields=['status', 'due_date']),
+            models.Index(fields=['applicability', 'implementation_status']),
+            models.Index(fields=['assigned_to', 'status']),
+            models.Index(fields=['control', 'status']),
+        ]
+        unique_together = [('control', 'assessment_id')]
+    
+    def __str__(self):
+        return f"Assessment {self.assessment_id}: {self.control.control_id}"
+    
+    @property
+    def is_overdue(self):
+        """Check if assessment is overdue."""
+        if not self.due_date:
+            return False
+        return self.due_date < timezone.now().date() and self.status not in ['complete', 'not_applicable']
+    
+    @property
+    def is_complete(self):
+        """Check if assessment is complete."""
+        return self.status == 'complete'
+    
+    @property
+    def completion_percentage(self):
+        """Calculate completion percentage based on status."""
+        status_weights = {
+            'not_started': 0,
+            'pending': 10,
+            'in_progress': 50,
+            'under_review': 80,
+            'complete': 100,
+            'not_applicable': 100,
+            'deferred': 0,
+        }
+        return status_weights.get(self.status, 0)
+    
+    @property
+    def days_until_due(self):
+        """Calculate days until due date."""
+        if not self.due_date:
+            return None
+        delta = self.due_date - timezone.now().date()
+        return delta.days
+    
+    def save(self, *args, **kwargs):
+        # Auto-generate assessment_id if not provided
+        if not self.assessment_id:
+            self.assessment_id = f"ASS-{self.control.control_id}-{uuid.uuid4().hex[:8].upper()}"
+        
+        # Update status-based dates
+        if self.status == 'in_progress' and not self.started_date:
+            self.started_date = timezone.now().date()
+        elif self.status == 'complete' and not self.completed_date:
+            self.completed_date = timezone.now().date()
+        
+        super().save(*args, **kwargs)
+    
+    def add_change_log_entry(self, user, change_description):
+        """Add an entry to the assessment's change log."""
+        if not self.change_log:
+            self.change_log = []
+        
+        entry = {
+            'timestamp': timezone.now().isoformat(),
+            'user': user.username if user else 'System',
+            'description': change_description,
+            'version': self.version
+        }
+        self.change_log.append(entry)
+        self.save(update_fields=['change_log'])
+    
+    def update_status(self, new_status, user=None, notes=""):
+        """Update assessment status with logging."""
+        old_status = self.status
+        self.status = new_status
+        
+        # Log the change
+        change_description = f'Status updated from "{old_status}" to "{new_status}"'
+        if notes:
+            change_description += f'. Notes: {notes}'
+        
+        if user:
+            self.add_change_log_entry(user, change_description)
+        
+        self.save()
+
+
+class AssessmentEvidence(models.Model):
+    """
+    Evidence specifically collected for control assessments.
+    Links assessment evidence to the ControlEvidence model.
+    """
+    assessment = models.ForeignKey(
+        ControlAssessment, 
+        on_delete=models.CASCADE, 
+        related_name='evidence_links'
+    )
+    evidence = models.ForeignKey(
+        ControlEvidence, 
+        on_delete=models.CASCADE, 
+        related_name='assessment_links'
+    )
+    
+    # Evidence relationship to assessment
+    evidence_purpose = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Purpose of this evidence for the assessment"
+    )
+    is_primary_evidence = models.BooleanField(
+        default=False,
+        help_text="Whether this is primary evidence for the assessment"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    class Meta:
+        unique_together = [('assessment', 'evidence')]
+        indexes = [
+            models.Index(fields=['assessment', 'is_primary_evidence']),
+        ]
+    
+    def __str__(self):
+        return f"{self.assessment.assessment_id} - {self.evidence.title}"
+
+
+class AssessmentReminderConfiguration(models.Model):
+    """
+    Configuration for automated assessment reminders per user.
+    """
+    REMINDER_FREQUENCY_CHOICES = [
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('custom', 'Custom Days'),
+    ]
+    
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='reminder_config',
+        help_text="User for whom reminders are configured"
+    )
+    
+    # Reminder timing settings
+    enable_reminders = models.BooleanField(
+        default=True,
+        help_text="Whether to send automated reminders to this user"
+    )
+    advance_warning_days = models.PositiveIntegerField(
+        default=7,
+        help_text="Days before due date to send first reminder"
+    )
+    overdue_reminders = models.BooleanField(
+        default=True,
+        help_text="Whether to send reminders for overdue assessments"
+    )
+    reminder_frequency = models.CharField(
+        max_length=10,
+        choices=REMINDER_FREQUENCY_CHOICES,
+        default='daily',
+        help_text="How frequently to send overdue reminders"
+    )
+    custom_reminder_days = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Custom days for reminders (e.g., [1, 3, 7] for 1, 3, and 7 days before)"
+    )
+    
+    # Email preferences
+    email_notifications = models.BooleanField(
+        default=True,
+        help_text="Whether to send email notifications"
+    )
+    include_assessment_details = models.BooleanField(
+        default=True,
+        help_text="Whether to include detailed assessment information in emails"
+    )
+    include_remediation_items = models.BooleanField(
+        default=True,
+        help_text="Whether to include remediation due dates in reminders"
+    )
+    
+    # Digest settings
+    daily_digest_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether to send daily digest of all upcoming/overdue items"
+    )
+    weekly_digest_enabled = models.BooleanField(
+        default=True,
+        help_text="Whether to send weekly digest of upcoming assessments"
+    )
+    digest_day_of_week = models.PositiveIntegerField(
+        default=1,  # Monday
+        help_text="Day of week for weekly digest (0=Sunday, 1=Monday, etc.)"
+    )
+    
+    # Auto-silence settings
+    silence_completed_assessments = models.BooleanField(
+        default=True,
+        help_text="Stop sending reminders for completed assessments"
+    )
+    silence_not_applicable = models.BooleanField(
+        default=True,
+        help_text="Don't send reminders for assessments marked as not applicable"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Assessment Reminder Configuration"
+        verbose_name_plural = "Assessment Reminder Configurations"
+    
+    def __str__(self):
+        return f"Reminder config for {self.user.username}"
+    
+    @classmethod
+    def get_or_create_for_user(cls, user):
+        """Get or create reminder configuration for a user with defaults."""
+        config, created = cls.objects.get_or_create(
+            user=user,
+            defaults={
+                'enable_reminders': True,
+                'advance_warning_days': 7,
+                'overdue_reminders': True,
+                'email_notifications': True,
+                'weekly_digest_enabled': True,
+            }
+        )
+        return config
+    
+    def get_reminder_days(self):
+        """Get list of days before due date when reminders should be sent."""
+        if self.reminder_frequency == 'custom' and self.custom_reminder_days:
+            return sorted(self.custom_reminder_days, reverse=True)
+        elif self.reminder_frequency == 'weekly':
+            return [7, 14, 21]  # Weekly reminders
+        else:  # daily
+            return list(range(1, self.advance_warning_days + 1))
+
+
+class AssessmentReminderLog(models.Model):
+    """
+    Log of sent reminders to prevent duplicate notifications.
+    """
+    REMINDER_TYPES = [
+        ('advance_warning', 'Advance Warning'),
+        ('due_today', 'Due Today'),
+        ('overdue', 'Overdue'),
+        ('weekly_digest', 'Weekly Digest'),
+        ('daily_digest', 'Daily Digest'),
+    ]
+    
+    assessment = models.ForeignKey(
+        ControlAssessment,
+        on_delete=models.CASCADE,
+        related_name='reminder_logs'
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='assessment_reminder_logs'
+    )
+    reminder_type = models.CharField(
+        max_length=20,
+        choices=REMINDER_TYPES
+    )
+    days_before_due = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Days before due date when reminder was sent (negative for overdue)"
+    )
+    sent_at = models.DateTimeField(auto_now_add=True)
+    email_sent = models.BooleanField(default=False)
+    
+    class Meta:
+        unique_together = [('assessment', 'user', 'reminder_type', 'days_before_due')]
+        indexes = [
+            models.Index(fields=['assessment', 'user']),
+            models.Index(fields=['sent_at']),
+            models.Index(fields=['reminder_type']),
+        ]
+    
+    def __str__(self):
+        return f"{self.reminder_type} reminder for {self.assessment.assessment_id} to {self.user.username}"

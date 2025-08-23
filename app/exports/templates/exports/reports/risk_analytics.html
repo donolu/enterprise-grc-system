@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ report.title }}</title>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ report.title }}</h1>
+        <div class="subtitle">
+            Risk Analytics & Integration Report
+            <br>
+            Generated: {{ generated_at|date:"F d, Y g:i A" }}
+            <br>
+            Requested by: {{ report.requested_by.get_full_name|default:report.requested_by.username }}
+        </div>
+    </div>
+
+    {% if risk_analytics %}
+    <div class="section">
+        <h2>Executive Risk Summary</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.overview.total_risks|default:0 }}</div>
+                <div class="label">Total Risks</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.overview.active_risks|default:0 }}</div>
+                <div class="label">Active Risks</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.overview.critical_risks|default:0 }}</div>
+                <div class="label">Critical Risks</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.overview.high_risks|default:0 }}</div>
+                <div class="label">High Risks</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.actions.total_actions|default:0 }}</div>
+                <div class="label">Mitigation Actions</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.actions.completed_actions|default:0 }}</div>
+                <div class="label">Completed Actions</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Risk Level Distribution</h2>
+        {% if risk_analytics.overview.risk_level_distribution %}
+        <div class="stats-grid">
+            {% for level, count in risk_analytics.overview.risk_level_distribution.items %}
+            <div class="stat-card">
+                <div class="number risk-level-{{ level }}">{{ count }}</div>
+                <div class="label">{{ level|title }} Risk{{ count|pluralize }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color: #666; font-style: italic;">No risk level distribution data available.</p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Risk Treatment Progress</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.actions.completion_rate|floatformat:1|default:0 }}%</div>
+                <div class="label">Action Completion Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.actions.overdue_actions|default:0 }}</div>
+                <div class="label">Overdue Actions</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.actions.avg_progress|floatformat:0|default:0 }}%</div>
+                <div class="label">Average Progress</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ risk_analytics.compliance_correlation.risk_mitigation_coverage|floatformat:1|default:0 }}%</div>
+                <div class="label">Risk Coverage</div>
+            </div>
+        </div>
+
+        {% if risk_analytics.actions.status_breakdown %}
+        <h3>Action Status Breakdown</h3>
+        <table class="assessment-table">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Count</th>
+                    <th>Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for status, count in risk_analytics.actions.status_breakdown.items %}
+                <tr>
+                    <td>
+                        <span class="status-badge status-{{ status }}">
+                            {{ status|title }}
+                        </span>
+                    </td>
+                    <td>{{ count }}</td>
+                    <td>{{ count|div:risk_analytics.actions.total_actions|mul:100|floatformat:1 }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+
+    {% if trend_analysis %}
+    <div class="section">
+        <h2>Risk Trend Analysis</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="number">{{ trend_analysis.new_risks_last_30_days|default:0 }}</div>
+                <div class="label">New Risks (30 days)</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ trend_analysis.closed_risks_last_30_days|default:0 }}</div>
+                <div class="label">Closed Risks (30 days)</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ trend_analysis.net_risk_change|default:0 }}</div>
+                <div class="label">Net Risk Change</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ trend_analysis.avg_days_to_close|floatformat:0|default:0 }}</div>
+                <div class="label">Avg Days to Close</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="section">
+        <h2>Risk-Compliance Integration Analysis</h2>
+        {% if risk_analytics.compliance_correlation %}
+        <div style="padding: 1em; background-color: #f8f9fa; border-left: 4px solid #0066cc; margin-bottom: 1em;">
+            <h4 style="margin-top: 0; color: #0066cc;">Integration Metrics</h4>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="number">{{ risk_analytics.compliance_correlation.risks_with_mitigation_actions }}</div>
+                    <div class="label">Risks with Actions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">{{ risk_analytics.compliance_correlation.risk_mitigation_coverage|floatformat:1 }}%</div>
+                    <div class="label">Mitigation Coverage</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">{{ risk_analytics.compliance_correlation.overdue_risks|default:0 }}</div>
+                    <div class="label">Overdue Risks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">{{ risk_analytics.compliance_correlation.risk_action_completion_rate }}%</div>
+                    <div class="label">Action Completion</div>
+                </div>
+            </div>
+        </div>
+
+        {% if risk_analytics.compliance_correlation.integration_insights %}
+        <div style="padding: 1em; background-color: #f8f9fa; border-left: 4px solid #28a745;">
+            <h4 style="margin-top: 0; color: #28a745;">Integration Assessment</h4>
+            <ul style="margin: 0.5em 0; padding-left: 1.5em; font-size: 11pt;">
+                {% if risk_analytics.compliance_correlation.integration_insights.risk_driven_compliance %}
+                <li style="color: #28a745; margin-bottom: 0.5em;">
+                    <strong>✓ Risk-Driven Compliance:</strong> Organization uses risk assessments to drive compliance activities
+                </li>
+                {% endif %}
+                {% if risk_analytics.compliance_correlation.integration_insights.action_based_mitigation %}
+                <li style="color: #28a745; margin-bottom: 0.5em;">
+                    <strong>✓ Structured Mitigation:</strong> Risk mitigation follows structured action-based approach
+                </li>
+                {% endif %}
+                {% if risk_analytics.compliance_correlation.integration_insights.comprehensive_coverage %}
+                <li style="color: #28a745; margin-bottom: 0.5em;">
+                    <strong>✓ Comprehensive Coverage:</strong> Strong integration between risk management and compliance (70%+ coverage)
+                </li>
+                {% else %}
+                <li style="color: #ffc107; margin-bottom: 0.5em;">
+                    <strong>⚠ Limited Integration:</strong> Risk coverage below 70% - consider expanding risk-based compliance approach
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+
+    {% if control_integration %}
+    <div class="section">
+        <h2>Control Framework Integration</h2>
+        <p style="color: #666; font-size: 10pt; margin-bottom: 1em;">
+            Analysis of how risk management aligns with control framework assessments and compliance activities.
+        </p>
+        
+        {% if control_integration.framework_alignment %}
+        <table class="assessment-table">
+            <thead>
+                <tr>
+                    <th>Framework</th>
+                    <th>Related Risks</th>
+                    <th>Control Coverage</th>
+                    <th>Risk Alignment</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for framework in control_integration.framework_alignment %}
+                <tr>
+                    <td>{{ framework.name }}</td>
+                    <td>{{ framework.related_risks|default:0 }}</td>
+                    <td>{{ framework.control_coverage|floatformat:1|default:0 }}%</td>
+                    <td>
+                        <span class="status-badge {% if framework.alignment_score >= 70 %}status-completed{% elif framework.alignment_score >= 40 %}status-in-progress{% else %}status-not-started{% endif %}">
+                            {{ framework.alignment_score|floatformat:0 }}%
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #666; font-style: italic;">Control framework integration analysis not available.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if dashboard_data %}
+    <div class="section">
+        <h2>Comprehensive Risk Dashboard Summary</h2>
+        <div style="padding: 1em; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;">
+            <h4 style="margin-top: 0; color: #0066cc;">Key Performance Indicators</h4>
+            <div class="stats-grid">
+                {% for kpi_name, kpi_value in dashboard_data.items %}
+                {% if kpi_name != 'generated_at' %}
+                <div class="stat-card">
+                    <div class="number">
+                        {% if kpi_value|floatformat:0 == kpi_value|stringformat:"s" %}
+                            {{ kpi_value }}
+                        {% else %}
+                            {{ kpi_value|floatformat:1 }}
+                        {% endif %}
+                    </div>
+                    <div class="label">{{ kpi_name|title }}</div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="section">
+        <h2>Risk Analytics Unavailable</h2>
+        <div style="padding: 2em; text-align: center; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;">
+            <p style="color: #6c757d; font-size: 12pt; margin: 0;">
+                Risk analytics data is currently unavailable. Please ensure the risk management system is properly configured and contains data.
+            </p>
+            {% if risk_analytics.error %}
+            <p style="color: #dc3545; font-size: 10pt; margin-top: 1em;">
+                Error: {{ risk_analytics.error }}
+            </p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="section" style="margin-top: 3em; padding-top: 2em; border-top: 2px solid #dee2e6;">
+        <h2>Report Information</h2>
+        <div style="font-size: 10pt; color: #666;">
+            <p><strong>Report Type:</strong> Risk Analytics & Integration Report</p>
+            <p><strong>Generated:</strong> {{ generated_at|date:"F d, Y g:i A" }}</p>
+            <p><strong>Requested by:</strong> {{ report.requested_by.get_full_name|default:report.requested_by.username }}</p>
+            <p><strong>Data Sources:</strong> Risk Register, Risk Actions, Assessment Framework Integration</p>
+            <p style="margin-top: 1em; font-style: italic;">
+                This report integrates risk management analytics with compliance assessment data to provide comprehensive security posture insights.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+
+<style>
+/* Additional CSS for risk-specific styling */
+.risk-level-critical { color: #dc3545 !important; }
+.risk-level-high { color: #fd7e14 !important; }
+.risk-level-medium { color: #ffc107 !important; }
+.risk-level-low { color: #28a745 !important; }
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1em;
+    margin: 1em 0;
+}
+
+.stat-card {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 1em;
+    text-align: center;
+    background-color: white;
+}
+
+.stat-card .number {
+    font-size: 20pt;
+    font-weight: bold;
+    color: #0066cc;
+}
+
+.stat-card .label {
+    font-size: 9pt;
+    color: #666;
+    margin-top: 0.5em;
+}
+</style>

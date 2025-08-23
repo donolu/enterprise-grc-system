@@ -1,0 +1,78 @@
+ASSESSMENT REMINDER - {{ urgency_message }}
+
+Hello {{ user.get_full_name|default:user.username }},
+
+This is a reminder about your assigned assessment that requires attention.
+
+ASSESSMENT DETAILS
+==================
+Control: {{ control.control_id }} - {{ control.title }}
+Framework: {{ framework.short_name }} ({{ framework.name }})
+Current Status: {{ assessment.get_status_display }}
+Implementation Status: {{ assessment.get_implementation_status_display }}
+
+DUE DATE INFORMATION
+====================
+{% if assessment.due_date %}
+Due Date: {{ assessment.due_date|date:"F d, Y" }}
+{% if is_overdue %}
+STATUS: {{ assessment.days_until_due|add:"-1" }} DAYS OVERDUE
+{% elif assessment.days_until_due == 0 %}
+STATUS: DUE TODAY
+{% elif assessment.days_until_due > 0 %}
+STATUS: {{ assessment.days_until_due }} days remaining
+{% endif %}
+{% else %}
+Due Date: Not set
+{% endif %}
+
+{% if config.include_assessment_details and control.description %}
+CONTROL DESCRIPTION
+===================
+{{ control.description|truncatewords:100 }}
+
+{% endif %}
+{% if assessment.assessment_notes %}
+ASSESSMENT NOTES
+================
+{{ assessment.assessment_notes|truncatewords:50 }}
+
+{% endif %}
+{% if config.include_remediation_items and assessment.remediation_due_date %}
+REMEDIATION REQUIRED
+====================
+Remediation Due: {{ assessment.remediation_due_date|date:"F d, Y" }}
+{% if assessment.remediation_owner %}
+Remediation Owner: {{ assessment.remediation_owner.get_full_name|default:assessment.remediation_owner.username }}
+{% endif %}
+
+{% endif %}
+NEXT STEPS
+==========
+{% if assessment.status == 'not_started' %}
+- Review the control requirements and begin assessment
+- Update the assessment status to "In Progress"
+- Document current implementation state
+{% elif assessment.status == 'in_progress' %}
+- Complete the gap analysis and implementation approach
+- Gather evidence of control implementation
+- Update status to "Under Review" when ready
+{% elif assessment.status == 'under_review' %}
+- Address any reviewer feedback
+- Finalize assessment documentation
+- Mark as "Complete" once all requirements are met
+{% endif %}
+- Upload supporting evidence and documentation
+- Contact your reviewer if you have questions
+
+VIEW ASSESSMENT
+===============
+Visit: https://{{ site_domain }}/assessments/{{ assessment.id }}/
+
+NOTIFICATION SETTINGS
+=====================
+To manage your notification preferences, visit:
+https://{{ site_domain }}/settings/notifications/
+
+---
+This is an automated reminder from your compliance management system.

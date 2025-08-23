@@ -8,6 +8,8 @@ from django_otp import user_has_device
 import qrcode
 from io import BytesIO
 import base64
+import pyotp
+import secrets
 from .models import PushDevice, UserDevicePreference
 
 User = get_user_model()
