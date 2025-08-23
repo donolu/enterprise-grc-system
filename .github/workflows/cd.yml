@@ -132,7 +132,7 @@ jobs:
     # If pulling private GHCR images WITHOUT Managed Identity:
     # (One-time app settings; safe to re-apply)
     - name: Configure registry creds (optional for GHCR)
-      if: ${{ steps.detect.outputs.mode == 'single' && secrets.GHCR_USERNAME && secrets.GHCR_PAT }}
+      if: ${{ steps.detect.outputs.mode == 'single' && secrets.GHCR_USERNAME != '' && secrets.GHCR_PAT != '' }}
       uses: azure/CLI@v1
       with:
         inlineScript: |
