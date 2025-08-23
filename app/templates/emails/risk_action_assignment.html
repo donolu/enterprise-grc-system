@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Action Assignment</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 3px solid #28a745;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+        .assignment-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            background-color: #28a745;
+            color: white;
+        }
+        .action-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .action-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+        .action-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .detail-value {
+            color: #333;
+            font-size: 14px;
+        }
+        .action-button {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .action-button:hover {
+            background-color: #218838;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .priority-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .priority-critical {
+            background-color: #dc3545;
+            color: white;
+        }
+        .priority-high {
+            background-color: #fd7e14;
+            color: white;
+        }
+        .priority-medium {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .priority-low {
+            background-color: #28a745;
+            color: white;
+        }
+        .risk-info {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .assigner-info {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="assignment-badge">
+                📋 NEW ASSIGNMENT
+            </div>
+            <h1>Risk Action Assigned</h1>
+            <p>Hello {{ user.get_full_name|default:user.username }},</p>
+            <p>You have been assigned a new risk action that requires your attention.</p>
+        </div>
+
+        <div class="action-card">
+            <div class="action-title">
+                {{ action.action_id }}: {{ action.title }}
+            </div>
+            
+            <div class="action-details">
+                <div class="detail-item">
+                    <span class="detail-label">Priority</span>
+                    <span class="detail-value">
+                        <span class="priority-badge priority-{{ action.priority }}">{{ action.get_priority_display }}</span>
+                    </span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Action Type</span>
+                    <span class="detail-value">{{ action.get_action_type_display }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Due Date</span>
+                    <span class="detail-value">
+                        {{ action.due_date|date:"F d, Y" }}
+                        {% if action.days_until_due > 0 %}
+                            <span style="color: #28a745;">({{ action.days_until_due }} days remaining)</span>
+                        {% elif action.days_until_due == 0 %}
+                            <strong style="color: #fd7e14;">(Due Today)</strong>
+                        {% else %}
+                            <strong style="color: #dc3545;">({{ action.days_until_due|add:"-1" }} days overdue)</strong>
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Start Date</span>
+                    <span class="detail-value">
+                        {% if action.start_date %}
+                            {{ action.start_date|date:"F d, Y" }}
+                        {% else %}
+                            Not specified
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            {% if action.description %}
+            <div style="margin-top: 20px;">
+                <div class="detail-label">Description</div>
+                <div class="detail-value" style="margin-top: 8px;">
+                    {{ action.description }}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if action.success_criteria %}
+            <div style="margin-top: 15px;">
+                <div class="detail-label">Success Criteria</div>
+                <div class="detail-value" style="margin-top: 8px;">
+                    {{ action.success_criteria }}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if action.dependencies %}
+            <div style="margin-top: 15px;">
+                <div class="detail-label">Dependencies</div>
+                <div class="detail-value" style="margin-top: 8px; font-style: italic;">
+                    {{ action.dependencies }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="risk-info">
+            <strong>Related Risk: {{ risk.risk_id }}</strong><br>
+            <span style="font-size: 14px;">
+                {{ risk.title }}
+                <br><span style="font-size: 12px; color: #666;">
+                    Risk Level: <span style="font-weight: bold; color: {{ risk.get_risk_level_color }};">{{ risk.get_risk_level_display }}</span>
+                    | Owner: {{ risk.risk_owner.get_full_name|default:risk.risk_owner.username|default:"Unassigned" }}
+                </span>
+            </span>
+        </div>
+
+        {% if assigner %}
+        <div class="assigner-info">
+            <strong>Assigned by:</strong> {{ assigner.get_full_name|default:assigner.username }}
+            {% if assigner.email %}
+            <br><span style="font-size: 12px;">Contact: {{ assigner.email }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div style="text-align: center;">
+            <a href="{{ action_url }}" class="action-button">
+                View & Update Action
+            </a>
+        </div>
+
+        <div style="margin-top: 25px; padding: 15px; background-color: #d4edda; border-radius: 6px;">
+            <h3 style="margin-top: 0; color: #155724;">🚀 Getting Started:</h3>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li><strong>Review the requirements</strong> - Understand what needs to be accomplished</li>
+                <li><strong>Check the success criteria</strong> - Know what defines completion</li>
+                <li><strong>Review dependencies</strong> - Identify any prerequisites or blockers</li>
+                <li><strong>Update status to "In Progress"</strong> - When you begin working</li>
+                <li><strong>Track your progress</strong> - Update percentage completion regularly</li>
+                <li><strong>Add notes</strong> - Document your progress and any issues</li>
+                <li><strong>Upload evidence</strong> - Provide documentation as you complete tasks</li>
+                <li><strong>Communicate</strong> - Reach out to the risk owner or assigner with questions</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>This notification was sent because you were assigned a new risk action.</p>
+            <p>If you have questions about this assignment, please contact {{ assigner.get_full_name|default:assigner.username|default:"the risk owner" }}.</p>
+            <p style="margin-top: 15px;">
+                <a href="{{ site_domain }}/admin/risk/riskactionreminderconfiguration/" style="color: #28a745;">Manage Risk Action Notification Preferences</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

@@ -6,9 +6,9 @@ supporting complex queries, date ranges, and multi-field filtering.
 """
 
 import django_filters
-from django.db.models import Q
+from django.db.models import Q, F
 from django.utils import timezone
-from .models import Vendor, VendorContact, VendorService, VendorNote, VendorCategory
+from .models import Vendor, VendorContact, VendorService, VendorNote, VendorCategory, VendorTask
 
 
 class VendorFilter(django_filters.FilterSet):
@@ -288,4 +288,218 @@ class VendorNoteFilter(django_filters.FilterSet):
         """Filter notes created by the current user."""
         if value and hasattr(self.request, 'user'):
             return queryset.filter(created_by=self.request.user)
+        return queryset
+
+
+class VendorTaskFilter(django_filters.FilterSet):
+    """Advanced filtering for vendor tasks with comprehensive query options."""
+    
+    # Basic filters
+    task_id = django_filters.CharFilter(lookup_expr='icontains')
+    title = django_filters.CharFilter(lookup_expr='icontains')
+    description = django_filters.CharFilter(lookup_expr='icontains')
+    
+    # Task classification
+    task_type = django_filters.MultipleChoiceFilter(choices=VendorTask.TASK_TYPE_CHOICES)
+    status = django_filters.MultipleChoiceFilter(choices=VendorTask.STATUS_CHOICES)
+    priority = django_filters.MultipleChoiceFilter(choices=VendorTask.PRIORITY_CHOICES)
+    
+    # Vendor-related filters
+    vendor = django_filters.NumberFilter()
+    vendor_name = django_filters.CharFilter(field_name='vendor__name', lookup_expr='icontains')
+    vendor_id = django_filters.CharFilter(field_name='vendor__vendor_id', lookup_expr='icontains')
+    vendor_status = django_filters.MultipleChoiceFilter(
+        field_name='vendor__status',
+        choices=Vendor.STATUS_CHOICES
+    )
+    vendor_risk_level = django_filters.MultipleChoiceFilter(
+        field_name='vendor__risk_level',
+        choices=Vendor.RISK_LEVEL_CHOICES
+    )
+    
+    # Assignment filters
+    assigned_to = django_filters.NumberFilter()
+    assigned_to_me = django_filters.BooleanFilter(method='filter_assigned_to_me')
+    unassigned = django_filters.BooleanFilter(method='filter_unassigned')
+    created_by = django_filters.NumberFilter()
+    created_by_me = django_filters.BooleanFilter(method='filter_created_by_me')
+    
+    # Date-based filters
+    due_date = django_filters.DateFilter()
+    due_date_range = django_filters.DateFromToRangeFilter(field_name='due_date')
+    due_before = django_filters.DateFilter(field_name='due_date', lookup_expr='lte')
+    due_after = django_filters.DateFilter(field_name='due_date', lookup_expr='gte')
+    
+    start_date_range = django_filters.DateFromToRangeFilter(field_name='start_date')
+    completed_date_range = django_filters.DateTimeFromToRangeFilter(field_name='completed_date')
+    
+    # Special date filters
+    due_this_week = django_filters.BooleanFilter(method='filter_due_this_week')
+    due_this_month = django_filters.BooleanFilter(method='filter_due_this_month')
+    due_next_month = django_filters.BooleanFilter(method='filter_due_next_month')
+    overdue = django_filters.BooleanFilter(method='filter_overdue')
+    due_soon = django_filters.NumberFilter(method='filter_due_soon', help_text="Due within N days")
+    
+    # Task characteristics
+    auto_generated = django_filters.BooleanFilter()
+    is_recurring = django_filters.BooleanFilter()
+    has_reminders = django_filters.BooleanFilter(method='filter_has_reminders')
+    reminder_sent = django_filters.BooleanFilter(method='filter_reminder_sent')
+    
+    # Contract and service filters
+    related_contract_number = django_filters.CharFilter(lookup_expr='icontains')
+    has_contract_reference = django_filters.BooleanFilter(method='filter_has_contract_reference')
+    service_reference = django_filters.NumberFilter()
+    has_service_reference = django_filters.BooleanFilter(method='filter_has_service_reference')
+    
+    # Performance and completion filters
+    completed_on_time = django_filters.BooleanFilter(method='filter_completed_on_time')
+    completed_late = django_filters.BooleanFilter(method='filter_completed_late')
+    has_completion_notes = django_filters.BooleanFilter(method='filter_has_completion_notes')
+    
+    # Advanced date filters
+    created_after = django_filters.DateTimeFilter(field_name='created_at', lookup_expr='gte')
+    created_before = django_filters.DateTimeFilter(field_name='created_at', lookup_expr='lte')
+    updated_after = django_filters.DateTimeFilter(field_name='updated_at', lookup_expr='gte')
+    updated_before = django_filters.DateTimeFilter(field_name='updated_at', lookup_expr='lte')
+    
+    class Meta:
+        model = VendorTask
+        fields = []
+    
+    def filter_assigned_to_me(self, queryset, name, value):
+        """Filter tasks assigned to the current user."""
+        if value and hasattr(self.request, 'user'):
+            return queryset.filter(assigned_to=self.request.user)
+        return queryset
+    
+    def filter_unassigned(self, queryset, name, value):
+        """Filter unassigned tasks."""
+        if value:
+            return queryset.filter(assigned_to__isnull=True)
+        return queryset
+    
+    def filter_created_by_me(self, queryset, name, value):
+        """Filter tasks created by the current user."""
+        if value and hasattr(self.request, 'user'):
+            return queryset.filter(created_by=self.request.user)
+        return queryset
+    
+    def filter_due_this_week(self, queryset, name, value):
+        """Filter tasks due within this week."""
+        if value:
+            today = timezone.now().date()
+            week_end = today + timezone.timedelta(days=7)
+            return queryset.filter(
+                due_date__gte=today,
+                due_date__lte=week_end,
+                status__in=['pending', 'in_progress']
+            )
+        return queryset
+    
+    def filter_due_this_month(self, queryset, name, value):
+        """Filter tasks due within this month."""
+        if value:
+            today = timezone.now().date()
+            month_end = today + timezone.timedelta(days=30)
+            return queryset.filter(
+                due_date__gte=today,
+                due_date__lte=month_end,
+                status__in=['pending', 'in_progress']
+            )
+        return queryset
+    
+    def filter_due_next_month(self, queryset, name, value):
+        """Filter tasks due within next month."""
+        if value:
+            today = timezone.now().date()
+            next_month_start = today + timezone.timedelta(days=30)
+            next_month_end = today + timezone.timedelta(days=60)
+            return queryset.filter(
+                due_date__gt=next_month_start,
+                due_date__lte=next_month_end,
+                status__in=['pending', 'in_progress']
+            )
+        return queryset
+    
+    def filter_overdue(self, queryset, name, value):
+        """Filter overdue tasks."""
+        if value:
+            today = timezone.now().date()
+            return queryset.filter(
+                due_date__lt=today,
+                status__in=['pending', 'in_progress']
+            )
+        return queryset
+    
+    def filter_due_soon(self, queryset, name, value):
+        """Filter tasks due within specified number of days."""
+        if value is not None and isinstance(value, int) and value > 0:
+            today = timezone.now().date()
+            target_date = today + timezone.timedelta(days=value)
+            return queryset.filter(
+                due_date__gte=today,
+                due_date__lte=target_date,
+                status__in=['pending', 'in_progress']
+            )
+        return queryset
+    
+    def filter_has_reminders(self, queryset, name, value):
+        """Filter tasks that have reminder configuration."""
+        if value:
+            return queryset.exclude(reminder_days__isnull=True).exclude(reminder_days=[])
+        elif value is False:
+            return queryset.filter(Q(reminder_days__isnull=True) | Q(reminder_days=[]))
+        return queryset
+    
+    def filter_reminder_sent(self, queryset, name, value):
+        """Filter tasks that have had reminders sent."""
+        if value:
+            return queryset.filter(last_reminder_sent__isnull=False)
+        elif value is False:
+            return queryset.filter(last_reminder_sent__isnull=True)
+        return queryset
+    
+    def filter_has_contract_reference(self, queryset, name, value):
+        """Filter tasks with contract number references."""
+        if value:
+            return queryset.exclude(related_contract_number='')
+        elif value is False:
+            return queryset.filter(related_contract_number='')
+        return queryset
+    
+    def filter_has_service_reference(self, queryset, name, value):
+        """Filter tasks with service references."""
+        if value:
+            return queryset.filter(service_reference__isnull=False)
+        elif value is False:
+            return queryset.filter(service_reference__isnull=True)
+        return queryset
+    
+    def filter_completed_on_time(self, queryset, name, value):
+        """Filter tasks completed on or before due date."""
+        if value:
+            return queryset.filter(
+                status='completed',
+                completed_date__isnull=False,
+                completed_date__date__lte=F('due_date')
+            )
+        return queryset
+    
+    def filter_completed_late(self, queryset, name, value):
+        """Filter tasks completed after due date."""
+        if value:
+            return queryset.filter(
+                status='completed',
+                completed_date__isnull=False,
+                completed_date__date__gt=F('due_date')
+            )
+        return queryset
+    
+    def filter_has_completion_notes(self, queryset, name, value):
+        """Filter tasks with completion notes."""
+        if value:
+            return queryset.exclude(completion_notes='')
+        elif value is False:
+            return queryset.filter(completion_notes='')
         return queryset

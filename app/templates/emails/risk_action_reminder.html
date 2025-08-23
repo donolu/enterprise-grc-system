@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Action Reminder</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 3px solid #dc3545;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+        .urgency-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+        .urgency-critical {
+            background-color: #dc3545;
+            color: white;
+        }
+        .urgency-high {
+            background-color: #fd7e14;
+            color: white;
+        }
+        .urgency-medium {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .urgency-low {
+            background-color: #28a745;
+            color: white;
+        }
+        .action-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #dc3545;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .action-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #dc3545;
+            margin-bottom: 10px;
+        }
+        .action-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .detail-value {
+            color: #333;
+            font-size: 14px;
+        }
+        .action-button {
+            display: inline-block;
+            background-color: #dc3545;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .action-button:hover {
+            background-color: #c82333;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .priority-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .priority-critical {
+            background-color: #dc3545;
+            color: white;
+        }
+        .priority-high {
+            background-color: #fd7e14;
+            color: white;
+        }
+        .priority-medium {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .priority-low {
+            background-color: #28a745;
+            color: white;
+        }
+        .risk-info {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #28a745;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="urgency-badge urgency-{{ urgency }}">
+                {% if reminder_type == 'overdue' %}
+                    ⚠️ OVERDUE
+                {% elif reminder_type == 'due_today' %}
+                    📅 DUE TODAY
+                {% elif days_before_due == 1 %}
+                    ⏰ DUE TOMORROW
+                {% else %}
+                    📋 REMINDER
+                {% endif %}
+            </div>
+            <h1>Risk Action Reminder</h1>
+            <p>Hello {{ user.get_full_name|default:user.username }},</p>
+            <p>
+                {% if reminder_type == 'overdue' %}
+                    Your risk action is <strong>overdue</strong> and requires immediate attention.
+                {% elif reminder_type == 'due_today' %}
+                    Your risk action is <strong>due today</strong> and needs to be completed.
+                {% elif days_before_due == 1 %}
+                    Your risk action is <strong>due tomorrow</strong>. Please ensure it's completed on time.
+                {% else %}
+                    You have a risk action due in {{ days_before_due }} days that requires your attention.
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="action-card">
+            <div class="action-title">
+                {{ action.action_id }}: {{ action.title }}
+            </div>
+            
+            <div class="action-details">
+                <div class="detail-item">
+                    <span class="detail-label">Priority</span>
+                    <span class="detail-value">
+                        <span class="priority-badge priority-{{ action.priority }}">{{ action.get_priority_display }}</span>
+                    </span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Status</span>
+                    <span class="detail-value">{{ action.get_status_display }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Due Date</span>
+                    <span class="detail-value">
+                        {{ action.due_date|date:"F d, Y" }}
+                        {% if action.is_overdue %}
+                            <strong style="color: #dc3545;">({{ action.days_until_due|add:"-1" }} days overdue)</strong>
+                        {% elif action.days_until_due == 0 %}
+                            <strong style="color: #fd7e14;">(Due Today)</strong>
+                        {% elif action.days_until_due > 0 %}
+                            <strong style="color: #28a745;">({{ action.days_until_due }} days remaining)</strong>
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Action Type</span>
+                    <span class="detail-value">{{ action.get_action_type_display }}</span>
+                </div>
+            </div>
+
+            {% if action.progress_percentage > 0 %}
+            <div style="margin-top: 15px;">
+                <div class="detail-label">Progress</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ action.progress_percentage }}%;"></div>
+                </div>
+                <div style="font-size: 12px; color: #666; margin-top: 5px;">{{ action.progress_percentage }}% Complete</div>
+            </div>
+            {% endif %}
+
+            {% if action.description %}
+            <div style="margin-top: 20px;">
+                <div class="detail-label">Description</div>
+                <div class="detail-value" style="margin-top: 8px;">
+                    {{ action.description|truncatewords:50 }}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if action.success_criteria %}
+            <div style="margin-top: 15px;">
+                <div class="detail-label">Success Criteria</div>
+                <div class="detail-value" style="margin-top: 8px; font-style: italic;">
+                    {{ action.success_criteria|truncatewords:30 }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="risk-info">
+            <strong>Related Risk: {{ risk.risk_id }}</strong><br>
+            <span style="font-size: 14px;">
+                {{ risk.title }}
+                <br><span style="font-size: 12px; color: #666;">
+                    Risk Level: <span style="font-weight: bold; color: {{ risk.get_risk_level_color }};">{{ risk.get_risk_level_display }}</span>
+                    | Owner: {{ risk.risk_owner.get_full_name|default:risk.risk_owner.username|default:"Unassigned" }}
+                </span>
+            </span>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="{{ action_url }}" class="action-button">
+                Update Action Status
+            </a>
+        </div>
+
+        <div style="margin-top: 25px; padding: 15px; background-color: #fff3cd; border-radius: 6px;">
+            <h3 style="margin-top: 0; color: #856404;">Next Steps:</h3>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                {% if action.status == 'pending' %}
+                    <li>Review the action requirements and begin work</li>
+                    <li>Update the status to "In Progress"</li>
+                    <li>Update progress percentage as you complete tasks</li>
+                {% elif action.status == 'in_progress' %}
+                    <li>Continue working on the required tasks</li>
+                    <li>Update progress percentage regularly</li>
+                    <li>Add progress notes to track your work</li>
+                    <li>Upload evidence when tasks are completed</li>
+                {% elif action.status == 'deferred' %}
+                    <li>Review the deferral reason and timeline</li>
+                    <li>Resume work when conditions allow</li>
+                    <li>Update status to "In Progress" when ready</li>
+                {% endif %}
+                <li>Upload supporting evidence and documentation</li>
+                <li>Contact the risk owner if you have questions</li>
+                <li>Mark as "Complete" when all requirements are met</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated reminder from your risk management system.</p>
+            <p>If you no longer wish to receive these reminders, you can update your notification preferences in your account settings.</p>
+            <p style="margin-top: 15px;">
+                <a href="{{ site_domain }}/admin/risk/riskactionreminderconfiguration/" style="color: #dc3545;">Manage Risk Action Notification Preferences</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

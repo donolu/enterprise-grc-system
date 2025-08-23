@@ -1,0 +1,70 @@
+Risk Action Reminder
+
+Hello {{ user.get_full_name|default:user.username }},
+
+{% if reminder_type == 'overdue' %}Your risk action is OVERDUE and requires immediate attention.
+{% elif reminder_type == 'due_today' %}Your risk action is DUE TODAY and needs to be completed.
+{% elif days_before_due == 1 %}Your risk action is DUE TOMORROW. Please ensure it's completed on time.
+{% else %}You have a risk action due in {{ days_before_due }} days that requires your attention.
+{% endif %}
+
+ACTION DETAILS:
+===============
+Action ID: {{ action.action_id }}
+Title: {{ action.title }}
+Priority: {{ action.get_priority_display }}
+Status: {{ action.get_status_display }}
+Due Date: {{ action.due_date|date:"F d, Y" }}
+{% if action.is_overdue %}({{ action.days_until_due|add:"-1" }} days overdue)
+{% elif action.days_until_due == 0 %}(Due Today)
+{% elif action.days_until_due > 0 %}({{ action.days_until_due }} days remaining)
+{% endif %}
+Action Type: {{ action.get_action_type_display }}
+{% if action.progress_percentage > 0 %}Progress: {{ action.progress_percentage }}% Complete
+{% endif %}
+
+{% if action.description %}Description:
+{{ action.description }}
+{% endif %}
+
+{% if action.success_criteria %}Success Criteria:
+{{ action.success_criteria }}
+{% endif %}
+
+RELATED RISK:
+=============
+Risk ID: {{ risk.risk_id }}
+Title: {{ risk.title }}
+Risk Level: {{ risk.get_risk_level_display }}
+Risk Owner: {{ risk.risk_owner.get_full_name|default:risk.risk_owner.username|default:"Unassigned" }}
+
+NEXT STEPS:
+===========
+{% if action.status == 'pending' %}
+• Review the action requirements and begin work
+• Update the status to "In Progress"
+• Update progress percentage as you complete tasks
+{% elif action.status == 'in_progress' %}
+• Continue working on the required tasks
+• Update progress percentage regularly
+• Add progress notes to track your work
+• Upload evidence when tasks are completed
+{% elif action.status == 'deferred' %}
+• Review the deferral reason and timeline
+• Resume work when conditions allow
+• Update status to "In Progress" when ready
+{% endif %}
+• Upload supporting evidence and documentation
+• Contact the risk owner if you have questions
+• Mark as "Complete" when all requirements are met
+
+To update this action, visit:
+{{ action_url }}
+
+To view the related risk, visit:
+{{ risk_url }}
+
+---
+This is an automated reminder from your risk management system.
+If you no longer wish to receive these reminders, you can update your notification preferences at:
+{{ site_domain }}/admin/risk/riskactionreminderconfiguration/

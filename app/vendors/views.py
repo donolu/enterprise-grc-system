@@ -6,7 +6,7 @@ filtering, search, and bulk operations with proper tenant isolation.
 """
 
 from django.shortcuts import get_object_or_404
-from django.db.models import Count, Q, Avg, Sum
+from django.db.models import Count, Q, Avg, Sum, F
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -18,13 +18,16 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiPara
 from drf_spectacular.types import OpenApiTypes
 from decimal import Decimal
 
-from .models import Vendor, VendorCategory, VendorContact, VendorService, VendorNote
+from .models import Vendor, VendorCategory, VendorContact, VendorService, VendorNote, VendorTask
 from .serializers import (
     VendorListSerializer, VendorDetailSerializer, VendorCreateUpdateSerializer,
     VendorCategorySerializer, VendorContactSerializer, VendorServiceSerializer,
-    VendorNoteSerializer, VendorSummarySerializer, BulkVendorCreateSerializer
+    VendorNoteSerializer, VendorSummarySerializer, BulkVendorCreateSerializer,
+    VendorTaskListSerializer, VendorTaskDetailSerializer, VendorTaskCreateUpdateSerializer,
+    VendorTaskStatusUpdateSerializer, VendorTaskBulkActionSerializer, VendorTaskSummarySerializer,
+    VendorTaskReminderSerializer
 )
-from .filters import VendorFilter, VendorContactFilter, VendorServiceFilter
+from .filters import VendorFilter, VendorContactFilter, VendorServiceFilter, VendorTaskFilter
 
 
 @extend_schema_view(
@@ -499,4 +502,360 @@ class VendorNoteViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set the creator when creating a note."""
+        serializer.save(created_by=self.request.user)
+
+
+@extend_schema_view(tags=['Vendor Tasks'])
+class VendorTaskViewSet(viewsets.ModelViewSet):
+    """
+    **Vendor Task Management**
+    
+    Comprehensive task management for vendor-related activities including contract renewals,
+    security reviews, compliance assessments, and automated task generation.
+    """
+    
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = VendorTaskFilter
+    search_fields = ['title', 'description', 'vendor__name', 'task_id']
+    ordering_fields = [
+        'due_date', 'priority', 'status', 'task_type', 'created_at', 'updated_at'
+    ]
+    ordering = ['due_date', '-priority']
+    
+    def get_serializer_class(self):
+        """Return appropriate serializer based on action."""
+        if self.action == 'list':
+            return VendorTaskListSerializer
+        elif self.action in ['create', 'update', 'partial_update']:
+            return VendorTaskCreateUpdateSerializer
+        elif self.action == 'update_status':
+            return VendorTaskStatusUpdateSerializer
+        elif self.action == 'bulk_action':
+            return VendorTaskBulkActionSerializer
+        elif self.action == 'summary':
+            return VendorTaskSummarySerializer
+        elif self.action == 'send_reminders':
+            return VendorTaskReminderSerializer
+        else:
+            return VendorTaskDetailSerializer
+    
+    def get_queryset(self):
+        """Get tasks with related data optimized."""
+        return VendorTask.objects.select_related(
+            'vendor', 'assigned_to', 'created_by', 'service_reference'
+        ).all()
+    
+    @extend_schema(
+        summary="Get task summary statistics",
+        description="Get comprehensive statistics about vendor tasks including status, priority, and due date analysis.",
+        responses={200: VendorTaskSummarySerializer}
+    )
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Get comprehensive task summary statistics."""
+        queryset = self.get_queryset()
+        
+        # Basic counts
+        total_tasks = queryset.count()
+        active_tasks = queryset.filter(status__in=['pending', 'in_progress']).count()
+        completed_tasks = queryset.filter(status='completed').count()
+        overdue_tasks = queryset.filter(
+            due_date__lt=timezone.now().date(),
+            status__in=['pending', 'in_progress']
+        ).count()
+        
+        # Status breakdown
+        status_counts = queryset.values('status').annotate(count=Count('id'))
+        status_breakdown = {item['status']: item['count'] for item in status_counts}
+        
+        # Priority breakdown
+        priority_counts = queryset.values('priority').annotate(count=Count('id'))
+        priority_breakdown = {item['priority']: item['count'] for item in priority_counts}
+        
+        # Task type breakdown
+        task_type_counts = queryset.values('task_type').annotate(count=Count('id'))
+        task_type_breakdown = {item['task_type']: item['count'] for item in task_type_counts}
+        
+        # Due date analysis
+        today = timezone.now().date()
+        week_end = today + timezone.timedelta(days=7)
+        month_end = today + timezone.timedelta(days=30)
+        next_month_end = today + timezone.timedelta(days=60)
+        
+        due_this_week = queryset.filter(
+            due_date__gte=today,
+            due_date__lte=week_end,
+            status__in=['pending', 'in_progress']
+        ).count()
+        
+        due_this_month = queryset.filter(
+            due_date__gte=today,
+            due_date__lte=month_end,
+            status__in=['pending', 'in_progress']
+        ).count()
+        
+        due_next_month = queryset.filter(
+            due_date__gt=month_end,
+            due_date__lte=next_month_end,
+            status__in=['pending', 'in_progress']
+        ).count()
+        
+        # Assignment analysis
+        assigned_tasks = queryset.filter(assigned_to__isnull=False).count()
+        unassigned_tasks = queryset.filter(assigned_to__isnull=True).count()
+        
+        # Automation statistics
+        auto_generated_tasks = queryset.filter(auto_generated=True).count()
+        manual_tasks = queryset.filter(auto_generated=False).count()
+        
+        # Performance metrics
+        completed_queryset = queryset.filter(status='completed', completed_date__isnull=False)
+        
+        # Calculate average completion time (in days)
+        completion_times = []
+        for task in completed_queryset:
+            if task.created_at and task.completed_date:
+                delta = task.completed_date.date() - task.created_at.date()
+                completion_times.append(delta.days)
+        
+        average_completion_time = sum(completion_times) / len(completion_times) if completion_times else None
+        
+        # Calculate on-time completion rate
+        on_time_completions = completed_queryset.filter(
+            completed_date__date__lte=F('due_date')
+        ).count()
+        on_time_completion_rate = (
+            (on_time_completions / completed_tasks * 100) if completed_tasks > 0 else None
+        )
+        
+        summary_data = {
+            'total_tasks': total_tasks,
+            'active_tasks': active_tasks,
+            'completed_tasks': completed_tasks,
+            'overdue_tasks': overdue_tasks,
+            'status_breakdown': status_breakdown,
+            'priority_breakdown': priority_breakdown,
+            'task_type_breakdown': task_type_breakdown,
+            'due_this_week': due_this_week,
+            'due_this_month': due_this_month,
+            'due_next_month': due_next_month,
+            'assigned_tasks': assigned_tasks,
+            'unassigned_tasks': unassigned_tasks,
+            'auto_generated_tasks': auto_generated_tasks,
+            'manual_tasks': manual_tasks,
+            'average_completion_time': average_completion_time,
+            'on_time_completion_rate': on_time_completion_rate,
+        }
+        
+        serializer = VendorTaskSummarySerializer(summary_data)
+        return Response(serializer.data)
+    
+    @extend_schema(
+        summary="Update task status",
+        description="Update the status of a specific task with optional completion notes.",
+        request=VendorTaskStatusUpdateSerializer,
+        responses={200: VendorTaskDetailSerializer}
+    )
+    @action(detail=True, methods=['post'])
+    def update_status(self, request, pk=None):
+        """Update task status with validation and logging."""
+        task = self.get_object()
+        serializer = VendorTaskStatusUpdateSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            old_status = task.status
+            new_status = serializer.validated_data['status']
+            completion_notes = serializer.validated_data.get('completion_notes', '')
+            
+            task.status = new_status
+            if completion_notes:
+                task.completion_notes = completion_notes
+            
+            task.save()
+            
+            # Send completion notification if task was completed
+            if new_status == 'completed' and old_status != 'completed':
+                from .task_notifications import get_notification_service
+                notification_service = get_notification_service()
+                notification_service.send_task_completion_notification(task)
+            
+            response_serializer = VendorTaskDetailSerializer(task, context={'request': request})
+            return Response(response_serializer.data)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @extend_schema(
+        summary="Bulk task actions",
+        description="Perform bulk actions on multiple tasks (update status, assign users, etc.).",
+        request=VendorTaskBulkActionSerializer,
+        responses={200: OpenApiResponse(description="Bulk action completed")}
+    )
+    @action(detail=False, methods=['post'])
+    def bulk_action(self, request):
+        """Perform bulk actions on selected tasks."""
+        serializer = VendorTaskBulkActionSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            task_ids = serializer.validated_data['task_ids']
+            action = serializer.validated_data['action']
+            
+            tasks = VendorTask.objects.filter(id__in=task_ids)
+            updated_count = 0
+            
+            if action == 'update_status':
+                new_status = serializer.validated_data['status']
+                notes = serializer.validated_data.get('notes', '')
+                
+                for task in tasks:
+                    task.status = new_status
+                    if notes and not task.completion_notes:
+                        task.completion_notes = notes
+                    task.save()
+                    updated_count += 1
+                    
+            elif action == 'assign_user':
+                assigned_to = serializer.validated_data['assigned_to']
+                tasks.update(assigned_to=assigned_to)
+                updated_count = tasks.count()
+                
+            elif action == 'update_priority':
+                new_priority = serializer.validated_data['priority']
+                tasks.update(priority=new_priority)
+                updated_count = tasks.count()
+                
+            elif action == 'send_reminders':
+                from .task_notifications import get_notification_service
+                notification_service = get_notification_service()
+                results = notification_service.send_batch_reminders(list(tasks))
+                updated_count = results.get('sent', 0)
+            
+            return Response({
+                'status': 'success',
+                'message': f'Bulk {action} completed',
+                'updated_count': updated_count
+            })
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @extend_schema(
+        summary="Send task reminders",
+        description="Send reminder emails for tasks that are due soon or overdue.",
+        request=VendorTaskReminderSerializer,
+        responses={200: OpenApiResponse(description="Reminders sent")}
+    )
+    @action(detail=False, methods=['post'])
+    def send_reminders(self, request):
+        """Send reminder emails for specified tasks or all due tasks."""
+        serializer = VendorTaskReminderSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            task_ids = serializer.validated_data.get('task_ids')
+            force_send = serializer.validated_data.get('force_send', False)
+            additional_recipients = serializer.validated_data.get('additional_recipients', [])
+            
+            # Get tasks to send reminders for
+            if task_ids:
+                tasks = VendorTask.objects.filter(id__in=task_ids)
+            else:
+                tasks = VendorTask.objects.filter(status__in=['pending', 'in_progress'])
+            
+            # Filter tasks that should receive reminders
+            if not force_send:
+                tasks = [task for task in tasks if task.should_send_reminder]
+            
+            # Send reminders
+            from .task_notifications import get_notification_service
+            notification_service = get_notification_service()
+            
+            results = {'sent': 0, 'failed': 0, 'skipped': 0}
+            
+            for task in tasks:
+                # Add additional recipients to task temporarily
+                original_recipients = task.reminder_recipients.copy()
+                task.reminder_recipients.extend(additional_recipients)
+                
+                success = notification_service.send_task_reminder(task)
+                if success:
+                    results['sent'] += 1
+                else:
+                    results['failed'] += 1
+                
+                # Restore original recipients
+                task.reminder_recipients = original_recipients
+            
+            return Response({
+                'status': 'success',
+                'message': f"Sent {results['sent']} reminders, {results['failed']} failed",
+                'results': results
+            })
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @extend_schema(
+        summary="Get upcoming tasks",
+        description="Get tasks that are due within a specified number of days.",
+        parameters=[
+            OpenApiParameter(
+                name='days',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Number of days to look ahead (default: 7)',
+                default=7
+            )
+        ]
+    )
+    @action(detail=False, methods=['get'])
+    def upcoming(self, request):
+        """Get tasks due within specified number of days."""
+        days = int(request.query_params.get('days', 7))
+        end_date = timezone.now().date() + timezone.timedelta(days=days)
+        
+        upcoming_tasks = self.get_queryset().filter(
+            due_date__lte=end_date,
+            due_date__gte=timezone.now().date(),
+            status__in=['pending', 'in_progress']
+        ).order_by('due_date', '-priority')
+        
+        serializer = VendorTaskListSerializer(upcoming_tasks, many=True, context={'request': request})
+        return Response(serializer.data)
+    
+    @extend_schema(
+        summary="Get overdue tasks",
+        description="Get all tasks that are past their due date."
+    )
+    @action(detail=False, methods=['get'])
+    def overdue(self, request):
+        """Get all overdue tasks."""
+        overdue_tasks = self.get_queryset().filter(
+            due_date__lt=timezone.now().date(),
+            status__in=['pending', 'in_progress']
+        ).order_by('due_date')
+        
+        serializer = VendorTaskListSerializer(overdue_tasks, many=True, context={'request': request})
+        return Response(serializer.data)
+    
+    @extend_schema(
+        summary="Generate automatic tasks",
+        description="Trigger automatic task generation based on contract dates and vendor requirements.",
+        responses={200: OpenApiResponse(description="Automatic tasks generated")}
+    )
+    @action(detail=False, methods=['post'])
+    def generate_tasks(self, request):
+        """Trigger automatic task generation."""
+        from .task_automation import get_automation_service
+        
+        automation_service = get_automation_service()
+        results = automation_service.run_daily_automation()
+        
+        total_created = sum(results.values())
+        
+        return Response({
+            'status': 'success',
+            'message': f'Generated {total_created} automatic tasks',
+            'breakdown': results
+        })
+    
+    def perform_create(self, serializer):
+        """Set creator when creating a task."""
         serializer.save(created_by=self.request.user)

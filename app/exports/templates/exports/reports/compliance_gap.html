@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ report.title }}</title>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ report.title }}</h1>
+        <div class="subtitle">
+            Compliance Gap Analysis - {{ framework.name }}
+            <br>
+            Generated: {{ generated_at|date:"F d, Y g:i A" }}
+            <br>
+            Requested by: {{ report.requested_by.get_full_name|default:report.requested_by.username }}
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Executive Summary</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="number">{{ total_gaps }}</div>
+                <div class="label">Total Compliance Gaps</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ not_started.count }}</div>
+                <div class="label">Not Started</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ in_progress_overdue.count }}</div>
+                <div class="label">Overdue</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ missing_evidence.count }}</div>
+                <div class="label">Missing Evidence</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ no_primary_evidence.count }}</div>
+                <div class="label">No Primary Evidence</div>
+            </div>
+        </div>
+        
+        {% if total_gaps == 0 %}
+        <div style="text-align: center; padding: 2em; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; margin: 1em 0;">
+            <h3 style="color: #155724; margin: 0;">🎉 Congratulations!</h3>
+            <p style="color: #155724; margin: 0.5em 0;">No compliance gaps detected for {{ framework.name }}. Your implementation appears to be complete.</p>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 2em; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; margin: 1em 0;">
+            <h3 style="color: #721c24; margin: 0;">⚠️ Action Required</h3>
+            <p style="color: #721c24; margin: 0.5em 0;">{{ total_gaps }} compliance gap{{ total_gaps|pluralize }} identified that require attention to achieve full {{ framework.name }} compliance.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if not_started.exists %}
+    <div class="section">
+        <h2>🔴 Critical: Assessments Not Started ({{ not_started.count }})</h2>
+        <p>These assessments have not been started and represent the highest priority compliance gaps:</p>
+        <table class="assessment-table">
+            <thead>
+                <tr>
+                    <th>Control ID</th>
+                    <th>Control Title</th>
+                    <th>Clause</th>
+                    <th>Assigned To</th>
+                    <th>Due Date</th>
+                    <th>Priority</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assessment in not_started %}
+                <tr>
+                    <td style="font-weight: bold;">{{ assessment.control.control_id }}</td>
+                    <td>{{ assessment.control.title }}</td>
+                    <td>{{ assessment.control.clause.clause_id }}</td>
+                    <td>{{ assessment.assigned_to.get_full_name|default:assessment.assigned_to.username|default:"Unassigned" }}</td>
+                    <td>
+                        {% if assessment.due_date %}
+                            {{ assessment.due_date|date:"M d, Y" }}
+                            {% if assessment.due_date < today %}
+                                <span class="status-badge status-overdue">OVERDUE</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="status-badge status-not-started">Not Set</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if assessment.control.clause.criticality == 'critical' %}
+                            <span class="status-badge status-overdue">CRITICAL</span>
+                        {% elif assessment.control.clause.criticality == 'high' %}
+                            <span class="status-badge" style="background-color: #fd7e14;">HIGH</span>
+                        {% else %}
+                            <span class="status-badge status-in-progress">MEDIUM</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if in_progress_overdue.exists %}
+    <div class="section page-break">
+        <h2>🟡 In Progress but Overdue ({{ in_progress_overdue.count }})</h2>
+        <p>These assessments are in progress but have exceeded their due dates:</p>
+        <table class="assessment-table">
+            <thead>
+                <tr>
+                    <th>Control ID</th>
+                    <th>Control Title</th>
+                    <th>Assigned To</th>
+                    <th>Due Date</th>
+                    <th>Days Overdue</th>
+                    <th>Started</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assessment in in_progress_overdue %}
+                <tr>
+                    <td style="font-weight: bold;">{{ assessment.control.control_id }}</td>
+                    <td>{{ assessment.control.title }}</td>
+                    <td>{{ assessment.assigned_to.get_full_name|default:assessment.assigned_to.username|default:"Unassigned" }}</td>
+                    <td>{{ assessment.due_date|date:"M d, Y" }}</td>
+                    <td style="color: #dc3545; font-weight: bold;">{{ assessment.due_date|timesince|truncatewords:1 }}</td>
+                    <td>{{ assessment.started_date|date:"M d, Y"|default:"Not recorded" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if missing_evidence.exists %}
+    <div class="section">
+        <h2>📄 Completed but Missing Evidence ({{ missing_evidence.count }})</h2>
+        <p>These assessments are marked as completed but lack supporting evidence:</p>
+        <table class="assessment-table">
+            <thead>
+                <tr>
+                    <th>Control ID</th>
+                    <th>Control Title</th>
+                    <th>Completed Date</th>
+                    <th>Assigned To</th>
+                    <th>Risk Level</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assessment in missing_evidence %}
+                <tr>
+                    <td style="font-weight: bold;">{{ assessment.control.control_id }}</td>
+                    <td>{{ assessment.control.title }}</td>
+                    <td>{{ assessment.completed_date|date:"M d, Y"|default:"Unknown" }}</td>
+                    <td>{{ assessment.assigned_to.get_full_name|default:assessment.assigned_to.username|default:"Unassigned" }}</td>
+                    <td>
+                        {% if assessment.control.clause.is_testable %}
+                            <span class="status-badge status-overdue">HIGH RISK</span>
+                        {% else %}
+                            <span class="status-badge status-in-progress">MEDIUM RISK</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if no_primary_evidence.exists %}
+    <div class="section">
+        <h2>⭐ Missing Primary Evidence Designation ({{ no_primary_evidence.count }})</h2>
+        <p>These assessments have evidence but lack a primary evidence designation:</p>
+        <table class="assessment-table">
+            <thead>
+                <tr>
+                    <th>Control ID</th>
+                    <th>Control Title</th>
+                    <th>Evidence Count</th>
+                    <th>Completed Date</th>
+                    <th>Action Required</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assessment in no_primary_evidence %}
+                <tr>
+                    <td style="font-weight: bold;">{{ assessment.control.control_id }}</td>
+                    <td>{{ assessment.control.title }}</td>
+                    <td>{{ assessment.evidence_links.count }}</td>
+                    <td>{{ assessment.completed_date|date:"M d, Y"|default:"Unknown" }}</td>
+                    <td style="font-style: italic; color: #0066cc;">Designate primary evidence</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <div class="section page-break">
+        <h2>📋 Recommended Actions</h2>
+        <div style="padding: 1em; background-color: #f8f9fa; border-radius: 4px;">
+            <h3 style="color: #0066cc; margin-top: 0;">Immediate Actions (Next 7 Days)</h3>
+            <ul>
+                {% if not_started.exists %}
+                <li><strong>Start {{ not_started.count }} pending assessment{{ not_started.count|pluralize }}:</strong> Prioritize critical and high-importance controls</li>
+                {% endif %}
+                {% if in_progress_overdue.exists %}
+                <li><strong>Complete {{ in_progress_overdue.count }} overdue assessment{{ in_progress_overdue.count|pluralize }}:</strong> Follow up with assigned personnel</li>
+                {% endif %}
+                {% if missing_evidence.exists %}
+                <li><strong>Collect evidence for {{ missing_evidence.count }} completed assessment{{ missing_evidence.count|pluralize }}:</strong> Risk of audit findings</li>
+                {% endif %}
+            </ul>
+
+            <h3 style="color: #0066cc;">Short-term Actions (Next 30 Days)</h3>
+            <ul>
+                {% if no_primary_evidence.exists %}
+                <li><strong>Designate primary evidence:</strong> Review {{ no_primary_evidence.count }} assessment{{ no_primary_evidence.count|pluralize }} and designate the most relevant evidence as primary</li>
+                {% endif %}
+                <li><strong>Process Review:</strong> Review assignment and due date processes to prevent future gaps</li>
+                <li><strong>Training:</strong> Ensure all personnel understand evidence requirements and documentation standards</li>
+            </ul>
+
+            <h3 style="color: #0066cc;">Long-term Improvements</h3>
+            <ul>
+                <li><strong>Automation:</strong> Consider automated reminders and escalation procedures</li>
+                <li><strong>Templates:</strong> Develop evidence collection templates for common control types</li>
+                <li><strong>Regular Reviews:</strong> Schedule monthly compliance gap analysis reviews</li>
+            </ul>
+        </div>
+    </div>
+
+    {% if total_gaps == 0 %}
+    <div class="section">
+        <h2>✅ Compliance Status: EXCELLENT</h2>
+        <p>Your organization has achieved comprehensive compliance with {{ framework.name }}. Continue monitoring and maintain current practices to ensure ongoing compliance.</p>
+        
+        <h3>Maintenance Recommendations:</h3>
+        <ul>
+            <li>Schedule regular compliance reviews (quarterly recommended)</li>
+            <li>Keep evidence current and validate periodically</li>
+            <li>Monitor for framework updates and changes</li>
+            <li>Train new personnel on compliance procedures</li>
+        </ul>
+    </div>
+    {% endif %}
+</body>
+</html>

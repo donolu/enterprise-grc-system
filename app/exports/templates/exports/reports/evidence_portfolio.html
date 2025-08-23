@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ report.title }}</title>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ report.title }}</h1>
+        <div class="subtitle">
+            Evidence Portfolio Report
+            <br>
+            Generated: {{ generated_at|date:"F d, Y g:i A" }}
+            <br>
+            Requested by: {{ report.requested_by.get_full_name|default:report.requested_by.username }}
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Evidence Overview</h2>
+        <p>This report provides a comprehensive view of all evidence items and their usage across assessments.</p>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="number">{{ evidence_summary|length }}</div>
+                <div class="label">Unique Evidence Items</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">
+                    {% for evidence in evidence_summary %}{{ evidence.assessments|length }}{% if not forloop.last %} + {% endif %}{% endfor %}
+                </div>
+                <div class="label">Total Evidence Links</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Evidence Inventory</h2>
+        {% for evidence_info in evidence_summary %}
+        <div style="margin-bottom: 2em; padding: 1em; border: 1px solid #ddd; border-radius: 4px;">
+            <h3 style="color: #0066cc; margin-top: 0;">
+                {{ evidence_info.evidence.title }}
+                {% if evidence_info.is_primary_count > 0 %}
+                    <span class="status-badge" style="background-color: #28a745; margin-left: 1em;">
+                        PRIMARY ({{ evidence_info.is_primary_count }})
+                    </span>
+                {% endif %}
+            </h3>
+            
+            <table style="width: 100%; margin-bottom: 1em;">
+                <tr>
+                    <td style="font-weight: bold; width: 120px;">Type:</td>
+                    <td>{{ evidence_info.evidence.get_evidence_type_display }}</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold;">Date:</td>
+                    <td>{{ evidence_info.evidence.evidence_date|date:"F d, Y" }}</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold;">Collected By:</td>
+                    <td>{{ evidence_info.evidence.collected_by.get_full_name|default:evidence_info.evidence.collected_by.username|default:"Unknown" }}</td>
+                </tr>
+                {% if evidence_info.evidence.document %}
+                <tr>
+                    <td style="font-weight: bold;">File:</td>
+                    <td>{{ evidence_info.evidence.document.title }}</td>
+                </tr>
+                {% endif %}
+                {% if evidence_info.evidence.external_url %}
+                <tr>
+                    <td style="font-weight: bold;">External URL:</td>
+                    <td>{{ evidence_info.evidence.external_url }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td style="font-weight: bold;">Validated:</td>
+                    <td>
+                        {% if evidence_info.evidence.is_validated %}
+                            <span class="status-badge status-completed">
+                                Yes - {{ evidence_info.evidence.validated_at|date:"M d, Y" }}
+                            </span>
+                            {% if evidence_info.evidence.validated_by %}
+                                by {{ evidence_info.evidence.validated_by.get_full_name|default:evidence_info.evidence.validated_by.username }}
+                            {% endif %}
+                        {% else %}
+                            <span class="status-badge status-not-started">Not Validated</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+
+            {% if evidence_info.evidence.description %}
+            <div style="margin: 0.5em 0;">
+                <strong>Description:</strong>
+                <p style="margin: 0.5em 0; color: #666;">{{ evidence_info.evidence.description }}</p>
+            </div>
+            {% endif %}
+
+            <div style="margin-top: 1em;">
+                <strong>Used in {{ evidence_info.assessments|length }} Assessment{{ evidence_info.assessments|length|pluralize }}:</strong>
+                <ul style="margin: 0.5em 0;">
+                    {% for assessment in evidence_info.assessments %}
+                    <li>
+                        <strong>{{ assessment.control.control_id }}:</strong> {{ assessment.control.title|truncatechars:60 }}
+                        <span class="status-badge status-{{ assessment.status }}" style="margin-left: 0.5em; font-size: 8pt;">
+                            {{ assessment.get_status_display }}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            {% if evidence_info.evidence.validation_notes %}
+            <div style="margin-top: 1em; padding: 0.5em; background-color: #f8f9fa; border-radius: 4px;">
+                <strong>Validation Notes:</strong>
+                <p style="margin: 0.5em 0; font-style: italic;">{{ evidence_info.evidence.validation_notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if not evidence_summary %}
+    <div class="section">
+        <p>No evidence items found for the specified criteria.</p>
+    </div>
+    {% endif %}
+
+    <div class="section page-break">
+        <h2>Evidence Reuse Analysis</h2>
+        <p>The following table shows how effectively evidence is being reused across multiple assessments:</p>
+        <table class="assessment-table">
+            <thead>
+                <tr>
+                    <th>Evidence Title</th>
+                    <th>Type</th>
+                    <th>Assessments Using</th>
+                    <th>Primary Evidence</th>
+                    <th>Reuse Efficiency</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for evidence_info in evidence_summary %}
+                <tr>
+                    <td>{{ evidence_info.evidence.title|truncatechars:40 }}</td>
+                    <td>{{ evidence_info.evidence.get_evidence_type_display }}</td>
+                    <td>{{ evidence_info.assessments|length }}</td>
+                    <td>{{ evidence_info.is_primary_count }}</td>
+                    <td>
+                        {% if evidence_info.assessments|length > 1 %}
+                            <span class="status-badge status-completed">High Reuse</span>
+                        {% elif evidence_info.assessments|length == 1 %}
+                            <span class="status-badge status-in-progress">Single Use</span>
+                        {% else %}
+                            <span class="status-badge status-not-started">Unused</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

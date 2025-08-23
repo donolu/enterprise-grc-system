@@ -1,0 +1,84 @@
+WEEKLY RISK ACTION DIGEST
+Week ending {{ week_ending|date:"F d, Y" }}
+
+Hello {{ user.get_full_name|default:user.username }},
+
+Here's your weekly summary of risk actions and their current status.
+
+SUMMARY STATISTICS:
+===================
+Total Actions: {{ actions.count }}
+Overdue: {{ overdue_actions.count }}
+Due This Week: {{ due_soon_actions.count }}
+In Progress: {{ in_progress_actions.count }}
+High Priority: {{ high_priority_actions.count }}
+
+{% if overdue_actions %}
+OVERDUE ACTIONS ({{ overdue_actions.count }}):
+{% for action in overdue_actions %}
+• {{ action.action_id }}: {{ action.title }}
+  Priority: {{ action.get_priority_display }} | Status: {{ action.get_status_display }}
+  Risk: {{ action.risk.risk_id }} | Due: {{ action.due_date|date:"M d" }} ({{ action.days_until_due|add:"-1" }} days overdue)
+  {% if action.progress_percentage > 0 %}Progress: {{ action.progress_percentage }}%{% endif %}
+
+{% endfor %}
+{% endif %}
+
+{% if due_soon_actions %}
+DUE THIS WEEK ({{ due_soon_actions.count }}):
+{% for action in due_soon_actions %}
+• {{ action.action_id }}: {{ action.title }}
+  Priority: {{ action.get_priority_display }} | Status: {{ action.get_status_display }}
+  Risk: {{ action.risk.risk_id }} | Due: {{ action.due_date|date:"M d" }} ({{ action.days_until_due }} days remaining)
+  {% if action.progress_percentage > 0 %}Progress: {{ action.progress_percentage }}%{% endif %}
+
+{% endfor %}
+{% endif %}
+
+{% if in_progress_actions %}
+IN PROGRESS ({{ in_progress_actions.count }}):
+{% for action in in_progress_actions|slice:":10" %}
+• {{ action.action_id }}: {{ action.title }}
+  Priority: {{ action.get_priority_display }} | Status: {{ action.get_status_display }}
+  Risk: {{ action.risk.risk_id }} | Due: {{ action.due_date|date:"M d" }}
+  {% if action.progress_percentage > 0 %}Progress: {{ action.progress_percentage }}%{% endif %}
+
+{% endfor %}
+{% if in_progress_actions.count > 10 %}... and {{ in_progress_actions.count|add:"-10" }} more in progress actions
+{% endif %}
+{% endif %}
+
+{% if high_priority_actions %}
+HIGH PRIORITY ACTIONS ({{ high_priority_actions.count }}):
+{% for action in high_priority_actions|slice:":8" %}
+• {{ action.action_id }}: {{ action.title }}
+  Priority: {{ action.get_priority_display }} | Status: {{ action.get_status_display }}
+  Risk: {{ action.risk.risk_id }} | Due: {{ action.due_date|date:"M d" }}
+  {% if action.progress_percentage > 0 %}Progress: {{ action.progress_percentage }}%{% endif %}
+
+{% endfor %}
+{% if high_priority_actions.count > 8 %}... and {{ high_priority_actions.count|add:"-8" }} more high priority actions
+{% endif %}
+{% endif %}
+
+{% if not actions %}
+Great news! You have no active risk actions assigned at this time.
+{% endif %}
+
+QUICK TIPS:
+===========
+• Focus on overdue items first - These need immediate attention
+• Update progress regularly - Keep stakeholders informed of your progress  
+• Upload evidence early - Don't wait until the due date to provide documentation
+• Communicate blockers - Add notes if you're facing challenges
+• Plan ahead - Review items due next week to avoid last-minute rushes
+
+QUICK LINKS:
+============
+View All Risk Actions: {{ site_domain }}/admin/risk/riskaction/
+View Risk Register: {{ site_domain }}/admin/risk/risk/
+Manage Notification Preferences: {{ site_domain }}/admin/risk/riskactionreminderconfiguration/
+
+---
+This weekly digest is automatically generated from your risk management system.
+You can adjust the frequency or disable these emails in your notification preferences.

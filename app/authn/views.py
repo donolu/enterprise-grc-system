@@ -7,11 +7,14 @@ from django.contrib.auth import get_user_model
 from django_otp.plugins.otp_email.models import EmailDevice
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp import user_has_device
+from .totp_service import TOTPService
 import qrcode
 from io import BytesIO
 import base64
 from django.conf import settings
 from .models import PushDevice, UserDevicePreference
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 from .serializers import (
     RegisterSerializer, 
     LoginSerializer, 
@@ -31,8 +34,35 @@ from .serializers import (
 User = get_user_model()
 
 class RegisterView(APIView):
+    """
+    **User Registration**
+    
+    Register a new user account with email verification and tenant assignment.
+    """
     permission_classes = [permissions.AllowAny]
     
+    @extend_schema(
+        summary="Register new user",
+        description="Create a new user account with email, username, and password. Account will be associated with the current tenant.",
+        request=RegisterSerializer,
+        responses={
+            201: OpenApiResponse(
+                description='User created successfully',
+                examples=[
+                    OpenApiExample(
+                        'Registration Success',
+                        summary='Successful user registration',
+                        value={
+                            'message': 'User created successfully',
+                            'user_id': 123
+                        }
+                    ),
+                ]
+            ),
+            400: OpenApiResponse(description='Validation errors (username taken, weak password, etc.)'),
+        },
+        tags=['Authentication'],
+    )
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
@@ -44,8 +74,52 @@ class RegisterView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
+    """
+    **User Authentication**
+    
+    Authenticate user with username/email and password. Supports 2FA flow with multiple methods.
+    """
     permission_classes = [permissions.AllowAny]
     
+    @extend_schema(
+        summary="User login",
+        description="Authenticate user with credentials. If 2FA is enabled, returns 2FA challenge instead of session.",
+        request=LoginSerializer,
+        responses={
+            200: OpenApiResponse(
+                description='Login successful or 2FA challenge sent',
+                examples=[
+                    OpenApiExample(
+                        'Login Success (No 2FA)',
+                        summary='Successful login without 2FA',
+                        value={
+                            'message': 'Login successful',
+                            'user': {
+                                'id': 123,
+                                'username': 'john_doe',
+                                'email': 'john@example.com',
+                                'first_name': 'John',
+                                'last_name': 'Doe'
+                            },
+                            'requires_2fa': False
+                        }
+                    ),
+                    OpenApiExample(
+                        '2FA Challenge',
+                        summary='2FA challenge required',
+                        value={
+                            'message': '2FA code sent to your email',
+                            'requires_2fa': True,
+                            'username': 'john_doe',
+                            'method': 'email'
+                        }
+                    ),
+                ]
+            ),
+            400: OpenApiResponse(description='Invalid credentials'),
+        },
+        tags=['Authentication'],
+    )
     def post(self, request):
         serializer = LoginSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
@@ -146,10 +220,19 @@ class ChangePasswordView(APIView):
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@extend_schema(
+    summary="Get current user profile",
+    description="Retrieve the profile information of the currently authenticated user.",
+    responses={
+        200: UserProfileSerializer,
+        401: OpenApiResponse(description='Authentication required'),
+    },
+    tags=['Authentication'],
+)
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def me(request):
-    """Get current user info"""
+    """Get current user profile information."""
     serializer = UserProfileSerializer(request.user)
     return Response(serializer.data)
 
@@ -301,10 +384,43 @@ class DisableTwoFactorView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyOTPView(APIView):
+    """
+    **Two-Factor Authentication Verification**
+    
+    Complete login by verifying 2FA code from email, TOTP app, or push notification.
+    """
     permission_classes = [permissions.AllowAny]
     
+    @extend_schema(
+        summary="Verify 2FA code",
+        description="Complete login by verifying the 2FA code received via email, TOTP app, or push notification.",
+        request=VerifyOTPSerializer,
+        responses={
+            200: OpenApiResponse(
+                description='2FA verification successful, login complete',
+                examples=[
+                    OpenApiExample(
+                        'Verification Success',
+                        summary='Successful 2FA verification and login',
+                        value={
+                            'message': 'Login successful',
+                            'user': {
+                                'id': 123,
+                                'username': 'john_doe',
+                                'email': 'john@example.com',
+                                'first_name': 'John',
+                                'last_name': 'Doe'
+                            }
+                        }
+                    ),
+                ]
+            ),
+            400: OpenApiResponse(description='Invalid or expired 2FA code'),
+        },
+        tags=['Authentication'],
+    )
     def post(self, request):
-        """Verify OTP and complete login"""
+        """Verify OTP and complete login."""
         serializer = VerifyOTPSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data['user']
@@ -323,56 +439,63 @@ class SetupTOTPView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def post(self, request):
-        """Generate QR code for TOTP setup"""
+        """Generate QR code for TOTP setup using enhanced pyotp service"""
         serializer = SetupTOTPSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             user = request.user
+            password = serializer.validated_data['password']
             
-            # Create unconfirmed TOTP device
-            device = TOTPDevice.objects.create(
-                user=user,
-                name=f'Authenticator App - {user.username}',
-                confirmed=False
-            )
-            
-            return Response({
-                'message': 'TOTP device created successfully. Please use the confirm endpoint to complete setup.',
-                'device_id': device.id,
-                'next_step': 'Generate a code from your authenticator app and call /api/auth/2fa/confirm-totp/ to complete setup'
-            }, status=status.HTTP_200_OK)
+            try:
+                # Use enhanced TOTP service for setup
+                setup_data = TOTPService.setup_totp_device(
+                    user=user,
+                    password=password,
+                    device_name=f'Authenticator App - {user.username}'
+                )
+                
+                return Response({
+                    'message': 'Scan QR code with your authenticator app or enter the manual key',
+                    'device_id': setup_data['device_id'],
+                    'qr_code': setup_data['qr_code'],
+                    'manual_key': setup_data['manual_entry_key'],
+                    'next_step': 'Enter a code from your authenticator app and call /api/auth/2fa/confirm-totp/ to complete setup'
+                }, status=status.HTTP_200_OK)
+                
+            except ValueError as e:
+                return Response({
+                    'error': str(e)
+                }, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                return Response({
+                    'error': 'Failed to setup TOTP device. Please try again.'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ConfirmTOTPView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def post(self, request):
-        """Confirm TOTP setup with verification code"""
+        """Confirm TOTP setup with verification code using enhanced service"""
         serializer = ConfirmTOTPSerializer(data=request.data)
         if serializer.is_valid():
             user = request.user
             otp_code = serializer.validated_data['otp_code']
             
-            # Find unconfirmed TOTP device
-            try:
-                device = TOTPDevice.objects.get(user=user, confirmed=False)
-            except TOTPDevice.DoesNotExist:
-                return Response({
-                    'error': 'No pending TOTP setup found. Please start setup first.'
-                }, status=status.HTTP_400_BAD_REQUEST)
+            # Use enhanced TOTP service for confirmation
+            success, device = TOTPService.confirm_totp_setup(user, otp_code)
             
-            # Verify the code
-            if device.verify_token(otp_code):
-                device.confirmed = True
-                device.save()
-                
+            if success:
                 return Response({
                     'message': 'TOTP 2FA enabled successfully',
-                    'method': 'totp'
+                    'method': 'totp',
+                    'device_id': device.id
                 }, status=status.HTTP_200_OK)
             else:
                 return Response({
-                    'error': 'Invalid verification code. Please try again.'
+                    'error': 'Invalid verification code or no pending setup found. Please try again.'
                 }, status=status.HTTP_400_BAD_REQUEST)
+                
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class RegisterPushDeviceView(APIView):
