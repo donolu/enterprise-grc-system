@@ -171,3 +171,18 @@ frontend/.yarn/
 
 # npm
 frontend/.npm/
+
+# Environment files with credentials
+.env
+.env.dev
+.env.prod
+.env.production
+.env.local
+
+# Sensitive files
+cookies.txt
+create_stripe_products.py
+*.key
+*.pem
+*.p12
+*.pfx

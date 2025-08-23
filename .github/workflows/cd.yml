@@ -1,4 +1,4 @@
-name: CD - Build and Deploy
+name: CD - Build, Deploy (Slots), and Scan
 
 on:
   push:
@@ -6,298 +6,242 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to deploy to'
+        description: 'Target environment'
         required: true
         default: 'staging'
         type: choice
-        options:
-        - staging
-        - production
+        options: [staging, production]
+
+# Required for GHCR, Code Scanning, and Azure OIDC
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  id-token: write
+
+# Prevent overlapping deploys per branch/env
+concurrency:
+  group: cd-${{ github.ref }}-${{ github.event.inputs.environment || 'push' }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: grc-platform
+  COMPOSE_PATH: deploy/docker-compose.webapp.yml
+  HEALTH_PATH: /health/
 
 jobs:
   build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
+      image-tag: ${{ steps.pick.outputs.primary }}
       image-digest: ${{ steps.build.outputs.digest }}
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+
+    - name: Set up QEMU
+    # Needed for linux/arm64 cross-builds
+      uses: docker/setup-qemu-action@v3
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Log in to Container Registry
+    - name: Log in to GHCR
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata
+    - name: Extract metadata (tags, labels)
       id: meta
       uses: docker/metadata-action@v5
       with:
         images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
         tags: |
           type=ref,event=branch
-          type=ref,event=pr
           type=sha,prefix=sha-
           type=raw,value=latest,enable={{is_default_branch}}
 
-    - name: Build and push Docker image
+    - name: Pick primary image tag (prefer sha-)
+      id: pick
+      run: |
+        tags="${{ steps.meta.outputs.tags }}"
+        primary="$(printf "%s\n" "$tags" | grep '^ghcr\.io/.*/sha-' | head -n1)"
+        [ -z "$primary" ] && primary="$(printf "%s\n" "$tags" | head -n1)"
+        echo "primary=$primary" >> "$GITHUB_OUTPUT"
+        echo "Chosen image tag: $primary"
+
+    - name: Build and push (multi-arch)
       id: build
       uses: docker/build-push-action@v5
       with:
         context: .
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: ${{ steps.meta.outputs.tags }}
+        tags: ${{ steps.pick.outputs.primary }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         build-args: |
           BUILD_ENV=production
 
-    - name: Generate SBOM
+    - name: Generate SBOM (SPDX)
       uses: anchore/sbom-action@v0
       with:
-        image: ${{ steps.meta.outputs.tags }}
+        image: ${{ steps.pick.outputs.primary }}
         format: spdx-json
         output-file: sbom.spdx.json
 
     - name: Upload SBOM
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: sbom
         path: sbom.spdx.json
 
-  deploy-staging:
-    name: Deploy to Staging
+  deploy-staging-slot:
+    name: Deploy to Staging Slot (Blue/Green)
     runs-on: ubuntu-latest
     needs: build-and-push
     environment: staging
-    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-    - name: Azure Login
-      uses: azure/login@v1
+    - name: Azure Login (OIDC)
+      uses: azure/login@v2
       with:
-        creds: ${{ secrets.AZURE_CREDENTIALS_STAGING }}
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-    - name: Set up Azure CLI
+    - name: Detect Compose vs Single image
+      id: detect
+      run: |
+        if [ -f "${{ env.COMPOSE_PATH }}" ]; then
+          echo "mode=compose" >> "$GITHUB_OUTPUT"
+        else
+          echo "mode=single" >> "$GITHUB_OUTPUT"
+        fi
+
+    # If pulling private GHCR images WITHOUT Managed Identity:
+    # (One-time app settings; safe to re-apply)
+    - name: Configure registry creds (optional for GHCR)
+      if: ${{ steps.detect.outputs.mode == 'single' && secrets.GHCR_USERNAME && secrets.GHCR_PAT }}
       uses: azure/CLI@v1
       with:
-        azcliversion: latest
+        inlineScript: |
+          az webapp config appsettings set \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name ${{ secrets.AZURE_WEBAPP_NAME }} \
+            --slot ${{ secrets.AZURE_SLOT_STAGING }} \
+            --settings \
+              DOCKER_REGISTRY_SERVER_URL=https://ghcr.io \
+              DOCKER_REGISTRY_SERVER_USERNAME=${{ secrets.GHCR_USERNAME }} \
+              DOCKER_REGISTRY_SERVER_PASSWORD=${{ secrets.GHCR_PAT }}
 
-    - name: Deploy to Azure App Service (Staging)
-      uses: azure/webapps-deploy@v2
+    # --- Single-container deploy to slot
+    - name: Deploy single container to staging slot
+      if: ${{ steps.detect.outputs.mode == 'single' }}
+      uses: azure/webapps-deploy@v3
       with:
-        app-name: ${{ secrets.AZURE_WEBAPP_NAME_STAGING }}
+        app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+        slot-name: ${{ secrets.AZURE_SLOT_STAGING }}
         images: ${{ needs.build-and-push.outputs.image-tag }}
 
-    - name: Run Database Migrations (Staging)
+    # --- Multi-container (Compose) deploy to slot
+    - name: Deploy compose to staging slot
+      if: ${{ steps.detect.outputs.mode == 'compose' }}
       uses: azure/CLI@v1
       with:
         inlineScript: |
-          # Run migrations via Azure CLI
-          az webapp config appsettings set \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP_STAGING }} \
-            --name ${{ secrets.AZURE_WEBAPP_NAME_STAGING }} \
-            --settings RUN_MIGRATIONS=true
-          
-          # Trigger a restart to apply migrations
-          az webapp restart \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP_STAGING }} \
-            --name ${{ secrets.AZURE_WEBAPP_NAME_STAGING }}
+          az webapp config container set \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name ${{ secrets.AZURE_WEBAPP_NAME }} \
+            --slot ${{ secrets.AZURE_SLOT_STAGING }} \
+            --multicontainer-config-type compose \
+            --multicontainer-config-file "${{ env.COMPOSE_PATH }}"
 
-    - name: Run Health Check (Staging)
+    - name: Warm-up + Health Check (staging slot)
+      env:
+        HEALTH_URL: https://${{ secrets.AZURE_WEBAPP_NAME }}-${{ secrets.AZURE_SLOT_STAGING }}.azurewebsites.net${{ env.HEALTH_PATH }}
       run: |
-        echo "Waiting for deployment to be ready..."
-        sleep 60
-        
-        # Health check
-        HEALTH_URL="https://${{ secrets.AZURE_WEBAPP_NAME_STAGING }}.azurewebsites.net/health/"
-        
-        for i in {1..10}; do
-          if curl -f "$HEALTH_URL"; then
-            echo "✅ Staging deployment successful!"
-            exit 0
-          else
-            echo "⏳ Attempt $i failed, retrying in 30s..."
-            sleep 30
-          fi
-        done
-        
-        echo "❌ Staging deployment health check failed"
-        exit 1
-
-    - name: Run Integration Tests (Staging)
-      run: |
-        # Run integration tests against staging environment
-        echo "Running integration tests against staging..."
-        # Add your integration test commands here
-        # pytest tests/integration/ --base-url=https://${{ secrets.AZURE_WEBAPP_NAME_STAGING }}.azurewebsites.net
-
-  deploy-production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: [build-and-push, deploy-staging]
-    environment: production
-    if: github.ref == 'refs/heads/main' && (github.event.inputs.environment == 'production' || github.event_name == 'push')
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
-
-    - name: Create Backup (Production)
-      uses: azure/CLI@v1
-      with:
-        inlineScript: |
-          # Create database backup before deployment
-          BACKUP_NAME="backup-$(date +%Y%m%d-%H%M%S)"
-          echo "Creating backup: $BACKUP_NAME"
-          
-          az sql db export \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP_PRODUCTION }} \
-            --server ${{ secrets.AZURE_SQL_SERVER_PRODUCTION }} \
-            --name ${{ secrets.AZURE_SQL_DATABASE_PRODUCTION }} \
-            --admin-user ${{ secrets.AZURE_SQL_ADMIN_USER }} \
-            --admin-password ${{ secrets.AZURE_SQL_ADMIN_PASSWORD }} \
-            --storage-key ${{ secrets.AZURE_STORAGE_KEY }} \
-            --storage-key-type StorageAccessKey \
-            --storage-uri "https://${{ secrets.AZURE_STORAGE_ACCOUNT }}.blob.core.windows.net/backups/$BACKUP_NAME.bacpac"
-
-    - name: Deploy to Azure App Service (Production)
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: ${{ secrets.AZURE_WEBAPP_NAME_PRODUCTION }}
-        images: ${{ needs.build-and-push.outputs.image-tag }}
-        
-    - name: Run Database Migrations (Production)
-      uses: azure/CLI@v1
-      with:
-        inlineScript: |
-          # Run migrations in production
-          az webapp config appsettings set \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP_PRODUCTION }} \
-            --name ${{ secrets.AZURE_WEBAPP_NAME_PRODUCTION }} \
-            --settings RUN_MIGRATIONS=true
-          
-          # Restart to apply migrations
-          az webapp restart \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP_PRODUCTION }} \
-            --name ${{ secrets.AZURE_WEBAPP_NAME_PRODUCTION }}
-
-    - name: Run Health Check (Production)
-      run: |
-        echo "Waiting for production deployment to be ready..."
-        sleep 90
-        
-        # Health check
-        HEALTH_URL="https://${{ secrets.AZURE_WEBAPP_NAME_PRODUCTION }}.azurewebsites.net/health/"
-        
+        echo "Warming up staging slot..."
         for i in {1..15}; do
-          if curl -f "$HEALTH_URL"; then
-            echo "✅ Production deployment successful!"
-            break
-          else
-            echo "⏳ Attempt $i failed, retrying in 30s..."
-            sleep 30
-            if [ $i -eq 15 ]; then
-              echo "❌ Production deployment health check failed"
-              exit 1
-            fi
+          if curl -fsS "$HEALTH_URL"; then
+            echo "✅ Staging slot healthy"; exit 0
           fi
+          echo "⏳ [$i/15] retry in 10s..."; sleep 10
         done
+        echo "❌ Staging slot health check failed"; exit 1
 
-    - name: Smoke Tests (Production)
-      run: |
-        # Run critical smoke tests
-        echo "Running production smoke tests..."
-        BASE_URL="https://${{ secrets.AZURE_WEBAPP_NAME_PRODUCTION }}.azurewebsites.net"
-        
-        # Test API endpoints
-        curl -f "$BASE_URL/api/plans/" || exit 1
-        curl -f "$BASE_URL/api/health/" || exit 1
-        
-        echo "✅ Production smoke tests passed!"
-
-    - name: Notify Deployment Success
-      if: success()
-      run: |
-        echo "🚀 Production deployment successful!"
-        echo "Image: ${{ needs.build-and-push.outputs.image-tag }}"
-        echo "Digest: ${{ needs.build-and-push.outputs.image-digest }}"
-        # Add Slack/Teams notification here if needed
-
-  rollback:
-    name: Rollback on Failure
-    runs-on: ubuntu-latest
-    needs: [deploy-production]
-    if: failure() && needs.deploy-production.result == 'failure'
-    environment: production
-
-    steps:
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS_PRODUCTION }}
-
-    - name: Rollback Production Deployment
+    - name: Swap staging -> production
       uses: azure/CLI@v1
       with:
         inlineScript: |
-          echo "🔄 Rolling back production deployment..."
-          
-          # Get previous successful deployment
-          PREVIOUS_IMAGE=$(az webapp config container show \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP_PRODUCTION }} \
-            --name ${{ secrets.AZURE_WEBAPP_NAME_PRODUCTION }} \
-            --query "linuxFxVersion" -o tsv | sed 's/DOCKER|//')
-          
-          echo "Rolling back to: $PREVIOUS_IMAGE"
-          
-          # Note: This is a simplified rollback. In practice, you'd want to:
-          # 1. Track previous successful deployments
-          # 2. Restore database from backup if needed
-          # 3. More sophisticated rollback logic
-          
-          echo "❌ Rollback completed. Manual intervention may be required."
+          az webapp deployment slot swap \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name ${{ secrets.AZURE_WEBAPP_NAME }} \
+            --slot ${{ secrets.AZURE_SLOT_STAGING }} \
+            --target-slot production
+
+    - name: Post-swap Health Check (production)
+      env:
+        HEALTH_URL: https://${{ secrets.AZURE_WEBAPP_NAME }}.azurewebsites.net${{ env.HEALTH_PATH }}
+      run: |
+        echo "Checking production after swap..."
+        for i in {1..20}; do
+          if curl -fsS "$HEALTH_URL"; then
+            echo "✅ Production healthy after swap"; exit 0
+          fi
+          echo "⏳ [$i/20] retry in 10s..."; sleep 10
+        done
+        echo "❌ Production health check failed"; exit 1
+
+  rollback-on-failure:
+    name: Rollback (Swap back)
+    runs-on: ubuntu-latest
+    needs: [deploy-staging-slot]
+    if: failure()
+    environment: production
+
+    steps:
+    - name: Azure Login (OIDC)
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Swap back production -> staging
+      uses: azure/CLI@v1
+      with:
+        inlineScript: |
+          echo "🔄 Rolling back: swapping production back to staging..."
+          az webapp deployment slot swap \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name ${{ secrets.AZURE_WEBAPP_NAME }} \
+            --slot production \
+            --target-slot ${{ secrets.AZURE_SLOT_STAGING }}
 
   security-scan-image:
-    name: Security Scan Docker Image
+    name: Security Scan (Image)
     runs-on: ubuntu-latest
     needs: build-and-push
-    if: always()
+    if: needs.build-and-push.result == 'success'
 
     steps:
-    - name: Run Trivy vulnerability scanner on image
+    - name: Trivy scan
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: ${{ needs.build-and-push.outputs.image-tag }}
-        format: 'sarif'
-        output: 'trivy-image-results.sarif'
+        format: sarif
+        output: trivy-image-results.sarif
 
-    - name: Upload Trivy scan results
-      uses: github/codeql-action/upload-sarif@v2
-      if: always()
+    - name: Upload SARIF to Code Scanning
+      uses: github/codeql-action/upload-sarif@v3
       with:
-        sarif_file: 'trivy-image-results.sarif'
+        sarif_file: trivy-image-results.sarif
