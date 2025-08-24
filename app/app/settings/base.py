@@ -275,6 +275,12 @@ ADMIN_NOTIFICATION_EMAILS = [
     if email.strip()
 ]
 
+# Internationalization
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -312,4 +318,72 @@ TENANT_DOMAIN_MODEL = "core.Domain"
 PUBLIC_SCHEMA_URLCONF = "app.public_urls"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Celery Configuration
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# Celery Beat Schedule - Periodic Tasks
+CELERY_BEAT_SCHEDULE = {
+    # Policy acknowledgment reminders - daily at 9:00 AM
+    'send-policy-acknowledgment-reminders': {
+        'task': 'policies.tasks.send_policy_acknowledgment_reminders',
+        'schedule': crontab(hour=9, minute=0),
+        'options': {'queue': 'default'}
+    },
+    
+    # Overdue policy notifications - weekly on Monday at 10:00 AM
+    'send-overdue-policy-notifications': {
+        'task': 'policies.tasks.send_overdue_policy_notifications', 
+        'schedule': crontab(day_of_week=1, hour=10, minute=0),
+        'options': {'queue': 'default'}
+    },
+    
+    # Weekly acknowledgment report - Friday at 5:00 PM
+    'generate-acknowledgment-report': {
+        'task': 'policies.tasks.generate_acknowledgment_report',
+        'schedule': crontab(day_of_week=5, hour=17, minute=0),
+        'options': {'queue': 'default'}
+    },
+    
+    # Clean up expired acknowledgments - daily at midnight
+    'cleanup-expired-acknowledgments': {
+        'task': 'policies.tasks.cleanup_expired_acknowledgments',
+        'schedule': crontab(hour=0, minute=0),
+        'options': {'queue': 'default'}
+    },
+    
+    # Training module tasks
+    # Send scheduled awareness campaigns - every hour
+    'send-scheduled-awareness-campaigns': {
+        'task': 'training.tasks.send_scheduled_awareness_campaigns',
+        'schedule': crontab(minute=0),  # Every hour at minute 0
+        'options': {'queue': 'default'}
+    },
+    
+    # Clean up old campaign deliveries - weekly on Sunday at 1:00 AM
+    'cleanup-old-campaign-deliveries': {
+        'task': 'training.tasks.cleanup_old_campaign_deliveries',
+        'schedule': crontab(day_of_week=0, hour=1, minute=0),
+        'options': {'queue': 'default'}
+    },
+    
+    # Generate training analytics report - weekly on Saturday at 6:00 PM
+    'generate-training-analytics-report': {
+        'task': 'training.tasks.generate_training_analytics_report',
+        'schedule': crontab(day_of_week=6, hour=18, minute=0),
+        'options': {'queue': 'default'}
+    },
+    
+    # Update video view counts - daily at 2:00 AM
+    'update-video-view-counts': {
+        'task': 'training.tasks.update_video_view_counts',
+        'schedule': crontab(hour=2, minute=0),
+        'options': {'queue': 'default'}
+    }
+}
 

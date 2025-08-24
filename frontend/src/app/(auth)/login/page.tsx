@@ -4,17 +4,27 @@ import { Form, Input, Button, Alert } from "antd";
 import { login } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 
+type LoginFormValues = {
+  email: string;
+  password: string;
+  otp?: string;
+};
+
 export default function LoginPage() {
   const [error, setError] = useState<string|null>(null);
   const router = useRouter();
 
-  const onFinish = async (values: any) => {
+  const onFinish = async (values: LoginFormValues) => {
     try {
       setError(null);
       await login(values.email, values.password, values.otp);
       router.push("/");
-    } catch (e:any) {
-      setError(e.message || "Login failed");
+    } catch (e) {
+      if (e instanceof Error) {
+        setError(e.message || "Login failed");
+      } else {
+        setError("An unexpected error occurred during login.");
+      }
     }
   };
 
