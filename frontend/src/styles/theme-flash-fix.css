@@ -1,0 +1,46 @@
+/* Prevent theme flashing during hydration */
+html {
+  /* Default to light theme colors */
+  --bg-layout: #F7F8FA;
+  --bg-container: #FFFFFF;
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --border-color: #E7EBF0;
+}
+
+/* Dark mode CSS variables */
+html.dark-mode {
+  --bg-layout: #151B23;
+  --bg-container: #1E2532;
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --border-color: #2A3441;
+}
+
+/* Apply theme colors immediately */
+body {
+  background-color: var(--bg-layout) !important;
+  color: var(--text-primary) !important;
+  transition: none !important; /* Prevent flash during hydration */
+}
+
+/* Re-enable transitions after hydration */
+body.hydrated {
+  transition: background-color 0.3s ease, color 0.3s ease !important;
+}
+
+/* Prevent layout shift during loading */
+.loading-skeleton {
+  background: linear-gradient(90deg, var(--bg-container) 25%, transparent 50%, var(--bg-container) 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

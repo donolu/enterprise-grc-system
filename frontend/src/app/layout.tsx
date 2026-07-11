@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import AppLayout from "@/components/AppLayout";
+import AuthWrapper from "@/components/AuthWrapper";
 import { AppTheme } from "@/theme";
+import ThemeScript from "@/components/ThemeScript";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,8 +21,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        <ThemeScript />
         <AppTheme>
-          <AppLayout>{children}</AppLayout>
+          <AuthWrapper>
+            <AppLayout>{children}</AppLayout>
+          </AuthWrapper>
         </AppTheme>
       </body>
     </html>

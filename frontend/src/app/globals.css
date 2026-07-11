@@ -1,1 +1,52 @@
 body { margin: 0; }
+
+/* Critical CSS to prevent flash - loads immediately */
+html {
+  --bg-layout: #F7F8FA;
+  --bg-container: #FFFFFF;
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --border-color: #E7EBF0;
+}
+
+html.dark-mode {
+  --bg-layout: #151B23;
+  --bg-container: #1E2532;
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --border-color: #2A3441;
+}
+
+/* Inline theme detection script */
+html {
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+html.theme-loaded {
+  opacity: 1;
+}
+
+/* Apply theme colors immediately */
+body {
+  background-color: var(--bg-layout) !important;
+  color: var(--text-primary) !important;
+  transition: none !important;
+  margin: 0;
+}
+
+/* Re-enable smooth transitions after hydration */
+body.hydrated {
+  transition: background-color 0.3s ease, color 0.3s ease !important;
+}
+
+/* Prevent white flash with dark default */
+@media (prefers-color-scheme: dark) {
+  html {
+    --bg-layout: #151B23;
+    --bg-container: #1E2532;
+    --text-primary: #F8FAFC;
+    --text-secondary: #CBD5E1;
+    --border-color: #2A3441;
+  }
+}
