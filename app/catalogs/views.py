@@ -735,15 +735,6 @@ class ControlAssessmentViewSet(viewsets.ModelViewSet):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=True, methods=['get'])
-    def evidence(self, request, pk=None):
-        """Get all evidence linked to this assessment."""
-        assessment = self.get_object()
-        evidence_links = assessment.evidence_links.all().select_related('evidence', 'created_by')
-        
-        serializer = AssessmentEvidenceSerializer(evidence_links, many=True)
-        return Response(serializer.data)
-    
     @action(detail=True, methods=['post'])
     def link_evidence(self, request, pk=None):
         """Link evidence to this assessment."""

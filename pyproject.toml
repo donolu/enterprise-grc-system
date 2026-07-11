@@ -1,30 +1,75 @@
-[tool.black]
+[tool.ruff]
 line-length = 100
-target-version = ['py312']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-    # directories
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | venv
-  | \.pytest_cache
-  | migrations
-)/
-'''
+target-version = "py312"
+extend-exclude = [
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".tox",
+    ".venv",
+    "venv",
+    "node_modules",
+    "*/migrations/*",
+]
 
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 100
-known_django = "django"
-known_first_party = ["app", "core", "authn", "billing", "catalogs", "compliance", "risk", "vendors", "policies", "training", "vuln", "events", "audit", "exports", "search", "api"]
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "FIRSTPARTY", "LOCALFOLDER"]
-skip = ["migrations", "venv", ".venv", "node_modules"]
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S", "RUF"]
+ignore = [
+    "E501",
+    "F401",
+    "F841",
+    "F541",
+    # Existing legacy debt to remove incrementally under the Ruff cleanup issue.
+    "I001",
+    "UP006",
+    "UP007",
+    "UP015",
+    "UP035",
+    "B007",
+    "B017",
+    "B904",
+    "S101",
+    "S106",
+    "S108",
+    "S110",
+    "S307",
+    "S308",
+    "RUF001",
+    "RUF005",
+    "RUF010",
+    "RUF012",
+    "RUF013",
+    "RUF019",
+    "RUF100",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "app",
+    "api",
+    "audit",
+    "authn",
+    "billing",
+    "catalogs",
+    "compliance",
+    "core",
+    "events",
+    "exports",
+    "policies",
+    "risk",
+    "search",
+    "sso",
+    "training",
+    "vendors",
+    "vuln",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"app/app/settings/*.py" = ["F403", "F405"]
+"**/tests/**" = ["S105", "S106"]
+"**/test_*.py" = ["S105", "S106"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "app.settings.test"

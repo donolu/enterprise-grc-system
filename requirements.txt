@@ -35,10 +35,9 @@ factory-boy==3.3.1
 faker==30.8.2
 
 # Code quality
-black==24.10.0
-flake8==6.1.0
-flake8-django==1.4.0
-isort==5.13.2
+ruff==0.9.9
+mypy==1.17.0
+pre-commit>=3.7
 
 # Security
 bandit==1.7.10

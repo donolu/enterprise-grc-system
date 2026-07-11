@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.contrib.auth.models import Group
+from django.utils import timezone
 from django_tenants.utils import tenant_context
 
 from .models import SSOProvider, SSOAuditLog, AttributeMapping
