@@ -41,6 +41,11 @@ collect_static() {
 # Function to create superuser if needed
 create_superuser() {
     if [[ "${CREATE_SUPERUSER}" == "true" ]]; then
+        if [[ -z "${SUPERUSER_PASSWORD}" ]]; then
+            echo "❌ SUPERUSER_PASSWORD must be set when CREATE_SUPERUSER=true"
+            exit 1
+        fi
+
         echo "👤 Creating superuser..."
         python manage.py shell << EOF
 from django.contrib.auth import get_user_model
@@ -49,7 +54,7 @@ from django.db import IntegrityError
 User = get_user_model()
 username = '${SUPERUSER_USERNAME:-admin}'
 email = '${SUPERUSER_EMAIL:-admin@example.com}'
-password = '${SUPERUSER_PASSWORD:-admin}'
+password = '${SUPERUSER_PASSWORD}'
 
 try:
     if not User.objects.filter(username=username).exists():
