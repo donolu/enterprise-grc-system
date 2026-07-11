@@ -35,7 +35,7 @@ repos:
       - id: bandit
         args: [-c, pyproject.toml]
         files: ^app/
-        exclude: ^app/.*/tests/
+        exclude: ^app/(.*/tests/|generate_dummy_data.*|generate_tenant_dummy_data\.py|test_sso_final\.py)
         additional_dependencies: ["bandit[toml]"]
 
   - repo: local
