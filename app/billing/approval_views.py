@@ -39,7 +39,7 @@ class LimitOverrideRequestViewSet(viewsets.ModelViewSet):
                 subscription = getattr(tenant, 'subscription', None)
                 if subscription:
                     return LimitOverrideRequest.objects.filter(subscription=subscription)
-            except:
+            except Exception:
                 pass
             
         return LimitOverrideRequest.objects.none()

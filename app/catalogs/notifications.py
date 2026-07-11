@@ -133,7 +133,7 @@ class AssessmentReminderService:
                     days_before_due=days_before_due,
                     email_sent=False
                 )
-            except:
+            except Exception:
                 pass
             
             return False

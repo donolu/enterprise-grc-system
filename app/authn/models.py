@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from django_otp.models import Device
 import uuid
 import json
@@ -79,7 +80,7 @@ class PushDevice(Device):
             # Check if token matches and hasn't expired
             if (challenge_data.get('challenge_id') == token and 
                 self.challenge_expires_at and 
-                self.challenge_expires_at > datetime.now()):
+                self.challenge_expires_at > timezone.now()):
                 
                 # Clear the challenge
                 self.pending_challenge = ''

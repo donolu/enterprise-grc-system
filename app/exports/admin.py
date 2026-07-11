@@ -289,7 +289,7 @@ class AssessmentReportAdmin(admin.ModelAdmin):
             if obj:
                 extra_context['show_generate_button'] = obj.status in ['pending', 'failed', 'completed']
                 extra_context['is_processing'] = obj.status == 'processing'
-        except:
+        except Exception:
             pass
         
         return super().change_view(request, object_id, form_url, extra_context)
