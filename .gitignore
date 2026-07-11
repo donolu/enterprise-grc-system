@@ -186,3 +186,9 @@ create_stripe_products.py
 *.pem
 *.p12
 *.pfx
+
+# Local/editor noise
+.DS_Store
+*.tsbuildinfo
+~$*.docx
+frontend/debug-theme.html
