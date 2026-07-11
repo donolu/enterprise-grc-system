@@ -22,7 +22,7 @@ DATABASES = {
         "ENGINE": "django_tenants.postgresql_backend",
         "NAME": os.environ.get("POSTGRES_DB", "grc_test"),
         "USER": os.environ.get("POSTGRES_USER", "grc"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "grc"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", ""),
         "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
         "TEST": {
@@ -89,12 +89,12 @@ SESSION_COOKIE_SECURE = False
 # Test Azure Storage settings (using Azurite)
 AZURE_STORAGE_CONNECTION_STRING = os.environ.get(
     'AZURE_STORAGE_CONNECTION_STRING',
-    'DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://localhost:10000/devstoreaccount1;'
+    'UseDevelopmentStorage=true'
 )
 
 # Stripe test mode (don't make real API calls in tests unless specified)
-STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_fake_key_for_testing')
-STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_fake_key_for_testing')
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', 'fake-stripe-secret-key-for-testing')
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'fake-stripe-publishable-key-for-testing')
 
 # Test-specific feature flags
 TESTING_SKIP_STRIPE_CALLS = True

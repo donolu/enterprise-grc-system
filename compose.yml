@@ -27,9 +27,9 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_DB: grc
-      POSTGRES_USER: grc
-      POSTGRES_PASSWORD: grc
+      POSTGRES_DB: ${POSTGRES_DB:-grc}
+      POSTGRES_USER: ${POSTGRES_USER:-grc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or your shell}
     ports: ["5432:5432"]
     volumes: ["pgdata:/var/lib/postgresql/data"]
 
@@ -39,8 +39,6 @@ services:
 
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite:latest
-    environment:
-      AZURITE_ACCOUNTS: "devstoreaccount1:Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
     command: ["azurite", "--silent", "--location", "/data", "--blobHost", "0.0.0.0", "--queueHost", "0.0.0.0", "--tableHost", "0.0.0.0"]
     ports: ["10000:10000","10001:10001","10002:10002"]
     volumes: ["azurite:/data"]
@@ -58,7 +56,7 @@ services:
     environment:
       - discovery.type=single-node
       - plugins.security.disabled=true
-      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=admin123
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:?Set OPENSEARCH_INITIAL_ADMIN_PASSWORD in .env or your shell}
     ports: ["9200:9200"]
 
   flower:

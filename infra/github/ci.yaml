@@ -8,7 +8,10 @@ jobs:
     services:
       postgres:
         image: postgres:16
-        env: { POSTGRES_DB: grc, POSTGRES_USER: grc, POSTGRES_PASSWORD: grc }
+        env:
+          POSTGRES_DB: grc
+          POSTGRES_USER: grc
+          POSTGRES_PASSWORD: ci-${{ github.run_id }}-${{ github.run_attempt }}
         ports: ["5432:5432"]
         options: >-
           --health-cmd="pg_isready -U grc" --health-interval=10s --health-timeout=5s --health-retries=5
@@ -18,9 +21,13 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install -r requirements.txt
       - env:
-          DATABASE_URL: postgres://grc:grc@localhost:5432/grc
+          POSTGRES_DB: grc
+          POSTGRES_USER: grc
+          POSTGRES_PASSWORD: ci-${{ github.run_id }}-${{ github.run_attempt }}
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: "5432"
           DJANGO_SETTINGS_MODULE: app.settings.local
-          SECRET_KEY: ci
+          SECRET_KEY: django-ci-${{ github.run_id }}-${{ github.run_attempt }}
           DEBUG: "1"
         run: |
           python app/manage.py migrate --noinput
