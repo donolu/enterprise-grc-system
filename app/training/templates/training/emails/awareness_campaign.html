@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{ subject }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #1890ff; color: white; padding: 20px; border-radius: 5px 5px 0 0; text-align: center; }
+        .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 5px 5px; }
+        .content-body { background: white; padding: 25px; border-radius: 5px; margin: 20px 0; }
+        .test-warning { background: #fff3cd; color: #856404; padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: center; font-weight: bold; }
+        .footer { background: #e9ecef; padding: 20px; border-radius: 5px; margin-top: 20px; text-align: center; font-size: 0.9em; color: #666; }
+        .button { background: #1890ff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 20px 0; }
+        .unsubscribe { font-size: 0.8em; color: #999; margin-top: 20px; }
+        .logo { font-size: 1.5em; font-weight: bold; margin-bottom: 10px; }
+        .security-tip { background: #e6f7ff; border-left: 4px solid #1890ff; padding: 15px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🛡️ Security Awareness</div>
+            <div>Keeping Our Organization Safe</div>
+        </div>
+
+        <div class="content">
+            {% if is_test %}
+            <div class="test-warning">
+                ⚠️ THIS IS A TEST EMAIL - No action required
+            </div>
+            {% endif %}
+
+            <p>Hello {{ user.first_name|default:user.email }},</p>
+
+            <div class="content-body">
+                {{ email_content|safe }}
+            </div>
+
+            {% if not is_test %}
+            <div style="text-align: center;">
+                <a href="{{ training_url }}" class="button">
+                    🎓 Access Training Library
+                </a>
+            </div>
+            {% endif %}
+
+            <div class="security-tip">
+                <strong>💡 Security Tip:</strong> Always verify the sender of security-related emails.
+                This email was sent from our official security awareness program.
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Security Team</strong><br>
+            Thank you for helping keep our organization secure!</p>
+
+            {% if not is_test %}
+            <div class="unsubscribe">
+                <p>You received this email as part of our security awareness program.</p>
+                <p><a href="{{ unsubscribe_url }}" style="color: #999;">Unsubscribe from security awareness emails</a></p>
+            </div>
+            {% else %}
+            <p><em>This was a test email sent to verify campaign configuration.</em></p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

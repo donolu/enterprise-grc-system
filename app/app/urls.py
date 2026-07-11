@@ -7,7 +7,8 @@ urlpatterns = [
     path('api/', include('api.urls')),
     path('', include('billing.urls')),
     path('', include('core.urls')),
-    
+    path('sso/', include('sso.urls')),
+
     # API Documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

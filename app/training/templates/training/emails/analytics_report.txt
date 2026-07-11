@@ -1,0 +1,42 @@
+Training Analytics Report - {{ report.period }}
+
+VIDEO ANALYTICS
+===============
+Total Videos: {{ report.video_analytics.total_videos }}
+Views This Week: {{ report.video_analytics.total_views_week }}
+Unique Viewers: {{ report.video_analytics.unique_viewers_week }}
+Average Completion Rate: {{ report.video_analytics.avg_completion_rate }}%
+
+{% if report.video_analytics.most_watched %}
+Most Watched Videos This Week:
+{% for video in report.video_analytics.most_watched %}
+- {{ video.title }} ({{ video.category }}) - {{ video.weekly_views }} views
+{% endfor %}
+{% else %}
+No videos were watched this week.
+{% endif %}
+
+CAMPAIGN ANALYTICS
+==================
+Active Campaigns: {{ report.campaign_analytics.active_campaigns }}
+Emails Sent This Week: {{ report.campaign_analytics.emails_sent_week }}
+Open Rate: {{ report.campaign_analytics.open_rate_week }}%
+Click Rate: {{ report.campaign_analytics.click_rate_week }}%
+
+RECOMMENDATIONS
+===============
+{% if report.video_analytics.avg_completion_rate < 50 %}
+- Video completion rates are low ({{ report.video_analytics.avg_completion_rate }}%). Consider shorter videos or more engaging content.
+{% endif %}
+{% if report.campaign_analytics.open_rate_week < 20 %}
+- Email open rates are below 20%. Consider improving subject lines or send timing.
+{% endif %}
+{% if report.video_analytics.total_views_week < 10 %}
+- Video engagement is low. Consider promoting training content more actively.
+{% endif %}
+
+Training Dashboard: {{ dashboard_url }}
+Full Training Portal: {{ training_url }}
+
+This report is generated automatically every week.
+Training Analytics System

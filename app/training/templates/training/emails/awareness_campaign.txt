@@ -1,0 +1,21 @@
+{% if is_test %}*** THIS IS A TEST EMAIL ***{% endif %}
+
+Hello {{ user.first_name|default:user.email }},
+
+{{ email_content|safe }}
+
+---
+
+Security Awareness Training Program
+
+{% if not is_test %}
+You can access our full training library at: {{ training_url }}
+
+If you no longer wish to receive these security awareness emails, you can unsubscribe here: {{ unsubscribe_url }}
+{% else %}
+This was a test email. No action is required.
+{% endif %}
+
+Thank you for helping keep our organization secure!
+
+Security Team
