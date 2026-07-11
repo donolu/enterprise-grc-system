@@ -1,18 +1,29 @@
-version: '3.8'
-
 services:
-  db:
-    image: postgres
-    restart: always
+  postgres:
+    image: postgres:16
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: aximcyber_db
-
+      POSTGRES_DB: ${POSTGRES_DB:-grc}
+      POSTGRES_USER: ${POSTGRES_USER:-grc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or your shell}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-grc} -d ${POSTGRES_DB:-grc}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  db-data:
+  postgres-data:
