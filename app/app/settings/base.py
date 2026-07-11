@@ -14,13 +14,13 @@ ALLOWED_HOSTS = ["*"]
 SHARED_APPS = [
     "django_tenants", # Must be first
     "django.contrib.admin",
-    "django.contrib.auth", 
+    "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
-    "django_filters", 
+    "django_filters",
     "drf_spectacular",
     "core", # Needed here for Tenant and Domain models
 ]
@@ -28,14 +28,15 @@ SHARED_APPS = [
 TENANT_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
-    "django.contrib.contenttypes", 
+    "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django_otp",
     "django_otp.plugins.otp_email",
     "django_otp.plugins.otp_totp",
-    "core", 
+    "core",
     "authn",
+    "sso",
     "billing",
     "catalogs",
     "compliance",
@@ -48,6 +49,7 @@ TENANT_APPS = [
     "audit",
     "exports",
     "search",
+    "analytics",
     "api",
 ]
 
@@ -126,10 +128,10 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "GRC SaaS API",
     "DESCRIPTION": """
     Comprehensive API for Governance, Risk, and Compliance (GRC) management.
-    
+
     This API provides complete functionality for compliance framework management,
     control assessments, evidence collection, reporting, and automated reminders.
-    
+
     ## Features
     - **Framework Management**: Import and manage compliance frameworks (ISO 27001, NIST CSF, SOC 2, etc.)
     - **Assessment Workflow**: Complete control assessment lifecycle with status tracking
@@ -137,10 +139,10 @@ SPECTACULAR_SETTINGS = {
     - **Automated Reporting**: Generate professional PDF reports for audits and compliance
     - **Smart Reminders**: Configurable email notifications for due dates and overdue items
     - **Multi-tenant Architecture**: Complete tenant isolation with secure data scoping
-    
+
     ## Authentication
     This API uses session-based authentication. Users must be authenticated to access endpoints.
-    
+
     ## Tenant Scoping
     All data is automatically scoped to the authenticated user's tenant. Cross-tenant access is prevented.
     """,
@@ -158,13 +160,13 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX": "/api/",
     "COMPONENT_SPLIT_REQUEST": True,
     "SORT_OPERATIONS": False,
-    
+
     # Enhanced documentation
     "SERVE_INCLUDE_SCHEMA": False,
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": None,
     "REDOC_DIST": "SIDECAR",
-    
+
     # Security schemes
     "APPEND_COMPONENTS": {
         "securitySchemes": {
@@ -177,7 +179,7 @@ SPECTACULAR_SETTINGS = {
         }
     },
     "SECURITY": [{"SessionAuth": []}],
-    
+
     # Tags for organizing endpoints
     "TAGS": [
         {
@@ -217,13 +219,13 @@ SPECTACULAR_SETTINGS = {
             "description": "Subscription and billing management"
         }
     ],
-    
+
     # Custom preprocessing for better documentation
     "PREPROCESSING_HOOKS": [],
     "POSTPROCESSING_HOOKS": [
         "drf_spectacular.hooks.postprocess_schema_enums",
     ],
-    
+
     # Enum choices handling
     "ENUM_NAME_OVERRIDES": {
         "StatusEnum": "catalogs.models.ControlAssessment.STATUS_CHOICES",
@@ -231,7 +233,7 @@ SPECTACULAR_SETTINGS = {
         "EvidenceTypeEnum": "catalogs.models.ControlEvidence.EVIDENCE_TYPES",
         "ReminderTypeEnum": "catalogs.models.AssessmentReminderLog.REMINDER_TYPES",
     },
-    
+
     # Error response schemas
     "DEFAULT_ERROR_RESPONSE_SCHEMA": "drf_spectacular.openapi.ErrorResponseSerializer",
 }
@@ -314,7 +316,7 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 # Django-tenants settings
 DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
 TENANT_MODEL = "core.Tenant"
-TENANT_DOMAIN_MODEL = "core.Domain" 
+TENANT_DOMAIN_MODEL = "core.Domain"
 PUBLIC_SCHEMA_URLCONF = "app.public_urls"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -335,28 +337,28 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(hour=9, minute=0),
         'options': {'queue': 'default'}
     },
-    
+
     # Overdue policy notifications - weekly on Monday at 10:00 AM
     'send-overdue-policy-notifications': {
-        'task': 'policies.tasks.send_overdue_policy_notifications', 
+        'task': 'policies.tasks.send_overdue_policy_notifications',
         'schedule': crontab(day_of_week=1, hour=10, minute=0),
         'options': {'queue': 'default'}
     },
-    
+
     # Weekly acknowledgment report - Friday at 5:00 PM
     'generate-acknowledgment-report': {
         'task': 'policies.tasks.generate_acknowledgment_report',
         'schedule': crontab(day_of_week=5, hour=17, minute=0),
         'options': {'queue': 'default'}
     },
-    
+
     # Clean up expired acknowledgments - daily at midnight
     'cleanup-expired-acknowledgments': {
         'task': 'policies.tasks.cleanup_expired_acknowledgments',
         'schedule': crontab(hour=0, minute=0),
         'options': {'queue': 'default'}
     },
-    
+
     # Training module tasks
     # Send scheduled awareness campaigns - every hour
     'send-scheduled-awareness-campaigns': {
@@ -364,21 +366,21 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute=0),  # Every hour at minute 0
         'options': {'queue': 'default'}
     },
-    
+
     # Clean up old campaign deliveries - weekly on Sunday at 1:00 AM
     'cleanup-old-campaign-deliveries': {
         'task': 'training.tasks.cleanup_old_campaign_deliveries',
         'schedule': crontab(day_of_week=0, hour=1, minute=0),
         'options': {'queue': 'default'}
     },
-    
+
     # Generate training analytics report - weekly on Saturday at 6:00 PM
     'generate-training-analytics-report': {
         'task': 'training.tasks.generate_training_analytics_report',
         'schedule': crontab(day_of_week=6, hour=18, minute=0),
         'options': {'queue': 'default'}
     },
-    
+
     # Update video view counts - daily at 2:00 AM
     'update-video-view-counts': {
         'task': 'training.tasks.update_video_view_counts',
@@ -386,4 +388,3 @@ CELERY_BEAT_SCHEDULE = {
         'options': {'queue': 'default'}
     }
 }
-

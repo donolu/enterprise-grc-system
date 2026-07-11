@@ -1,0 +1,33 @@
+Policy Acknowledgment Report - {{ report.period }}
+
+Overall Statistics:
+- Active Policies: {{ report.overall_stats.total_active_policies }}
+- Total Distributions: {{ report.overall_stats.total_distributions }}
+- Total Acknowledgments: {{ report.overall_stats.total_acknowledgments }}
+- Overall Acknowledgment Rate: {{ report.overall_stats.overall_rate }}%
+
+{% if report.low_rate_policies %}
+Policies Requiring Attention (< 70% acknowledgment rate):
+
+{% for policy_data in report.low_rate_policies %}
+{{ forloop.counter }}. {{ policy_data.policy.title }} ({{ policy_data.policy.policy_code }})
+   - Acknowledgment Rate: {{ policy_data.rate }}%
+   - Distributed: {{ policy_data.total_distributed }}
+   - Acknowledged: {{ policy_data.acknowledged }}
+   - Pending: {{ policy_data.total_distributed|add:policy_data.acknowledged|add:"-" }}
+
+{% endfor %}
+{% else %}
+🎉 Great news! All policies have acknowledgment rates above 70%.
+{% endif %}
+
+Recommendations:
+- Review policies with low acknowledgment rates
+- Send targeted reminders to users with pending acknowledgments
+- Consider policy training for frequently unacknowledged policies
+- Update policy content if acknowledgment rates remain consistently low
+
+View the full dashboard: {{ dashboard_url }}
+
+This report is generated automatically every week.
+Policy Management System

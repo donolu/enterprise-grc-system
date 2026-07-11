@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Policy Acknowledgment Reminder</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+        .policy-details { background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107; margin: 20px 0; }
+        .action-button { background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 20px 0; }
+        .footer { font-size: 0.9em; color: #666; border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; }
+        .reminder-notice { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Policy Acknowledgment Reminder</h2>
+            <p>Hello {{ user.first_name|default:user.email }},</p>
+            <p>This is a reminder that you have a policy that requires your acknowledgment.</p>
+        </div>
+
+        <div class="policy-details">
+            <h3>Policy Details</h3>
+            <ul>
+                <li><strong>Title:</strong> {{ policy.title }}</li>
+                <li><strong>Code:</strong> {{ policy.policy_code }}</li>
+                <li><strong>Category:</strong> {{ policy.category.name|default:"General" }}</li>
+                <li><strong>Distributed:</strong> {{ distribution.distributed_at|date:"F j, Y" }} ({{ days_since_distribution }} days ago)</li>
+            </ul>
+
+            {% if version.summary %}
+            <p><strong>Summary:</strong> {{ version.summary }}</p>
+            {% endif %}
+        </div>
+
+        {% if distribution.reminder_count > 0 %}
+        <div class="reminder-notice">
+            <strong>Notice:</strong> This is reminder #{{ distribution.reminder_count|add:1 }} for this policy.
+        </div>
+        {% endif %}
+
+        <p>To acknowledge this policy:</p>
+        <ol>
+            <li>Review the policy document</li>
+            <li>Click the acknowledgment button below</li>
+            <li>Confirm you have read and understood the policy</li>
+        </ol>
+
+        <a href="{{ acknowledge_url }}" class="action-button">Acknowledge Policy</a>
+
+        <p>You can also view the full policy details at: <a href="{{ policy_url }}">{{ policy_url }}</a></p>
+
+        <div class="footer">
+            <p>If you have any questions about this policy, please contact {{ policy.owner.email|default:"your administrator" }}.</p>
+            <p>Thank you,<br>Policy Management System</p>
+        </div>
+    </div>
+</body>
+</html>

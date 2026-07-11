@@ -1,0 +1,27 @@
+Policy Overdue Alert
+
+Policy: {{ policy.title }}
+Code: {{ policy.policy_code }}
+Category: {{ policy.category.name|default:"General" }}
+
+{{ total_overdue }} user(s) have not acknowledged this policy and are now overdue:
+
+{% for user_data in overdue_users %}
+- {{ user_data.user.email }} ({{ user_data.user.first_name }} {{ user_data.user.last_name }})
+  Distributed: {{ user_data.distributed_at|date:"F j, Y" }}
+  Days Overdue: {{ user_data.days_overdue }}
+  Reminders Sent: {{ user_data.reminder_count }}
+
+{% endfor %}
+
+Actions recommended:
+1. Contact users directly to ensure they acknowledge the policy
+2. Review policy distribution and acknowledgment processes
+3. Consider policy training or additional communication
+
+Policy Management Dashboard: {{ dashboard_url }}
+Policy Details: {{ policy_url }}
+
+This is an automated notification. Please take appropriate action to ensure policy compliance.
+
+Policy Management System

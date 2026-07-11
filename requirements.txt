@@ -24,7 +24,7 @@ gunicorn==23.0.0
 packaging>=23.0
 flower==2.0.1
 qrcode==7.4.2
-stripe==10.8.0
+stripe==12.4.0
 
 # Testing dependencies
 pytest==8.3.4

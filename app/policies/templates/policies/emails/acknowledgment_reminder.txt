@@ -1,0 +1,27 @@
+Hello {{ user.first_name|default:user.email }},
+
+This is a reminder that you have a policy that requires your acknowledgment.
+
+Policy Details:
+- Title: {{ policy.title }}
+- Code: {{ policy.policy_code }}
+- Category: {{ policy.category.name|default:"General" }}
+- Distributed: {{ distribution.distributed_at|date:"F j, Y" }} ({{ days_since_distribution }} days ago)
+
+{% if version.summary %}
+Summary: {{ version.summary }}
+{% endif %}
+
+To acknowledge this policy:
+1. Visit: {{ acknowledge_url }}
+2. Review the policy document
+3. Click "Acknowledge" to confirm you have read and understood the policy
+
+{% if distribution.reminder_count > 0 %}
+This is reminder #{{ distribution.reminder_count|add:1 }} for this policy.
+{% endif %}
+
+If you have any questions about this policy, please contact {{ policy.owner.email|default:"your administrator" }}.
+
+Thank you,
+Policy Management System
