@@ -32,8 +32,7 @@ class RiskActionReminderServiceTest(TestCase):
             password='testpass123'
         )
         self.category = RiskCategory.objects.create(
-            name='Test Category',
-            code='TEST'
+            name='Test Category'
         )
         self.risk = Risk.objects.create(
             title='Test Risk',
@@ -290,8 +289,7 @@ class RiskActionNotificationServiceTest(TestCase):
             password='testpass123'
         )
         self.category = RiskCategory.objects.create(
-            name='Test Category',
-            code='TEST'
+            name='Test Category'
         )
         self.risk = Risk.objects.create(
             title='Test Risk',
@@ -539,8 +537,7 @@ class RiskActionReminderLogTest(TestCase):
             password='testpass123'
         )
         self.category = RiskCategory.objects.create(
-            name='Test Category',
-            code='TEST'
+            name='Test Category'
         )
         self.risk = Risk.objects.create(
             title='Test Risk',

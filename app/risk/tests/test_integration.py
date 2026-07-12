@@ -33,8 +33,7 @@ class RiskActionWorkflowIntegrationTest(APITestCase):
         self.client.force_authenticate(user=self.user)
         
         self.category = RiskCategory.objects.create(
-            name='Integration Test Category',
-            code='INTEG'
+            name='Integration Test Category'
         )
         self.risk = Risk.objects.create(
             title='Integration Test Risk',

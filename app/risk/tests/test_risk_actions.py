@@ -31,7 +31,6 @@ class RiskActionModelTest(TestCase):
         )
         self.category = RiskCategory.objects.create(
             name='Test Category',
-            code='TEST',
             description='Test category'
         )
         self.risk = Risk.objects.create(
@@ -140,8 +139,7 @@ class RiskActionNoteModelTest(TestCase):
             password='testpass123'
         )
         self.category = RiskCategory.objects.create(
-            name='Test Category',
-            code='TEST'
+            name='Test Category'
         )
         self.risk = Risk.objects.create(
             title='Test Risk',
@@ -182,8 +180,7 @@ class RiskActionEvidenceModelTest(TestCase):
             password='testpass123'
         )
         self.category = RiskCategory.objects.create(
-            name='Test Category',
-            code='TEST'
+            name='Test Category'
         )
         self.risk = Risk.objects.create(
             title='Test Risk',
@@ -252,8 +249,7 @@ class RiskActionAPITest(APITestCase):
         self.client.force_authenticate(user=self.user)
         
         self.category = RiskCategory.objects.create(
-            name='Test Category',
-            code='TEST'
+            name='Test Category'
         )
         self.risk = Risk.objects.create(
             title='Test Risk',
@@ -406,8 +402,7 @@ class RiskActionNotificationTest(TestCase):
             password='testpass123'
         )
         self.category = RiskCategory.objects.create(
-            name='Test Category',
-            code='TEST'
+            name='Test Category'
         )
         self.risk = Risk.objects.create(
             title='Test Risk',
@@ -473,8 +468,7 @@ class RiskActionTaskTest(TestCase):
             password='testpass123'
         )
         self.category = RiskCategory.objects.create(
-            name='Test Category',
-            code='TEST'
+            name='Test Category'
         )
         self.risk = Risk.objects.create(
             title='Test Risk',
@@ -550,8 +544,7 @@ class RiskActionFilterTest(TestCase):
             password='testpass123'
         )
         self.category = RiskCategory.objects.create(
-            name='Test Category',
-            code='TEST'
+            name='Test Category'
         )
         self.risk = Risk.objects.create(
             title='Test Risk',

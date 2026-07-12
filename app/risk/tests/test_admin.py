@@ -50,8 +50,7 @@ class RiskActionAdminTest(TestCase):
         )
         
         self.category = RiskCategory.objects.create(
-            name='Test Category',
-            code='TEST'
+            name='Test Category'
         )
         self.risk = Risk.objects.create(
             title='Test Risk',
@@ -294,7 +293,7 @@ class RiskActionNoteAdminTest(TestCase):
             password='testpass123'
         )
         
-        self.category = RiskCategory.objects.create(name='Test', code='TEST')
+        self.category = RiskCategory.objects.create(name='Test')
         self.risk = Risk.objects.create(
             title='Test Risk',
             category=self.category,
@@ -365,7 +364,7 @@ class RiskActionEvidenceAdminTest(TestCase):
             password='testpass123'
         )
         
-        self.category = RiskCategory.objects.create(name='Test', code='TEST')
+        self.category = RiskCategory.objects.create(name='Test')
         self.risk = Risk.objects.create(
             title='Test Risk',
             category=self.category,
@@ -476,7 +475,7 @@ class AdminIntegrationTest(TestCase):
         )
         self.client.force_login(self.user)
         
-        self.category = RiskCategory.objects.create(name='Test', code='TEST')
+        self.category = RiskCategory.objects.create(name='Test')
         self.risk = Risk.objects.create(
             title='Test Risk',
             category=self.category,

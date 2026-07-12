@@ -4,12 +4,9 @@ on:
   pull_request:
     branches: [main]
     types: [opened, reopened, synchronize]
-  workflow_dispatch:
-    inputs:
-      ref:
-        description: "Branch or SHA to run against"
-        required: false
-        default: ""
+
+permissions:
+  contents: read
 
 jobs:
   check:
@@ -20,6 +17,11 @@ jobs:
         env:
           BRANCH: ${{ github.head_ref }}
         run: |
+          if [[ "$BRANCH" == dependabot/* ]]; then
+            echo "Dependabot branch '$BRANCH' is allowed."
+            exit 0
+          fi
+
           pattern='^(feature|fix|chore|docs)/[0-9]+-[a-z][a-z0-9-]*$'
           if [[ ! "$BRANCH" =~ $pattern ]]; then
             echo "Branch name '$BRANCH' does not match the required pattern."

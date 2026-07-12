@@ -260,9 +260,9 @@ def test_celery_beat_schedule():
 
 def test_frontend_components_exist():
     """Test that frontend components are created."""
-    import os
+    from pathlib import Path
 
-    frontend_dir = '/Users/deji/Dev/aximcyber/frontend/src/app/training'
+    frontend_dir = Path(__file__).resolve().parents[2] / 'frontend' / 'src' / 'app' / 'training'
 
     required_files = [
         'page.tsx',  # Main training page with video library
@@ -270,8 +270,8 @@ def test_frontend_components_exist():
     ]
 
     for file_path in required_files:
-        full_path = os.path.join(frontend_dir, file_path)
-        assert os.path.exists(full_path), f"Missing frontend file: {file_path}"
+        full_path = frontend_dir / file_path
+        assert full_path.exists(), f"Missing frontend file: {file_path}"
 
     print("✅ Training frontend components exist")
 

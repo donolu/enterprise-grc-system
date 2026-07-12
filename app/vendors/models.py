@@ -16,6 +16,10 @@ from datetime import timedelta
 User = get_user_model()
 
 
+def default_reminder_days():
+    return [30, 14, 7, 1]
+
+
 class RegionalConfig(models.Model):
     """
     Configuration for region-specific vendor due diligence requirements.
@@ -760,7 +764,7 @@ class VendorTask(models.Model):
     
     # Reminder Configuration
     reminder_days = models.JSONField(
-        default=lambda: [30, 14, 7, 1],
+        default=default_reminder_days,
         help_text="Days before due date to send reminders (e.g., [30, 14, 7, 1])"
     )
     last_reminder_sent = models.DateTimeField(

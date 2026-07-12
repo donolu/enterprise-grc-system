@@ -40,8 +40,7 @@ class RiskActionTaskTest(TestCase):
         )
         
         self.category = RiskCategory.objects.create(
-            name='Test Category',
-            code='TEST'
+            name='Test Category'
         )
         self.risk = Risk.objects.create(
             title='Test Risk',
