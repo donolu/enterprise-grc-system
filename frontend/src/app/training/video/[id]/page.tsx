@@ -313,7 +313,7 @@ export default function VideoPlayerPage() {
               />
               {isCompleted && (
                 <div style={{ marginTop: 8, color: '#52c41a' }}>
-                  <CheckCircleOutlined /> Congratulations! You've completed this training video.
+                  <CheckCircleOutlined /> Congratulations! You&apos;ve completed this training video.
                 </div>
               )}
             </Card>

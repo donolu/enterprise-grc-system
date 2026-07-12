@@ -127,7 +127,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     setOptions(filteredOptions)
   }
 
-  const handleSelect = (value: string, option: any) => {
+  const handleSelect = (value: string) => {
     const selectedOption = mockSearchData.find(item => item.value === value)
     if (selectedOption) {
       // Navigate to the selected item's page

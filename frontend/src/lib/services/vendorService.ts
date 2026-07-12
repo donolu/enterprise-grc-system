@@ -6,7 +6,7 @@ export interface VendorCategory {
   description: string
   color_code: string
   risk_weight: 'low' | 'medium' | 'high' | 'critical'
-  compliance_requirements: Record<string, any>
+  compliance_requirements: Record<string, unknown>
 }
 
 export interface VendorContact {
@@ -46,9 +46,9 @@ export interface Vendor {
   payment_terms: string
   operating_regions: string[]
   primary_region: string
-  custom_fields: Record<string, any>
+  custom_fields: Record<string, unknown>
   certifications: string[]
-  compliance_status: Record<string, any>
+  compliance_status: Record<string, unknown>
   data_processing_agreement: boolean
   security_assessment_completed: boolean
   security_assessment_date: string | null

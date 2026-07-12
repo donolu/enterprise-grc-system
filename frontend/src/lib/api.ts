@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosResponse } from "axios";
+import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { getAccessToken, setAccessToken, refresh } from "./auth";
 import { getTenantFromHost } from "./tenant";
 
@@ -7,7 +7,7 @@ interface APIError {
   message?: string;
   detail?: string;
   non_field_errors?: string[];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Enhanced error class for API errors
@@ -44,11 +44,11 @@ let queue: Array<() => void> = [];
 api.interceptors.response.use(
   (res: AxiosResponse) => res,
   async (err: AxiosError) => {
-    const original = err.config;
-    
+    const original = err.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+
     // Handle 401 Unauthorized - attempt token refresh
-    if (err?.response?.status === 401 && original && !(original as any)._retry) {
-      (original as any)._retry = true;
+    if (err?.response?.status === 401 && original && !original._retry) {
+      original._retry = true;
       if (!refreshing) {
         refreshing = true;
         try {
@@ -144,11 +144,15 @@ api.interceptors.response.use(
 );
 
 // Utility functions for error handling
-export const isAPIError = (error: any): error is APIException => {
-  return error && error.isAPIError === true;
+export const isAPIError = (error: unknown): error is APIException => {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { isAPIError?: boolean }).isAPIError === true
+  );
 };
 
-export const getErrorMessage = (error: any): string => {
+export const getErrorMessage = (error: unknown): string => {
   if (isAPIError(error)) {
     return error.message;
   }
@@ -161,7 +165,7 @@ export const getErrorMessage = (error: any): string => {
   return 'An unexpected error occurred';
 };
 
-export const getValidationErrors = (error: any): Record<string, string[]> => {
+export const getValidationErrors = (error: unknown): Record<string, string[]> => {
   if (isAPIError(error) && error.status === 400) {
     const errors: Record<string, string[]> = {};
     Object.keys(error.data).forEach(key => {
