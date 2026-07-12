@@ -58,7 +58,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           />
         </div>
       ),
-      onClick: (e: any) => {
+      onClick: (e: { domEvent: { preventDefault: () => void } }) => {
         e.domEvent.preventDefault();
         toggleMode();
       }

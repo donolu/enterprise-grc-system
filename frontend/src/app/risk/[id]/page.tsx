@@ -85,7 +85,7 @@ export default function RiskDetailPage() {
     return (
       <div style={{ textAlign: 'center', padding: '50px' }}>
         <Title level={3}>Risk Not Found</Title>
-        <Text type="secondary">The risk you're looking for doesn't exist or has been deleted.</Text>
+        <Text type="secondary">The risk you&apos;re looking for doesn&apos;t exist or has been deleted.</Text>
         <br />
         <Button type="primary" onClick={() => router.push('/risk')} style={{ marginTop: 16 }}>
           Back to Risk Management

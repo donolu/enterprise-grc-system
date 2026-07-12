@@ -6,7 +6,7 @@ import { DownloadOutlined, FileExcelOutlined, FilePdfOutlined, FileTextOutlined 
 import { useTheme } from '@/theme'
 
 interface ExportButtonProps {
-  data: any[]
+  data: unknown[]
   filename?: string
   disabled?: boolean
   size?: 'small' | 'middle' | 'large'
@@ -22,11 +22,11 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
   const isDark = mode === 'dark'
 
   // Helper function to flatten complex objects for CSV export
-  const flattenObject = (obj: any, prefix = ''): any => {
-    const flattened: any = {}
+  const flattenObject = (obj: Record<string, unknown>, prefix = ''): Record<string, string> => {
+    const flattened: Record<string, string> = {}
 
     for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         const value = obj[key]
         const newKey = prefix ? `${prefix}_${key}` : key
 
@@ -39,12 +39,13 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
           ).join('; ')
         } else if (typeof value === 'object' && value.constructor === Object) {
           // Handle nested objects - extract common fields
-          if (value.name || value.title) {
-            flattened[newKey] = value.name || value.title
-          } else if (value.first_name && value.last_name) {
-            flattened[newKey] = `${value.first_name} ${value.last_name}`
-          } else if (value.username) {
-            flattened[newKey] = value.username
+          const record = value as Record<string, unknown>
+          if (record.name || record.title) {
+            flattened[newKey] = String(record.name || record.title)
+          } else if (record.first_name && record.last_name) {
+            flattened[newKey] = `${record.first_name} ${record.last_name}`
+          } else if (record.username) {
+            flattened[newKey] = String(record.username)
           } else {
             // For complex objects, store as JSON but limit length
             const jsonStr = JSON.stringify(value)
@@ -67,7 +68,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
 
     try {
       // Flatten all objects first
-      const flattenedData = data.map(item => flattenObject(item))
+      const flattenedData = data.map(item => flattenObject(item as Record<string, unknown>))
 
       // Get headers from first flattened object
       const headers = Object.keys(flattenedData[0])
