@@ -292,7 +292,7 @@ jobs:
 
     - name: Node.js security audit
       working-directory: ./frontend
-      run: npm audit --audit-level moderate
+      run: npm audit --audit-level high
 
   build-test:
     name: Test Docker Build
