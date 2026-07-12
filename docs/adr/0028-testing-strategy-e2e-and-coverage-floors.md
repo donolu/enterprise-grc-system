@@ -1,12 +1,12 @@
-# ADR-0028: Testing strategy — frontend E2E, per-app coverage floors, tenant-isolation suite
+# ADR-0028: Testing strategy: frontend E2E, per-app coverage floors, tenant-isolation suite
 
 ## Status
 Proposed
 
 ## Context
-Test confidence is uneven. The frontend has no tests at all (`npm test` is a stub). On the backend, CI enforces a single global `--cov-fail-under=70`, and only the `risk` app has structured tests — a global floor lets a well-covered app hide untested ones (`catalogs`, `policies`, `training`, `vendors`, `exports`, `core`, `authn`). For a multi-tenant GRC product sold on its control assurance, this is the wrong risk profile: the most security-critical property (tenant isolation) has no dedicated tests.
+Test confidence is uneven. The frontend has no tests at all (`npm test` is a stub). On the backend, CI enforces a single global `--cov-fail-under=70`, and only the `risk` app has structured tests, and a global floor lets a well-covered app hide untested ones (`catalogs`, `policies`, `training`, `vendors`, `exports`, `core`, `authn`). For a multi-tenant GRC product sold on its control assurance, this is the wrong risk profile: the most security-critical property (tenant isolation) has no dedicated tests.
 
-Provena's model — a required Playwright E2E gate plus per-app coverage floors — kept regressions out of the critical paths.
+Provena's model (a required Playwright E2E gate plus per-app coverage floors) kept regressions out of the critical paths.
 
 ## Decision
 Adopt a three-part testing strategy.
@@ -22,7 +22,7 @@ Adopt a three-part testing strategy.
 
 ## Alternatives considered
 - Keep the global 70% floor: simplest, but structurally unable to protect under-tested apps.
-- Manual QA of tenant isolation: not repeatable and not auditable — unacceptable for the core security boundary.
+- Manual QA of tenant isolation: not repeatable and not auditable, which is unacceptable for the core security boundary.
 
 ## References
 - Issues #81, #83, #84; ADR-0029 (security hardening).

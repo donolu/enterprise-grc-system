@@ -4,16 +4,16 @@
 Proposed
 
 ## Context
-CI already runs backend tests, frontend lint/type-check/build, security scanning (Trivy, Bandit, TruffleHog, hadolint), and a Docker build; CD deploys to Azure App Service with slot swaps and SBOMs (ADR-0007). The gap is enforcement: `main` has **no branch protection** (verified via the API — "Branch not protected"), so despite `.github/branch-protection-setup.md`, nothing requires a PR, requires the checks to pass, or blocks a direct push. Green CI that is not *required* is advisory.
+CI already runs backend tests, frontend lint/type-check/build, security scanning (Trivy, Bandit, TruffleHog, hadolint), and a Docker build; CD deploys to Azure App Service with slot swaps and SBOMs (ADR-0007). The gap is enforcement: `main` has **no branch protection** (verified via the API: "Branch not protected"), so despite `.github/branch-protection-setup.md`, nothing requires a PR, requires the checks to pass, or blocks a direct push. Green CI that is not *required* is advisory.
 
-Provena's setup made the individual jobs the required checks, required branches to be up to date, and enforced a branch-name convention tied to a real issue — which is what turned CI from advisory into a gate.
+Provena's setup made the individual jobs the required checks, required branches to be up to date, and enforced a branch-name convention tied to a real issue, which is what turned CI from advisory into a gate.
 
 ## Decision
 Make the existing checks enforceable and keep the CI shape modern (the mechanics land in #71).
 
 - **Branch protection on `main`:** require a PR; require status checks to pass and the branch to be **up to date** (strict); required contexts = Backend Tests, Frontend Tests, Security Scanning, and Branch name check; require linear history; block force-push and deletion.
 - **Branch-name convention:** keep the pre-push hook and the `branch-name` workflow (`<type>/<issue#>-<desc>` tied to a real GitHub issue) as the required check.
-- **CI shape:** modern `setup-python`/`setup-node`, correct dependency caching, split backend/frontend jobs, and path filtering — tracked in #71.
+- **CI shape:** modern `setup-python`/`setup-node`, correct dependency caching, split backend/frontend jobs, and path filtering, tracked in #71.
 
 ## Consequences
 - No unreviewed or failing code reaches `main`; "green but not required" can no longer merge.
