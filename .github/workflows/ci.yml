@@ -112,6 +112,7 @@ jobs:
         POSTGRES_PASSWORD=grc
         POSTGRES_HOST=localhost
         POSTGRES_PORT=5432
+        POSTGRES_TEST_DB=grc_test
         DATABASE_URL=postgres://grc:grc@localhost:5432/grc_test
         CELERY_BROKER_URL=redis://localhost:6379/0
         CELERY_RESULT_BACKEND=redis://localhost:6379/1
