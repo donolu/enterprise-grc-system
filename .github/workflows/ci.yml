@@ -19,6 +19,7 @@ jobs:
   test-backend:
     name: Backend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     
     services:
       postgres:
@@ -29,7 +30,7 @@ jobs:
           POSTGRES_PASSWORD: grc
           POSTGRES_HOST_AUTH_METHOD: trust
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U grc -d grc_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -91,7 +92,8 @@ jobs:
           libxslt1-dev \
           libjpeg-dev \
           libfreetype6-dev \
-          zlib1g-dev
+          zlib1g-dev \
+          redis-tools
 
     - name: Install Python dependencies
       run: |
@@ -105,6 +107,11 @@ jobs:
         # Override for test environment
         cat >> .env.test << EOF
         DJANGO_SETTINGS_MODULE=app.settings.test
+        POSTGRES_DB=grc_test
+        POSTGRES_USER=grc
+        POSTGRES_PASSWORD=grc
+        POSTGRES_HOST=localhost
+        POSTGRES_PORT=5432
         DATABASE_URL=postgres://grc:grc@localhost:5432/grc_test
         CELERY_BROKER_URL=redis://localhost:6379/0
         CELERY_RESULT_BACKEND=redis://localhost:6379/1
@@ -114,24 +121,30 @@ jobs:
         EOF
 
     - name: Wait for services
+      timeout-minutes: 3
       run: |
-        # Wait for PostgreSQL
-        until pg_isready -h localhost -p 5432 -U grc >/dev/null 2>&1; do
-          echo "Waiting for PostgreSQL..."
-          sleep 2
-        done
-        
-        # Wait for Redis
-        until redis-cli -h localhost -p 6379 ping >/dev/null 2>&1; do
-          echo "Waiting for Redis..."
-          sleep 2
-        done
-        
-        # Wait for Azurite
-        until (echo > /dev/tcp/127.0.0.1/10000) >/dev/null 2>&1; do
-          echo "Waiting for Azurite..."
-          sleep 3
-        done
+        wait_for() {
+          local name="$1"
+          local command="$2"
+          local delay="${3:-2}"
+          local attempts="${4:-30}"
+
+          for attempt in $(seq 1 "$attempts"); do
+            if eval "$command" >/dev/null 2>&1; then
+              echo "$name is ready."
+              return 0
+            fi
+            echo "Waiting for $name... ($attempt/$attempts)"
+            sleep "$delay"
+          done
+
+          echo "::error::$name did not become ready in time."
+          return 1
+        }
+
+        wait_for "PostgreSQL" "pg_isready -h localhost -p 5432 -U grc"
+        wait_for "Redis" "redis-cli -h localhost -p 6379 ping"
+        wait_for "Azurite" "(echo > /dev/tcp/127.0.0.1/10000)" 3 20
 
     - name: Run database migrations
       working-directory: ./app
@@ -194,10 +207,10 @@ jobs:
           --verbose
 
     - name: Upload coverage reports
-      if: always()
+      if: always() && hashFiles('app/coverage.xml') != ''
       uses: codecov/codecov-action@v5
       with:
-        file: ./app/coverage.xml
+        files: ./app/coverage.xml
         flags: backend
         name: backend-coverage
 
