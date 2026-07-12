@@ -44,7 +44,7 @@ bandit==1.7.10
 safety==3.2.10
 
 # SSO and Enterprise Authentication
-django-allauth==0.61.1
+django-allauth==65.14.1
 python3-saml==1.16.0
 social-auth-app-django==5.4.0
 social-auth-core[saml]==4.5.3
