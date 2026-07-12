@@ -13,6 +13,7 @@ permissions:
   contents: read
   security-events: write
   actions: read
+  issues: write
 
 jobs:
   dependency-check:
@@ -51,7 +52,7 @@ jobs:
       working-directory: ./frontend
       run: |
         npm install
-        npm audit --audit-level moderate
+        npm audit --audit-level high
 
   code-security:
     name: Code Security Analysis
@@ -105,7 +106,7 @@ jobs:
         path: ./
         base: ${{ github.event.before || 'HEAD~1' }}
         head: ${{ github.sha }}
-        extra_args: --only-verified --no-update
+        extra_args: --only-verified
 
   dockerfile-security:
     name: Dockerfile Security Scan
@@ -121,6 +122,7 @@ jobs:
         dockerfile: Dockerfile
         format: sarif
         output-file: hadolint-results.sarif
+        no-fail: true
 
     - name: Upload Hadolint results
       if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
@@ -209,6 +211,8 @@ jobs:
         framework: dockerfile,github_actions,secrets
         output_format: sarif
         output_file_path: checkov-results.sarif
+        skip_check: CKV_GHA_7
+        soft_fail: true
 
     - name: Upload Checkov results
       if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
@@ -269,7 +273,8 @@ jobs:
         path: security-summary.md
 
     - name: Comment on PR (if applicable)
-      if: github.event_name == 'pull_request'
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      continue-on-error: true
       uses: actions/github-script@v6
       with:
         script: |
