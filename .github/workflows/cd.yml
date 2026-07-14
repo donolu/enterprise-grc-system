@@ -105,7 +105,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push
     environment: staging
-    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    # Keep push-to-main CD green before Azure OIDC secrets are configured.
+    # Main pushes still build, publish, generate SBOMs, and scan the image;
+    # deployment is an explicit staging action.
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
 
     steps:
     - uses: actions/checkout@v5
@@ -213,7 +216,7 @@ jobs:
     name: Rollback (Swap back)
     runs-on: ubuntu-latest
     needs: [deploy-staging-slot]
-    if: failure()
+    if: failure() && github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
     environment: production
 
     steps:
