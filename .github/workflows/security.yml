@@ -42,7 +42,7 @@ jobs:
 
     - name: Upload safety report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: safety-report
         path: safety-report.json
@@ -85,7 +85,7 @@ jobs:
 
     - name: Upload Bandit report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: bandit-report
         path: bandit-report.json
@@ -132,7 +132,7 @@ jobs:
 
     - name: Upload Hadolint SARIF as artifact (fallback)
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: hadolint-results
         path: hadolint-results.sarif
@@ -168,7 +168,7 @@ jobs:
 
     - name: Upload license reports
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: license-reports
         path: |
@@ -222,7 +222,7 @@ jobs:
 
     - name: Upload Checkov SARIF as artifact (fallback)
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: checkov-results
         path: checkov-results.sarif
@@ -267,7 +267,7 @@ jobs:
         echo "4. Ensure no secrets are committed to the repository" >> security-summary.md
 
     - name: Upload security summary
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: security-summary
         path: security-summary.md
