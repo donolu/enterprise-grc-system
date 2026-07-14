@@ -9,6 +9,7 @@ This module provides a Django storage backend that:
 """
 
 import os
+from django.db import connection
 from django.core.files.storage import Storage, FileSystemStorage
 from django.conf import settings
 from django.utils.deconstruct import deconstructible
@@ -72,17 +73,12 @@ class TenantAwareBlobStorage(Storage):
         
     def _get_tenant_container_name(self):
         """Get the container name for the current tenant."""
-        try:
-            from django_tenants.utils import get_tenant
-            tenant = get_tenant()
-            if tenant and hasattr(tenant, 'slug'):
-                return f"{self.container_prefix}-{tenant.slug}"
-            else:
-                # Fallback for shared schema or when no tenant context
-                return f"{self.container_prefix}-shared"
-        except Exception:
-            # Fallback for non-tenant contexts (management commands, etc.)
-            return f"{self.container_prefix}-shared"
+        tenant = getattr(connection, "tenant", None)
+        if tenant and getattr(tenant, "slug", None):
+            return f"{self.container_prefix}-{tenant.slug}"
+
+        # Fallback for shared schema or non-tenant contexts.
+        return f"{self.container_prefix}-shared"
     
     def _get_container_client(self, container_name=None):
         """Get a container client for the specified or current tenant."""
