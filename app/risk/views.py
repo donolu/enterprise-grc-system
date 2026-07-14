@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, filters, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Count, Q, Case, When, Value, IntegerField
+from django.db.models import Count, Q, Case, When, Value, IntegerField, F
 from django.utils import timezone
 from datetime import datetime, timedelta
 
@@ -170,7 +170,9 @@ class RiskViewSet(viewsets.ModelViewSet):
         """Return risks for the current tenant with optimized queries."""
         queryset = Risk.objects.select_related(
             'category', 'risk_owner', 'risk_matrix', 'created_by'
-        ).prefetch_related('notes')
+        ).prefetch_related('notes').alias(
+            risk_score=F('impact') * F('likelihood')
+        )
         
         # Apply common filters
         if self.request.query_params.get('overdue_review'):
