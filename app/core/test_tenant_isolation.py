@@ -9,6 +9,8 @@ from rest_framework.test import APIClient
 
 from core.models import Domain, Tenant
 from core.storage import TenantAwareBlobStorage
+from exports.models import AssessmentReport
+from policies.models import Policy, PolicyCategory
 from risk.models import Risk
 
 User = get_user_model()
@@ -58,6 +60,64 @@ class TestTenantIsolation:
         response = client.get(f"/api/risk/risks/{tenant_b_private_risk.pk}/")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_policy_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_policy(tenant_a, "POL-A-001", "Tenant A policy", user_a)
+        tenant_b_private_policy = self._create_policy(
+            tenant_b,
+            "POL-B-001",
+            "Tenant B private policy",
+            user_b,
+        )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/policies/policies/")
+        detail_response = client.get(
+            f"/api/policies/policies/{tenant_b_private_policy.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A policy"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_export_report_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_assessment_report(tenant_a, "Tenant A report", user_a)
+
+        with tenant_context(tenant_b):
+            self._create_assessment_report(
+                tenant_b,
+                "Tenant B first report",
+                user_b,
+            )
+            tenant_b_private_report = self._create_assessment_report(
+                tenant_b,
+                "Tenant B private report",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/exports/assessment-reports/")
+        detail_response = client.get(
+            f"/api/exports/assessment-reports/{tenant_b_private_report.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A report"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_storage_container_name_uses_current_tenant(self):
         tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
@@ -109,6 +169,28 @@ class TestTenantIsolation:
                 likelihood=3,
                 created_by=user,
                 risk_owner=user,
+            )
+
+    def _create_policy(self, tenant, policy_code, title, user):
+        with tenant_context(tenant):
+            category = PolicyCategory.objects.create(
+                name=f"{title} category",
+                description=f"{title} category description",
+            )
+            return Policy.objects.create(
+                policy_code=policy_code,
+                title=title,
+                category=category,
+                owner=user,
+                created_by=user,
+            )
+
+    def _create_assessment_report(self, tenant, title, user):
+        with tenant_context(tenant):
+            return AssessmentReport.objects.create(
+                report_type="assessment_summary",
+                title=title,
+                requested_by=user,
             )
 
     def _authenticated_client(self, tenant, user):
