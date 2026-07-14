@@ -3,15 +3,18 @@
 import pytest
 from uuid import uuid4
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from django_tenants.utils import schema_context, tenant_context
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from catalogs.models import Framework
 from core.models import Domain, Tenant
 from core.storage import TenantAwareBlobStorage
 from exports.models import AssessmentReport
 from policies.models import Policy, PolicyCategory
 from risk.models import Risk
+from training.models import TrainingCategory, TrainingVideo
 
 User = get_user_model()
 
@@ -119,6 +122,59 @@ class TestTenantIsolation:
         assert self._response_titles(list_response.json()) == ["Tenant A report"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
+    def test_catalog_framework_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_framework(tenant_a, "Tenant A framework", "TAF", user_a)
+        with tenant_context(tenant_b):
+            self._create_framework(tenant_b, "Tenant B first framework", "TBF1", user_b)
+            tenant_b_private_framework = self._create_framework(
+                tenant_b,
+                "Tenant B private framework",
+                "TBF2",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/catalogs/api/frameworks/")
+        detail_response = client.get(
+            f"/api/catalogs/api/frameworks/{tenant_b_private_framework.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_names(list_response.json()) == ["Tenant A framework"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_training_video_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_training_video(tenant_a, "Tenant A video", user_a)
+        tenant_b_private_video = self._create_training_video(
+            tenant_b,
+            "Tenant B private video",
+            user_b,
+        )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/training/videos/")
+        detail_response = client.get(
+            f"/api/training/videos/{tenant_b_private_video.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A video"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
     def test_storage_container_name_uses_current_tenant(self):
         tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
         tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
@@ -193,6 +249,34 @@ class TestTenantIsolation:
                 requested_by=user,
             )
 
+    def _create_framework(self, tenant, name, short_name, user):
+        with tenant_context(tenant):
+            return Framework.objects.create(
+                name=name,
+                short_name=short_name,
+                description=f"{name} description",
+                issuing_organization="Axim Cyber",
+                effective_date=timezone.now().date(),
+                status="active",
+                created_by=user,
+            )
+
+    def _create_training_video(self, tenant, title, user):
+        with tenant_context(tenant):
+            category = TrainingCategory.objects.create(
+                name=f"{title} category",
+                description=f"{title} category description",
+            )
+            return TrainingVideo.objects.create(
+                title=title,
+                description=f"{title} description",
+                category=category,
+                video_provider="custom",
+                video_url="https://example.com/training.mp4",
+                is_published=True,
+                created_by=user,
+            )
+
     def _authenticated_client(self, tenant, user):
         client = APIClient()
         client.defaults["HTTP_HOST"] = f"{tenant.slug}.localhost"
@@ -207,3 +291,7 @@ class TestTenantIsolation:
     def _response_titles(self, payload):
         results = payload.get("results", payload) if isinstance(payload, dict) else payload
         return [item["title"] for item in results]
+
+    def _response_names(self, payload):
+        results = payload.get("results", payload) if isinstance(payload, dict) else payload
+        return [item["name"] for item in results]
