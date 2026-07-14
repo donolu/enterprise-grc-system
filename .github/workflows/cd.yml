@@ -1,8 +1,6 @@
 name: CD - Build, Deploy (Slots), and Scan
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
     inputs:
       environment:
@@ -20,7 +18,7 @@ permissions:
 
 # Prevent overlapping deploys per branch/env
 concurrency:
-  group: cd-${{ github.ref }}-${{ github.event.inputs.environment || 'push' }}
+  group: cd-${{ github.ref }}-${{ github.event.inputs.environment || 'manual' }}
   cancel-in-progress: false
 
 env:
