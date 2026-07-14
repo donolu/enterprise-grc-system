@@ -12,11 +12,10 @@ on:
         type: choice
         options: [staging, production]
 
-# Required for GHCR, Code Scanning, and Azure OIDC
+# Required for GHCR and Azure OIDC
 permissions:
   contents: read
   packages: write
-  security-events: write
   id-token: write
 
 # Prevent overlapping deploys per branch/env
@@ -39,7 +38,7 @@ jobs:
       image-digest: ${{ steps.build.outputs.digest }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Set up QEMU
     # Needed for linux/arm64 cross-builds
@@ -109,7 +108,7 @@ jobs:
     if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Azure Login (OIDC)
       uses: azure/login@v2
@@ -250,7 +249,8 @@ jobs:
         format: sarif
         output: trivy-image-results.sarif
 
-    - name: Upload SARIF to Code Scanning
-      uses: github/codeql-action/upload-sarif@v3
+    - name: Upload image scan SARIF as artifact
+      uses: actions/upload-artifact@v7
       with:
-        sarif_file: trivy-image-results.sarif
+        name: trivy-image-results
+        path: trivy-image-results.sarif
