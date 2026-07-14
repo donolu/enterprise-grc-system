@@ -122,6 +122,22 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.environ.get("DRF_THROTTLE_ANON_RATE", "100/hour"),
+        "user": os.environ.get("DRF_THROTTLE_USER_RATE", "1000/hour"),
+        "auth": os.environ.get("DRF_THROTTLE_AUTH_RATE", "10/minute"),
+        "two_factor": os.environ.get("DRF_THROTTLE_TWO_FACTOR_RATE", "10/minute"),
+        "exports": os.environ.get("DRF_THROTTLE_EXPORTS_RATE", "30/hour"),
+        "evidence_upload": os.environ.get(
+            "DRF_THROTTLE_EVIDENCE_UPLOAD_RATE",
+            "60/hour",
+        ),
+    },
 }
 
 SPECTACULAR_SETTINGS = {

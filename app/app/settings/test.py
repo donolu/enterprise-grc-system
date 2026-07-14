@@ -109,6 +109,14 @@ TESTING_SKIP_EMAIL_SENDING = True
 # Django Rest Framework test settings
 REST_FRAMEWORK.update({
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '10000/hour',
+        'user': '10000/hour',
+        'auth': '10000/minute',
+        'two_factor': '10000/minute',
+        'exports': '10000/hour',
+        'evidence_upload': '10000/hour',
+    },
 })
 
 # Spectacular settings for API docs testing

@@ -91,6 +91,13 @@ class DocumentViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
+    throttle_scope_by_action = {"create": "evidence_upload"}
+
+    def get_throttles(self):
+        self.throttle_scope = self.throttle_scope_by_action.get(
+            getattr(self, "action", None)
+        )
+        return super().get_throttles()
     
     def get_queryset(self):
         """Return documents for the current tenant only."""

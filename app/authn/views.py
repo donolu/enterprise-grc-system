@@ -40,6 +40,7 @@ class RegisterView(APIView):
     Register a new user account with email verification and tenant assignment.
     """
     permission_classes = [permissions.AllowAny]
+    throttle_scope = "auth"
     
     @extend_schema(
         summary="Register new user",
@@ -80,6 +81,7 @@ class LoginView(APIView):
     Authenticate user with username/email and password. Supports 2FA flow with multiple methods.
     """
     permission_classes = [permissions.AllowAny]
+    throttle_scope = "auth"
     
     @extend_schema(
         summary="User login",
@@ -283,6 +285,7 @@ class TwoFactorStatusView(APIView):
 
 class EnableTwoFactorView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = "two_factor"
     
     def post(self, request):
         """Enable 2FA for current user - supports email, TOTP, and push"""
@@ -359,6 +362,7 @@ class EnableTwoFactorView(APIView):
 
 class DisableTwoFactorView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = "two_factor"
     
     def post(self, request):
         """Disable 2FA methods for current user"""
@@ -390,6 +394,7 @@ class VerifyOTPView(APIView):
     Complete login by verifying 2FA code from email, TOTP app, or push notification.
     """
     permission_classes = [permissions.AllowAny]
+    throttle_scope = "two_factor"
     
     @extend_schema(
         summary="Verify 2FA code",
@@ -437,6 +442,7 @@ class VerifyOTPView(APIView):
 
 class SetupTOTPView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = "two_factor"
     
     def post(self, request):
         """Generate QR code for TOTP setup using enhanced pyotp service"""
@@ -474,6 +480,7 @@ class SetupTOTPView(APIView):
 
 class ConfirmTOTPView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = "two_factor"
     
     def post(self, request):
         """Confirm TOTP setup with verification code using enhanced service"""
@@ -500,6 +507,7 @@ class ConfirmTOTPView(APIView):
 
 class RegisterPushDeviceView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = "two_factor"
     
     def post(self, request):
         """Register a new push notification device"""
@@ -529,6 +537,7 @@ class RegisterPushDeviceView(APIView):
 
 class ApprovePushChallengeView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_scope = "two_factor"
     
     def post(self, request):
         """Approve or deny a push notification challenge"""

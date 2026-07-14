@@ -101,6 +101,7 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['report_type', 'status', 'framework']
+    throttle_scope = "exports"
     
     def get_queryset(self):
         """Return reports for the current user's tenant."""
