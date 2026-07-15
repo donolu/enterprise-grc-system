@@ -121,6 +121,16 @@ EXPORT_COVERAGE = [
         ],
     },
     {
+        'module': 'knowledge',
+        'label': 'Knowledge base categories, articles and article revisions',
+        'formats': ['xlsx', 'csv_zip'],
+        'sheets': [
+            {'model': 'knowledge.KnowledgeCategory', 'worksheet': 'Knowledge categories'},
+            {'model': 'knowledge.KnowledgeArticle', 'worksheet': 'Knowledge articles'},
+            {'model': 'knowledge.KnowledgeArticleRevision', 'worksheet': 'Knowledge revisions'},
+        ],
+    },
+    {
         'module': 'assets',
         'label': 'Information assets and review reminders',
         'formats': ['xlsx', 'csv_zip'],

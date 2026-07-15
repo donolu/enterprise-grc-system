@@ -47,6 +47,7 @@ TENANT_APPS = [
     "vendors",
     "policies",
     "training",
+    "knowledge",
     "vuln",
     "events",
     "audit",

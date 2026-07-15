@@ -14,6 +14,7 @@ document through the standard document download lifecycle so downloads are acces
 | Vendors | Regional configuration, categories, vendors, contacts, services, notes, tasks | `xlsx`, `csv_zip` |
 | Policies | Categories, policies, versions, version audit logs, acknowledgements, distributions | `xlsx`, `csv_zip` |
 | Training | Categories, videos, awareness campaigns, deliveries, video views | `xlsx`, `csv_zip` |
+| Knowledge | Categories, articles, article revisions | `xlsx`, `csv_zip` |
 | Assets | Assets and asset review reminders | `xlsx`, `csv_zip` |
 | Calendar | Events, notification preferences, reminder logs, calendar audit logs | `xlsx`, `csv_zip` |
 | Vulnerabilities | Scan targets, schedules, jobs, vulnerability findings | `xlsx`, `csv_zip` |
