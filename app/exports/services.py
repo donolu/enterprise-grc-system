@@ -76,12 +76,14 @@ class AssessmentReportGenerator:
         if self.report.framework:
             # Framework-specific summary
             assessments = ControlAssessment.objects.filter(
-                control__clause__framework=self.report.framework
-            ).select_related('control', 'assigned_to', 'control__clause')
+                control__clauses__framework=self.report.framework
+            ).select_related(
+                'control', 'assigned_to'
+            ).prefetch_related('control__clauses').distinct()
             
             # Assessment statistics
             total_assessments = assessments.count()
-            completed_assessments = assessments.filter(status='completed').count()
+            completed_assessments = assessments.filter(status='complete').count()
             in_progress_assessments = assessments.filter(status='in_progress').count()
             not_started_assessments = assessments.filter(status='not_started').count()
             overdue_assessments = assessments.filter(
@@ -126,14 +128,14 @@ class AssessmentReportGenerator:
         
         if self.report.framework:
             assessments = ControlAssessment.objects.filter(
-                control__clause__framework=self.report.framework
+                control__clauses__framework=self.report.framework
             ).select_related(
-                'control', 'assigned_to', 'control__clause'
-            ).prefetch_related('evidence_links__evidence')
+                'control', 'assigned_to'
+            ).prefetch_related('control__clauses', 'evidence_links__evidence').distinct()
         else:
             assessments = self.report.assessments.all().select_related(
-                'control', 'assigned_to', 'control__clause'
-            ).prefetch_related('evidence_links__evidence')
+                'control', 'assigned_to'
+            ).prefetch_related('control__clauses', 'evidence_links__evidence')
         
         context['assessments'] = assessments
         return render_to_string('exports/reports/detailed_assessment.html', context)
@@ -148,10 +150,10 @@ class AssessmentReportGenerator:
         # Get evidence across assessments
         if self.report.framework:
             evidence_links = AssessmentEvidence.objects.filter(
-                assessment__control__clause__framework=self.report.framework
+                assessment__control__clauses__framework=self.report.framework
             ).select_related(
                 'assessment', 'evidence', 'assessment__control'
-            ).prefetch_related('evidence__document')
+            ).prefetch_related('evidence__document').distinct()
         else:
             assessment_ids = self.report.assessments.values_list('id', flat=True)
             evidence_links = AssessmentEvidence.objects.filter(
@@ -190,8 +192,10 @@ class AssessmentReportGenerator:
         
         # Get all assessments for the framework
         assessments = ControlAssessment.objects.filter(
-            control__clause__framework=self.report.framework
-        ).select_related('control', 'assigned_to', 'control__clause')
+            control__clauses__framework=self.report.framework
+        ).select_related(
+            'control', 'assigned_to'
+        ).prefetch_related('control__clauses').distinct()
         
         # Categorize gaps
         not_started = assessments.filter(status='not_started')
@@ -200,11 +204,11 @@ class AssessmentReportGenerator:
             due_date__lt=timezone.now().date()
         )
         missing_evidence = assessments.filter(
-            status='completed',
+            status='complete',
             evidence_links__isnull=True
         )
         no_primary_evidence = assessments.filter(
-            status='completed'
+            status='complete'
         ).exclude(
             evidence_links__is_primary_evidence=True
         )
@@ -316,6 +320,7 @@ class AssessmentReportGenerator:
             color: white;
         }
         
+        .status-complete,
         .status-completed { background-color: #28a745; }
         .status-in-progress { background-color: #ffc107; color: #333; }
         .status-not-started { background-color: #6c757d; }
@@ -340,7 +345,12 @@ class AssessmentReportGenerator:
         html = HTML(string=html_content)
         
         pdf_buffer = io.BytesIO()
-        html.write_pdf(pdf_buffer, stylesheets=[css], font_config=self.font_config)
+        html.write_pdf(
+            pdf_buffer,
+            stylesheets=[css],
+            font_config=self.font_config,
+            presentational_hints=False,
+        )
         pdf_buffer.seek(0)
         
         return pdf_buffer.getvalue()

@@ -27,7 +27,8 @@ class AssessmentReportModelTest(TestCase):
         self.framework = Framework.objects.create(
             name='Test Framework',
             short_name='TEST',
-            version='1.0'
+            version='1.0',
+            effective_date=timezone.now().date()
         )
     
     def test_assessment_report_creation(self):
@@ -73,7 +74,8 @@ class AssessmentReportAPITest(APITestCase):
         self.framework = Framework.objects.create(
             name='ISO 27001',
             short_name='ISO27001',
-            version='2022'
+            version='2022',
+            effective_date=timezone.now().date()
         )
         
         self.clause = Clause.objects.create(
@@ -84,17 +86,19 @@ class AssessmentReportAPITest(APITestCase):
         )
         
         self.control = Control.objects.create(
-            clause=self.clause,
             control_id='A.5.1.1',
-            title='Test Control',
-            description='Test control description'
+            name='Test Control',
+            description='Test control description',
+            control_type='preventive'
         )
+        self.control.clauses.add(self.clause)
         
         self.assessment = ControlAssessment.objects.create(
             control=self.control,
             assigned_to=self.user,
-            status='completed',
-            implementation_status='implemented'
+            status='complete',
+            implementation_status='implemented',
+            implementation_approach='Test implementation'
         )
         
         self.client.force_authenticate(user=self.user)
@@ -283,7 +287,8 @@ class AssessmentReportGeneratorTest(TestCase):
         self.framework = Framework.objects.create(
             name='Test Framework',
             short_name='TEST',
-            version='1.0'
+            version='1.0',
+            effective_date=timezone.now().date()
         )
         
         self.clause = Clause.objects.create(
@@ -294,18 +299,19 @@ class AssessmentReportGeneratorTest(TestCase):
         )
         
         self.control = Control.objects.create(
-            clause=self.clause,
             control_id='T.1.1',
-            title='Test Control',
-            description='Test control description'
+            name='Test Control',
+            description='Test control description',
+            control_type='preventive'
         )
+        self.control.clauses.add(self.clause)
         
         self.assessment = ControlAssessment.objects.create(
             control=self.control,
             assigned_to=self.user,
-            status='completed',
+            status='complete',
             implementation_status='implemented',
-            implementation_notes='Test implementation'
+            implementation_approach='Test implementation'
         )
         
         # Create evidence
@@ -339,7 +345,10 @@ class AssessmentReportGeneratorTest(TestCase):
         )
         
         with patch('exports.services.AssessmentReportGenerator._save_pdf_document') as mock_save:
-            mock_document = Document(title='Test Report')
+            mock_document = Document.objects.create(
+                title='Test Report',
+                uploaded_by=self.user
+            )
             mock_save.return_value = mock_document
             
             generator = AssessmentReportGenerator(report)
@@ -349,6 +358,9 @@ class AssessmentReportGeneratorTest(TestCase):
             report.refresh_from_db()
             self.assertEqual(report.status, 'completed')
             self.assertIsNotNone(report.generation_completed_at)
+            mock_html_instance.write_pdf.assert_called_once()
+            _, write_pdf_kwargs = mock_html_instance.write_pdf.call_args
+            self.assertFalse(write_pdf_kwargs['presentational_hints'])
     
     def test_generate_detailed_assessment(self):
         """Test generating detailed assessment report HTML."""
@@ -364,7 +376,7 @@ class AssessmentReportGeneratorTest(TestCase):
         
         self.assertIn('Detailed Assessment Report', html_content)
         self.assertIn(self.control.control_id, html_content)
-        self.assertIn(self.control.title, html_content)
+        self.assertIn(self.control.name, html_content)
         self.assertIn('Test implementation', html_content)
     
     def test_generate_evidence_portfolio(self):
@@ -416,7 +428,7 @@ class AssessmentReportGeneratorTest(TestCase):
         generator = AssessmentReportGenerator(report)
         
         with self.assertRaises(ValueError):
-            generator._generate_assessment_summary()
+            generator.generate_report()
     
     def test_filename_generation(self):
         """Test PDF filename generation."""

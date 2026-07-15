@@ -19,7 +19,7 @@
 
     {% for assessment in assessments %}
     <div class="section {% if not forloop.first %}page-break{% endif %}">
-        <h2>{{ assessment.control.control_id }}: {{ assessment.control.title }}</h2>
+        <h2>{{ assessment.control.control_id }}: {{ assessment.control.name }}</h2>
         
         <div class="assessment-details">
             <table style="width: 100%; margin-bottom: 1em;">
@@ -40,7 +40,7 @@
                     <td>
                         {% if assessment.due_date %}
                             {{ assessment.due_date|date:"F d, Y" }}
-                            {% if assessment.status != 'completed' and assessment.due_date < today %}
+                            {% if assessment.status != 'complete' and assessment.due_date < today %}
                                 <span class="status-badge status-overdue">OVERDUE</span>
                             {% endif %}
                         {% else %}
@@ -74,20 +74,11 @@
         </div>
         {% endif %}
 
-        {% if report.include_implementation_notes and assessment.implementation_notes %}
+        {% if report.include_implementation_notes and assessment.implementation_approach %}
         <div style="margin: 1em 0;">
-            <h3 style="color: #0066cc; font-size: 12pt;">Implementation Notes</h3>
+            <h3 style="color: #0066cc; font-size: 12pt;">Implementation Approach</h3>
             <div style="background-color: #f8f9fa; padding: 1em; border-left: 4px solid #0066cc;">
-                {{ assessment.implementation_notes|linebreaks }}
-            </div>
-        </div>
-        {% endif %}
-
-        {% if assessment.testing_notes %}
-        <div style="margin: 1em 0;">
-            <h3 style="color: #0066cc; font-size: 12pt;">Testing Notes</h3>
-            <div style="background-color: #f8f9fa; padding: 1em; border-left: 4px solid #28a745;">
-                {{ assessment.testing_notes|linebreaks }}
+                {{ assessment.implementation_approach|linebreaks }}
             </div>
         </div>
         {% endif %}
