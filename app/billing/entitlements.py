@@ -37,6 +37,7 @@ MODULE_PATH_PREFIXES = (
     ('/api/policies/', 'policies'),
     ('/api/training/', 'training'),
     ('/api/assets/', 'assets'),
+    ('/api/calendar/', 'calendar'),
     ('/api/analytics/', 'analytics'),
     ('/api/exports/', 'exports'),
     ('/api/vuln/', 'vulnerability_scanning'),
