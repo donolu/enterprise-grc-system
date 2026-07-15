@@ -12,7 +12,7 @@ from assets.models import Asset
 from catalogs.models import Framework
 from core.models import Domain, Tenant
 from core.storage import TenantAwareBlobStorage
-from exports.models import AssessmentReport
+from exports.models import AssessmentReport, TenantDataExport
 from policies.models import Policy, PolicyCategory
 from risk.models import Risk
 from training.models import TrainingCategory, TrainingVideo
@@ -121,6 +121,38 @@ class TestTenantIsolation:
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
         assert self._response_titles(list_response.json()) == ["Tenant A report"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_tenant_data_export_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_tenant_data_export(tenant_a, "Tenant A data export", user_a)
+
+        with tenant_context(tenant_b):
+            self._create_tenant_data_export(
+                tenant_b,
+                "Tenant B first data export",
+                user_b,
+            )
+            tenant_b_private_export = self._create_tenant_data_export(
+                tenant_b,
+                "Tenant B private data export",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/exports/tenant-data-exports/")
+        detail_response = client.get(
+            f"/api/exports/tenant-data-exports/{tenant_b_private_export.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A data export"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_catalog_framework_list_and_detail_are_scoped_to_request_tenant(self):
@@ -273,6 +305,15 @@ class TestTenantIsolation:
             return AssessmentReport.objects.create(
                 report_type="assessment_summary",
                 title=title,
+                requested_by=user,
+            )
+
+    def _create_tenant_data_export(self, tenant, title, user):
+        with tenant_context(tenant):
+            return TenantDataExport.objects.create(
+                title=title,
+                export_format="xlsx",
+                selected_modules=["all"],
                 requested_by=user,
             )
 

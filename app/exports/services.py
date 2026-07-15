@@ -1,10 +1,17 @@
-import os
 import io
-from datetime import datetime
+import csv
+import json
+import zipfile
+from datetime import date, datetime, time
+from decimal import Decimal
+from uuid import UUID
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.db.models import Count, Q
 from django.core.files.base import ContentFile
+from django.apps import apps
+from django.db import models
+from openpyxl import Workbook
 from weasyprint import HTML, CSS
 from weasyprint.text.fonts import FontConfiguration
 
@@ -12,7 +19,338 @@ from core.models import Document
 from catalogs.models import ControlAssessment, Framework, AssessmentEvidence
 from risk.analytics import RiskAnalyticsService, RiskReportGenerator
 from risk.models import Risk, RiskAction
-from .models import AssessmentReport
+from .models import AssessmentReport, TenantDataExport
+
+
+EXCLUDED_FIELD_NAMES = {
+    'password',
+    'last_login',
+    'is_superuser',
+    'is_staff',
+    'user_permissions',
+    'groups',
+    'token',
+    'token_hash',
+    'secret',
+    'api_key',
+    'stripe_customer_id',
+    'stripe_subscription_id',
+    'stripe_event_id',
+    'stripe_price_id',
+}
+
+EXPORT_COVERAGE = [
+    {
+        'module': 'identity',
+        'label': 'Users, documents and audit activity',
+        'formats': ['xlsx', 'csv_zip'],
+        'sheets': [
+            {'model': 'core.User', 'worksheet': 'Users'},
+            {'model': 'core.Document', 'worksheet': 'Documents'},
+            {'model': 'core.DocumentAccess', 'worksheet': 'Document access'},
+            {'model': 'core.AuditEvent', 'worksheet': 'Audit events'},
+        ],
+    },
+    {
+        'module': 'frameworks',
+        'label': 'Frameworks, controls, assessments, evidence and templates',
+        'formats': ['xlsx', 'csv_zip'],
+        'sheets': [
+            {'model': 'catalogs.Framework', 'worksheet': 'Frameworks'},
+            {'model': 'catalogs.Clause', 'worksheet': 'Clauses'},
+            {'model': 'catalogs.Control', 'worksheet': 'Controls'},
+            {'model': 'catalogs.ControlEvidence', 'worksheet': 'Control evidence'},
+            {'model': 'catalogs.ControlAssessment', 'worksheet': 'Assessments'},
+            {'model': 'catalogs.AssessmentEvidence', 'worksheet': 'Assessment evidence'},
+            {'model': 'catalogs.TemplateDocument', 'worksheet': 'Template documents'},
+            {'model': 'catalogs.AssessmentReminderLog', 'worksheet': 'Assessment reminders'},
+        ],
+    },
+    {
+        'module': 'risk',
+        'label': 'Risk register, actions, evidence and reminders',
+        'formats': ['xlsx', 'csv_zip'],
+        'sheets': [
+            {'model': 'risk.RiskCategory', 'worksheet': 'Risk categories'},
+            {'model': 'risk.RiskMatrix', 'worksheet': 'Risk matrices'},
+            {'model': 'risk.Risk', 'worksheet': 'Risks'},
+            {'model': 'risk.RiskNote', 'worksheet': 'Risk notes'},
+            {'model': 'risk.RiskAction', 'worksheet': 'Risk actions'},
+            {'model': 'risk.RiskActionNote', 'worksheet': 'Risk action notes'},
+            {'model': 'risk.RiskActionEvidence', 'worksheet': 'Risk action evidence'},
+            {'model': 'risk.RiskActionReminderLog', 'worksheet': 'Risk action reminders'},
+        ],
+    },
+    {
+        'module': 'vendors',
+        'label': 'Vendor management, contacts, services, notes and tasks',
+        'formats': ['xlsx', 'csv_zip'],
+        'sheets': [
+            {'model': 'vendors.RegionalConfig', 'worksheet': 'Vendor regions'},
+            {'model': 'vendors.VendorCategory', 'worksheet': 'Vendor categories'},
+            {'model': 'vendors.Vendor', 'worksheet': 'Vendors'},
+            {'model': 'vendors.VendorContact', 'worksheet': 'Vendor contacts'},
+            {'model': 'vendors.VendorService', 'worksheet': 'Vendor services'},
+            {'model': 'vendors.VendorNote', 'worksheet': 'Vendor notes'},
+            {'model': 'vendors.VendorTask', 'worksheet': 'Vendor tasks'},
+        ],
+    },
+    {
+        'module': 'policies',
+        'label': 'Policy repository, versions, acknowledgements and distributions',
+        'formats': ['xlsx', 'csv_zip'],
+        'sheets': [
+            {'model': 'policies.PolicyCategory', 'worksheet': 'Policy categories'},
+            {'model': 'policies.Policy', 'worksheet': 'Policies'},
+            {'model': 'policies.PolicyVersion', 'worksheet': 'Policy versions'},
+            {'model': 'policies.PolicyVersionAuditLog', 'worksheet': 'Policy audits'},
+            {'model': 'policies.PolicyAcknowledgment', 'worksheet': 'Policy acknowledgements'},
+            {'model': 'policies.PolicyDistribution', 'worksheet': 'Policy distributions'},
+        ],
+    },
+    {
+        'module': 'training',
+        'label': 'Security awareness training, campaigns and completion tracking',
+        'formats': ['xlsx', 'csv_zip'],
+        'sheets': [
+            {'model': 'training.TrainingCategory', 'worksheet': 'Training categories'},
+            {'model': 'training.TrainingVideo', 'worksheet': 'Training videos'},
+            {'model': 'training.SecurityAwarenessCampaign', 'worksheet': 'Awareness campaigns'},
+            {'model': 'training.CampaignDelivery', 'worksheet': 'Campaign deliveries'},
+            {'model': 'training.VideoView', 'worksheet': 'Video views'},
+        ],
+    },
+    {
+        'module': 'assets',
+        'label': 'Information assets and review reminders',
+        'formats': ['xlsx', 'csv_zip'],
+        'sheets': [
+            {'model': 'assets.Asset', 'worksheet': 'Assets'},
+            {'model': 'assets.AssetReviewReminderLog', 'worksheet': 'Asset reminders'},
+        ],
+    },
+    {
+        'module': 'calendar',
+        'label': 'Calendar events, reminder logs and audit activity',
+        'formats': ['xlsx', 'csv_zip'],
+        'sheets': [
+            {'model': 'calendarhub.CalendarEvent', 'worksheet': 'Calendar events'},
+            {'model': 'calendarhub.CalendarNotificationPreference', 'worksheet': 'Calendar preferences'},
+            {'model': 'calendarhub.CalendarReminderLog', 'worksheet': 'Calendar reminders'},
+            {'model': 'calendarhub.CalendarAuditLog', 'worksheet': 'Calendar audits'},
+        ],
+    },
+    {
+        'module': 'vulnerabilities',
+        'label': 'Vulnerability scan targets, schedules, jobs and findings',
+        'formats': ['xlsx', 'csv_zip'],
+        'sheets': [
+            {'model': 'vuln.ScanTarget', 'worksheet': 'Scan targets'},
+            {'model': 'vuln.ScanSchedule', 'worksheet': 'Scan schedules'},
+            {'model': 'vuln.ScanJob', 'worksheet': 'Scan jobs'},
+            {'model': 'vuln.VulnerabilityFinding', 'worksheet': 'Vulnerability findings'},
+        ],
+    },
+]
+
+
+def get_export_coverage_manifest():
+    """Return documented customer data export coverage."""
+    return EXPORT_COVERAGE
+
+
+def _normalise_selected_modules(selected_modules):
+    if not selected_modules or selected_modules == ['all']:
+        return {entry['module'] for entry in EXPORT_COVERAGE}
+    return set(selected_modules)
+
+
+def _get_model(model_label):
+    app_label, model_name = model_label.split('.', 1)
+    return apps.get_model(app_label, model_name)
+
+
+def _safe_sheet_title(title, used_titles):
+    clean_title = title[:31]
+    candidate = clean_title
+    counter = 2
+    while candidate in used_titles:
+        suffix = f' {counter}'
+        candidate = f'{clean_title[:31 - len(suffix)]}{suffix}'
+        counter += 1
+    used_titles.add(candidate)
+    return candidate
+
+
+def _exportable_fields(model_class):
+    fields = []
+    for field in model_class._meta.get_fields():
+        if field.name in EXCLUDED_FIELD_NAMES:
+            continue
+        if field.auto_created and not field.concrete:
+            continue
+        if isinstance(field, models.ManyToManyField):
+            fields.append(field)
+            continue
+        if not getattr(field, 'concrete', False):
+            continue
+        fields.append(field)
+    return fields
+
+
+def _serialise_value(value):
+    if value is None:
+        return ''
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, date | time):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, dict | list | tuple):
+        return json.dumps(value, default=str, ensure_ascii=False)
+    return str(value)
+
+
+def _row_for_instance(instance, fields):
+    row = []
+    for field in fields:
+        if isinstance(field, models.ManyToManyField):
+            manager = getattr(instance, field.name)
+            value = ', '.join(str(item.pk) for item in manager.all())
+        elif isinstance(field, models.ForeignKey):
+            value = getattr(instance, f'{field.name}_id')
+        elif isinstance(field, models.FileField):
+            file_value = getattr(instance, field.name)
+            value = file_value.name if file_value else ''
+        else:
+            value = getattr(instance, field.name)
+        row.append(_serialise_value(value))
+    return row
+
+
+class TenantDataExportGenerator:
+    """Generate tenant-scoped spreadsheet exports for all GRC data modules."""
+
+    def __init__(self, data_export: TenantDataExport):
+        self.data_export = data_export
+        self.coverage = [
+            entry for entry in EXPORT_COVERAGE
+            if entry['module'] in _normalise_selected_modules(data_export.selected_modules)
+        ]
+
+    def generate_export(self):
+        self.data_export.status = 'processing'
+        self.data_export.generation_started_at = timezone.now()
+        self.data_export.error_message = ''
+        self.data_export.coverage_manifest = self.coverage
+        self.data_export.save(update_fields=[
+            'status',
+            'generation_started_at',
+            'error_message',
+            'coverage_manifest',
+        ])
+
+        try:
+            if self.data_export.export_format == 'xlsx':
+                content, filename, mime_type, record_counts = self._generate_xlsx()
+            elif self.data_export.export_format == 'csv_zip':
+                content, filename, mime_type, record_counts = self._generate_csv_zip()
+            else:
+                raise ValueError(f'Unsupported export format: {self.data_export.export_format}')
+
+            document = self._save_export_document(content, filename, mime_type)
+            self.data_export.generated_file = document
+            self.data_export.record_counts = record_counts
+            self.data_export.status = 'completed'
+            self.data_export.generation_completed_at = timezone.now()
+            self.data_export.save(update_fields=[
+                'generated_file',
+                'record_counts',
+                'status',
+                'generation_completed_at',
+            ])
+            return document
+        except Exception as exc:
+            self.data_export.status = 'failed'
+            self.data_export.error_message = str(exc)
+            self.data_export.generation_completed_at = timezone.now()
+            self.data_export.save(update_fields=[
+                'status',
+                'error_message',
+                'generation_completed_at',
+            ])
+            raise
+
+    def _iter_sheet_data(self):
+        used_titles = set()
+        for module in self.coverage:
+            for sheet in module['sheets']:
+                model_class = _get_model(sheet['model'])
+                fields = _exportable_fields(model_class)
+                headers = [field.name for field in fields]
+                queryset = model_class.objects.all().order_by('pk')
+                rows = [_row_for_instance(instance, fields) for instance in queryset]
+                title = _safe_sheet_title(sheet['worksheet'], used_titles)
+                yield title, headers, rows, sheet['model']
+
+    def _generate_xlsx(self):
+        workbook = Workbook()
+        workbook.remove(workbook.active)
+        record_counts = {}
+
+        for title, headers, rows, model_label in self._iter_sheet_data():
+            worksheet = workbook.create_sheet(title=title)
+            worksheet.append(headers or ['id'])
+            for row in rows:
+                worksheet.append(row)
+            record_counts[model_label] = len(rows)
+
+        buffer = io.BytesIO()
+        workbook.save(buffer)
+        buffer.seek(0)
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        return (
+            buffer.getvalue(),
+            f'tenant-data-export-{timestamp}.xlsx',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            record_counts,
+        )
+
+    def _generate_csv_zip(self):
+        zip_buffer = io.BytesIO()
+        record_counts = {}
+        with zipfile.ZipFile(zip_buffer, mode='w', compression=zipfile.ZIP_DEFLATED) as archive:
+            for title, headers, rows, model_label in self._iter_sheet_data():
+                csv_buffer = io.StringIO()
+                writer = csv.writer(csv_buffer)
+                writer.writerow(headers or ['id'])
+                writer.writerows(rows)
+                archive.writestr(f'{title}.csv', csv_buffer.getvalue())
+                record_counts[model_label] = len(rows)
+
+        zip_buffer.seek(0)
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        return (
+            zip_buffer.getvalue(),
+            f'tenant-data-export-{timestamp}.zip',
+            'application/zip',
+            record_counts,
+        )
+
+    def _save_export_document(self, content, filename, mime_type):
+        document = Document(
+            title=self.data_export.title,
+            description='Generated tenant data export',
+            uploaded_by=self.data_export.requested_by,
+            mime_type=mime_type,
+        )
+        document.file.save(filename, ContentFile(content), save=False)
+        document.file_size = len(content)
+        document.save()
+        return document
 
 
 class AssessmentReportGenerator:
