@@ -10,5 +10,6 @@ urlpatterns = [
     path('policies/', include('policies.urls')),
     path('training/', include('training.urls')),
     path('analytics/', include('analytics.urls')),
+    path('vuln/', include('vuln.urls')),
     path('', include('api.routers')),
 ]
