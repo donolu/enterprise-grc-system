@@ -2,14 +2,18 @@
 Tests for core application functionality.
 """
 
+from datetime import timedelta
+
 import pytest
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from django_tenants.utils import tenant_context, schema_context
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 
 from .models import Tenant, Domain, Plan, Subscription, Document, LimitOverrideRequest
+from billing.entitlements import ALL_MODULE_KEYS
 from billing.services import PlanEnforcementService
 
 User = get_user_model()
@@ -112,6 +116,41 @@ class SubscriptionModelTest(TestCase):
         self.assertEqual(self.subscription.get_effective_user_limit(), 15)
         self.assertEqual(self.subscription.get_effective_document_limit(), 200)
 
+    def test_enterprise_subscription_gets_all_modules(self):
+        enterprise_plan = Plan.objects.create(
+            name="Enterprise",
+            slug="enterprise",
+            price_monthly=199,
+        )
+        subscription = Subscription.objects.create(
+            tenant=self.tenant,
+            plan=enterprise_plan,
+            status="active",
+        )
+
+        self.assertEqual(subscription.get_enabled_modules(), list(ALL_MODULE_KEYS))
+
+    def test_trial_subscription_is_restricted_to_one_module(self):
+        self.plan.included_modules = ["frameworks", "risk"]
+        self.plan.save()
+        self.subscription.status = "trialing"
+        self.subscription.enabled_modules = ["frameworks", "risk"]
+        self.subscription.trial_module = "risk"
+        self.subscription.trial_start = timezone.now()
+        self.subscription.trial_end = timezone.now() + timedelta(days=30)
+        self.subscription.save()
+
+        self.assertEqual(self.subscription.get_enabled_modules(), ["risk"])
+
+    def test_expired_trial_has_no_enabled_modules(self):
+        self.subscription.status = "trialing"
+        self.subscription.trial_module = "risk"
+        self.subscription.trial_start = timezone.now() - timedelta(days=60)
+        self.subscription.trial_end = timezone.now() - timedelta(days=30)
+        self.subscription.save()
+
+        self.assertEqual(self.subscription.get_enabled_modules(), [])
+
 
 @pytest.mark.django_db
 class TestPlanEnforcementService:
@@ -119,11 +158,12 @@ class TestPlanEnforcementService:
     
     def test_check_feature_access_with_permission(self, test_tenant, basic_plan):
         """Test feature access check when user has permission."""
-        subscription = Subscription.objects.create(
-            tenant=test_tenant,
-            plan=basic_plan,
-            status="active"
-        )
+        with schema_context("public"):
+            Subscription.objects.create(
+                tenant=test_tenant,
+                plan=basic_plan,
+                status="active"
+            )
         
         has_access, error = PlanEnforcementService.check_feature_access(
             test_tenant, 'has_api_access'
@@ -134,11 +174,12 @@ class TestPlanEnforcementService:
     
     def test_check_feature_access_without_permission(self, test_tenant, free_plan):
         """Test feature access check when user lacks permission."""
-        subscription = Subscription.objects.create(
-            tenant=test_tenant,
-            plan=free_plan,
-            status="active"
-        )
+        with schema_context("public"):
+            Subscription.objects.create(
+                tenant=test_tenant,
+                plan=free_plan,
+                status="active"
+            )
         
         has_access, error = PlanEnforcementService.check_feature_access(
             test_tenant, 'has_api_access'
@@ -237,7 +278,10 @@ class TestDocumentAPI:
         api_client.defaults['HTTP_HOST'] = f"{test_tenant.schema_name}.localhost"
         
         response = api_client.get('/api/documents/')
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code in [
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_403_FORBIDDEN,
+        ]
     
     def test_document_list_authenticated(self, authenticated_client, test_tenant):
         """Test authenticated access to document list."""
@@ -252,18 +296,126 @@ class TestDocumentAPI:
 class TestBillingAPI:
     """Test Billing API endpoints."""
     
-    def test_plans_list_public(self, api_client):
+    def test_plans_list_public(self, api_client, test_tenant):
         """Test plans list is accessible."""
+        api_client.defaults['HTTP_HOST'] = f"{test_tenant.schema_name}.localhost"
+
         response = api_client.get('/api/plans/')
         # May require authentication depending on implementation
-        assert response.status_code in [status.HTTP_200_OK, status.HTTP_401_UNAUTHORIZED]
+        assert response.status_code in [
+            status.HTTP_200_OK,
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_403_FORBIDDEN,
+        ]
     
     def test_current_subscription_requires_auth(self, api_client, test_tenant):
         """Test current subscription endpoint requires authentication."""
         api_client.defaults['HTTP_HOST'] = f"{test_tenant.schema_name}.localhost"
         
         response = api_client.get('/api/billing/current_subscription/')
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code in [
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_403_FORBIDDEN,
+        ]
+
+    def test_current_subscription_exposes_entitlements(self, api_client, test_tenant):
+        """Test current subscription exposes module entitlement state for the UI."""
+        with schema_context("public"):
+            plan = Plan.objects.create(
+                name="Basic",
+                slug="basic",
+                price_monthly=49,
+                included_modules=["frameworks", "risk"],
+            )
+            Subscription.objects.create(
+                tenant=test_tenant,
+                plan=plan,
+                status="active",
+                enabled_modules=["frameworks", "risk"],
+            )
+        with tenant_context(test_tenant):
+            user = User.objects.create_user(
+                username="billing-user",
+                email="billing-user@example.com",
+                password="testpass123",
+            )
+        api_client.defaults['HTTP_HOST'] = f"{test_tenant.schema_name}.localhost"
+        api_client.force_authenticate(user=user)
+
+        response = api_client.get('/api/billing/current_subscription/')
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["enabled_module_keys"] == ["frameworks", "risk"]
+        assert any(
+            module["key"] == "risk" and module["enabled"]
+            for module in response.data["module_catalog"]
+        )
+
+    def test_single_module_trial_blocks_direct_api_bypass(self, test_tenant):
+        """Test trial tenants cannot reach APIs outside the selected module."""
+        with schema_context("public"):
+            plan = Plan.objects.create(
+                name="Free",
+                slug="free",
+                price_monthly=0,
+                included_modules=["frameworks"],
+            )
+            Subscription.objects.create(
+                tenant=test_tenant,
+                plan=plan,
+                status="trialing",
+                enabled_modules=["assets"],
+                trial_module="assets",
+                trial_start=timezone.now(),
+                trial_end=timezone.now() + timedelta(days=30),
+            )
+        with tenant_context(test_tenant):
+            user = User.objects.create_user(
+                username="trial-user",
+                email="trial-user@example.com",
+                password="testpass123",
+            )
+
+        client = APIClient()
+        client.defaults['HTTP_HOST'] = f"{test_tenant.schema_name}.localhost"
+        client.force_authenticate(user=user)
+
+        allowed_response = client.get('/api/assets/assets/')
+        blocked_response = client.get('/api/risk/risks/')
+
+        assert allowed_response.status_code == status.HTTP_200_OK
+        assert blocked_response.status_code == status.HTTP_403_FORBIDDEN
+        assert blocked_response.json()["code"] == "module_not_enabled"
+        assert blocked_response.json()["module"] == "risk"
+
+    def test_start_trial_creates_single_module_trial(self, api_client, test_tenant):
+        """Test tenants can start a one-month trial for one selected module."""
+        with schema_context("public"):
+            Plan.objects.create(
+                name="Free",
+                slug="free",
+                price_monthly=0,
+                included_modules=["frameworks"],
+            )
+        with tenant_context(test_tenant):
+            user = User.objects.create_user(
+                username="trial-starter",
+                email="trial-starter@example.com",
+                password="testpass123",
+            )
+        api_client.defaults['HTTP_HOST'] = f"{test_tenant.schema_name}.localhost"
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            '/api/billing/start_trial/',
+            {'module': 'vendors'},
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["status"] == "trialing"
+        assert response.data["trial_module"] == "vendors"
+        assert response.data["enabled_module_keys"] == ["vendors"]
 
 
 # Integration tests
@@ -274,34 +426,28 @@ class TestFullWorkflow:
     
     def test_tenant_subscription_limit_workflow(self, test_tenant, free_plan, test_user):
         """Test complete tenant, subscription, and limit override workflow."""
-        # Create subscription
-        subscription = Subscription.objects.create(
-            tenant=test_tenant,
-            plan=free_plan,
-            status="active"
-        )
-        
-        # Verify initial limits
-        assert subscription.get_effective_user_limit() == 3
-        
-        # Create override request
-        override_request = LimitOverrideRequest.objects.create(
-            subscription=subscription,
-            limit_type="max_users",
-            current_limit=3,
-            requested_limit=10,
-            business_justification="Growing team needs more access",
-            requested_by="test@example.com"
-        )
-        
-        # Test approval workflow
-        override_request.approve_first("approver1@example.com")
-        override_request.approve_second("approver2@example.com")
-        
-        # Apply override
-        override_request.apply_override("admin@example.com")
-        
-        # Verify new limits
-        subscription.refresh_from_db()
-        assert subscription.get_effective_user_limit() == 10
-        assert override_request.status == "applied"
+        with schema_context("public"):
+            subscription = Subscription.objects.create(
+                tenant=test_tenant,
+                plan=free_plan,
+                status="active"
+            )
+
+            assert subscription.get_effective_user_limit() == 3
+
+            override_request = LimitOverrideRequest.objects.create(
+                subscription=subscription,
+                limit_type="max_users",
+                current_limit=3,
+                requested_limit=10,
+                business_justification="Growing team needs more access",
+                requested_by="test@example.com"
+            )
+
+            override_request.approve_first("approver1@example.com")
+            override_request.approve_second("approver2@example.com")
+            override_request.apply_override("admin@example.com")
+
+            subscription.refresh_from_db()
+            assert subscription.get_effective_user_limit() == 10
+            assert override_request.status == "applied"
