@@ -295,28 +295,33 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
         search = request.query_params.get('search', '')
         
         assessments = ControlAssessment.objects.select_related(
-            'control', 'control__clause'
-        )
+            'control'
+        ).prefetch_related('control__clauses__framework')
         
         if framework_id:
-            assessments = assessments.filter(control__clause__framework_id=framework_id)
+            assessments = assessments.filter(control__clauses__framework_id=framework_id)
         
         if search:
             assessments = assessments.filter(
                 Q(control__control_id__icontains=search) |
-                Q(control__title__icontains=search)
+                Q(control__name__icontains=search)
             )
         
         # Limit results to prevent large responses
-        assessments = assessments[:100]
+        assessments = assessments.distinct()[:100]
         
         assessment_data = [
             {
                 'id': assessment.id,
                 'control_id': assessment.control.control_id,
-                'control_title': assessment.control.title,
+                'control_title': assessment.control.name,
                 'status': assessment.status,
-                'framework_name': assessment.control.clause.framework.short_name
+                'framework_name': ', '.join(
+                    sorted({
+                        clause.framework.short_name
+                        for clause in assessment.control.clauses.all()
+                    })
+                )
             }
             for assessment in assessments
         ]

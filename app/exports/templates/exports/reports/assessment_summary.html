@@ -124,7 +124,7 @@
                 {% for assessment in assessments %}
                 <tr>
                     <td>{{ assessment.control.control_id }}</td>
-                    <td>{{ assessment.control.title|truncatechars:60 }}</td>
+                    <td>{{ assessment.control.name|truncatechars:60 }}</td>
                     <td>
                         <span class="status-badge status-{{ assessment.status }}">
                             {{ assessment.get_status_display }}
@@ -134,7 +134,7 @@
                     <td>
                         {% if assessment.due_date %}
                             {{ assessment.due_date|date:"M d, Y" }}
-                            {% if assessment.status != 'completed' and assessment.due_date < today %}
+                            {% if assessment.status != 'complete' and assessment.due_date < today %}
                                 <span class="status-badge status-overdue">OVERDUE</span>
                             {% endif %}
                         {% else %}
@@ -164,10 +164,10 @@
             </thead>
             <tbody>
                 {% for assessment in assessments %}
-                    {% if assessment.status != 'completed' and assessment.due_date < today %}
+                    {% if assessment.status != 'complete' and assessment.due_date < today %}
                     <tr>
                         <td>{{ assessment.control.control_id }}</td>
-                        <td>{{ assessment.control.title|truncatechars:80 }}</td>
+                        <td>{{ assessment.control.name|truncatechars:80 }}</td>
                         <td>{{ assessment.assigned_to.get_full_name|default:assessment.assigned_to.username|default:"Unassigned" }}</td>
                         <td>{{ assessment.due_date|date:"M d, Y" }}</td>
                         <td>{{ assessment.due_date|timesince|truncatewords:1 }}</td>

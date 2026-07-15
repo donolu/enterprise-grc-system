@@ -74,8 +74,14 @@
                 {% for assessment in not_started %}
                 <tr>
                     <td style="font-weight: bold;">{{ assessment.control.control_id }}</td>
-                    <td>{{ assessment.control.title }}</td>
-                    <td>{{ assessment.control.clause.clause_id }}</td>
+                    <td>{{ assessment.control.name }}</td>
+                    <td>
+                        {% for clause in assessment.control.clauses.all %}
+                            {{ clause.clause_id }}{% if not forloop.last %}, {% endif %}
+                        {% empty %}
+                            -
+                        {% endfor %}
+                    </td>
                     <td>{{ assessment.assigned_to.get_full_name|default:assessment.assigned_to.username|default:"Unassigned" }}</td>
                     <td>
                         {% if assessment.due_date %}
@@ -88,13 +94,17 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if assessment.control.clause.criticality == 'critical' %}
-                            <span class="status-badge status-overdue">CRITICAL</span>
-                        {% elif assessment.control.clause.criticality == 'high' %}
-                            <span class="status-badge" style="background-color: #fd7e14;">HIGH</span>
-                        {% else %}
-                            <span class="status-badge status-in-progress">MEDIUM</span>
-                        {% endif %}
+                        {% for clause in assessment.control.clauses.all %}
+                            {% if clause.criticality == 'critical' %}
+                                <span class="status-badge status-overdue">CRITICAL</span>
+                            {% elif clause.criticality == 'high' %}
+                                <span class="status-badge" style="background-color: #fd7e14;">HIGH</span>
+                            {% else %}
+                                <span class="status-badge status-in-progress">{{ clause.get_criticality_display|upper }}</span>
+                            {% endif %}
+                        {% empty %}
+                            <span class="status-badge status-in-progress">UNKNOWN</span>
+                        {% endfor %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -122,7 +132,7 @@
                 {% for assessment in in_progress_overdue %}
                 <tr>
                     <td style="font-weight: bold;">{{ assessment.control.control_id }}</td>
-                    <td>{{ assessment.control.title }}</td>
+                    <td>{{ assessment.control.name }}</td>
                     <td>{{ assessment.assigned_to.get_full_name|default:assessment.assigned_to.username|default:"Unassigned" }}</td>
                     <td>{{ assessment.due_date|date:"M d, Y" }}</td>
                     <td style="color: #dc3545; font-weight: bold;">{{ assessment.due_date|timesince|truncatewords:1 }}</td>
@@ -152,15 +162,19 @@
                 {% for assessment in missing_evidence %}
                 <tr>
                     <td style="font-weight: bold;">{{ assessment.control.control_id }}</td>
-                    <td>{{ assessment.control.title }}</td>
+                    <td>{{ assessment.control.name }}</td>
                     <td>{{ assessment.completed_date|date:"M d, Y"|default:"Unknown" }}</td>
                     <td>{{ assessment.assigned_to.get_full_name|default:assessment.assigned_to.username|default:"Unassigned" }}</td>
                     <td>
-                        {% if assessment.control.clause.is_testable %}
-                            <span class="status-badge status-overdue">HIGH RISK</span>
-                        {% else %}
-                            <span class="status-badge status-in-progress">MEDIUM RISK</span>
-                        {% endif %}
+                        {% for clause in assessment.control.clauses.all %}
+                            {% if clause.is_testable %}
+                                <span class="status-badge status-overdue">HIGH RISK</span>
+                            {% else %}
+                                <span class="status-badge status-in-progress">MEDIUM RISK</span>
+                            {% endif %}
+                        {% empty %}
+                            <span class="status-badge status-in-progress">UNKNOWN RISK</span>
+                        {% endfor %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -187,7 +201,7 @@
                 {% for assessment in no_primary_evidence %}
                 <tr>
                     <td style="font-weight: bold;">{{ assessment.control.control_id }}</td>
-                    <td>{{ assessment.control.title }}</td>
+                    <td>{{ assessment.control.name }}</td>
                     <td>{{ assessment.evidence_links.count }}</td>
                     <td>{{ assessment.completed_date|date:"M d, Y"|default:"Unknown" }}</td>
                     <td style="font-style: italic; color: #0066cc;">Designate primary evidence</td>

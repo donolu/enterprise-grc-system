@@ -4,12 +4,23 @@ Production settings for Azure App Service deployment.
 
 from .base import *
 
+
+def _csv_env(name):
+    return [
+        value.strip()
+        for value in os.environ.get(name, '').split(',')
+        if value.strip()
+    ]
+
 # Security settings
 DEBUG = False
 ALLOWED_HOSTS = [
     '.azurewebsites.net',
     os.environ.get('CUSTOM_DOMAIN', ''),
 ] + [host.strip() for host in os.environ.get('ADDITIONAL_HOSTS', '').split(',') if host.strip()]
+
+CORS_ALLOWED_ORIGINS = _csv_env('CORS_ALLOWED_ORIGINS')
+CSRF_TRUSTED_ORIGINS = _csv_env('CSRF_TRUSTED_ORIGINS') or CORS_ALLOWED_ORIGINS
 
 # Database configuration for Azure
 DATABASES = {
@@ -126,7 +137,3 @@ if STRIPE_LIVE_MODE:
 
 # Run migrations on startup if specified
 RUN_MIGRATIONS = os.environ.get('RUN_MIGRATIONS', 'False').lower() == 'true'
-
-print(f"Production settings loaded - Debug: {DEBUG}, Allowed hosts: {ALLOWED_HOSTS}")
-if RUN_MIGRATIONS:
-    print("🔄 Migrations will run on startup")

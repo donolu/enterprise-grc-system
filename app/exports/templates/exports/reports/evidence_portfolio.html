@@ -101,7 +101,7 @@
                 <ul style="margin: 0.5em 0;">
                     {% for assessment in evidence_info.assessments %}
                     <li>
-                        <strong>{{ assessment.control.control_id }}:</strong> {{ assessment.control.title|truncatechars:60 }}
+                        <strong>{{ assessment.control.control_id }}:</strong> {{ assessment.control.name|truncatechars:60 }}
                         <span class="status-badge status-{{ assessment.status }}" style="margin-left: 0.5em; font-size: 8pt;">
                             {{ assessment.get_status_display }}
                         </span>
