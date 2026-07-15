@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from catalogs.models import Framework, ControlAssessment
 from core.serializers import DocumentSerializer
-from .models import AssessmentReport
+from .models import AssessmentReport, TenantDataExport
+from .services import get_export_coverage_manifest
 
 
 class AssessmentReportSerializer(serializers.ModelSerializer):
@@ -98,6 +99,14 @@ class AssessmentReportCreateSerializer(serializers.ModelSerializer):
                         f"Invalid assessment IDs: {list(invalid_ids)}"
                     )
         return value
+
+    def validate(self, data):
+        """Validate report configuration."""
+        if data.get('report_type') == 'compliance_gap' and not data.get('framework'):
+            raise serializers.ValidationError({
+                'framework': 'Framework is required for compliance gap analysis.'
+            })
+        return data
     
     def create(self, validated_data):
         """Create assessment report with specific assessments."""
@@ -126,4 +135,88 @@ class ReportGenerationStatusSerializer(serializers.Serializer):
     status = serializers.CharField()
     message = serializers.CharField()
     download_url = serializers.URLField(required=False)
+    error_details = serializers.CharField(required=False)
+
+
+class TenantDataExportSerializer(serializers.ModelSerializer):
+    """Serializer for tenant data export jobs."""
+
+    requested_by_name = serializers.CharField(source='requested_by.get_full_name', read_only=True)
+    generated_file_details = DocumentSerializer(source='generated_file', read_only=True)
+    download_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TenantDataExport
+        fields = [
+            'id',
+            'title',
+            'export_format',
+            'selected_modules',
+            'requested_by',
+            'requested_by_name',
+            'requested_at',
+            'status',
+            'generated_file',
+            'generated_file_details',
+            'download_url',
+            'generation_started_at',
+            'generation_completed_at',
+            'error_message',
+            'record_counts',
+            'coverage_manifest',
+        ]
+        read_only_fields = [
+            'id',
+            'requested_by',
+            'requested_at',
+            'status',
+            'generated_file',
+            'generation_started_at',
+            'generation_completed_at',
+            'error_message',
+            'record_counts',
+            'coverage_manifest',
+        ]
+
+    def get_download_url(self, obj):
+        if obj.status != 'completed' or not obj.generated_file_id:
+            return None
+        request = self.context.get('request')
+        path = f'/api/documents/{obj.generated_file_id}/download/'
+        return request.build_absolute_uri(path) if request else path
+
+
+class TenantDataExportCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating tenant data exports."""
+
+    class Meta:
+        model = TenantDataExport
+        fields = [
+            'title',
+            'export_format',
+            'selected_modules',
+        ]
+
+    def validate_selected_modules(self, value):
+        valid_modules = {entry['module'] for entry in get_export_coverage_manifest()}
+        if not value:
+            return ['all']
+        invalid_modules = set(value) - valid_modules - {'all'}
+        if invalid_modules:
+            raise serializers.ValidationError(
+                f"Unsupported export modules: {sorted(invalid_modules)}"
+            )
+        if 'all' in value and len(value) > 1:
+            raise serializers.ValidationError("'all' cannot be combined with specific modules.")
+        return value
+
+
+class TenantDataExportStatusSerializer(serializers.Serializer):
+    """Serializer for tenant data export status responses."""
+
+    export_id = serializers.IntegerField()
+    status = serializers.CharField()
+    message = serializers.CharField()
+    download_url = serializers.URLField(required=False, allow_null=True)
+    record_counts = serializers.DictField(required=False)
     error_details = serializers.CharField(required=False)

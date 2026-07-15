@@ -11,13 +11,17 @@ from drf_spectacular.types import OpenApiTypes
 
 from catalogs.models import Framework, ControlAssessment
 from .models import AssessmentReport
+from .models import TenantDataExport
 from .serializers import (
     AssessmentReportSerializer, 
     AssessmentReportCreateSerializer,
-    ReportGenerationStatusSerializer
+    ReportGenerationStatusSerializer,
+    TenantDataExportSerializer,
+    TenantDataExportCreateSerializer,
+    TenantDataExportStatusSerializer,
 )
-from .services import AssessmentReportGenerator
-from .tasks import generate_assessment_report_task
+from .services import AssessmentReportGenerator, get_export_coverage_manifest
+from .tasks import generate_assessment_report_task, generate_tenant_data_export_task
 
 
 @extend_schema_view(
@@ -340,3 +344,145 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
             return f'Report generation failed: {report.error_message}'
         else:
             return 'Unknown status'
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List tenant data exports",
+        description="Retrieve tenant data export jobs requested by the current user.",
+        tags=['Data Exports'],
+    ),
+    create=extend_schema(
+        summary="Create tenant data export",
+        description="Create a tenant-wide GRC data export and start asynchronous generation.",
+        tags=['Data Exports'],
+    ),
+    retrieve=extend_schema(
+        summary="Get tenant data export",
+        description="Retrieve status and download metadata for a tenant data export.",
+        tags=['Data Exports'],
+    ),
+    destroy=extend_schema(
+        summary="Delete tenant data export",
+        description="Delete a tenant data export job and its generated document reference.",
+        tags=['Data Exports'],
+    ),
+)
+class TenantDataExportViewSet(viewsets.ModelViewSet):
+    """
+    Tenant-scoped customer data exports across all GRC modules.
+    """
+
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['export_format', 'status']
+    throttle_scope = 'exports'
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        return TenantDataExport.objects.filter(
+            requested_by=self.request.user
+        ).select_related('requested_by', 'generated_file')
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return TenantDataExportCreateSerializer
+        return TenantDataExportSerializer
+
+    def perform_create(self, serializer):
+        data_export = serializer.save(requested_by=self.request.user)
+        data_export.status = 'processing'
+        data_export.generation_started_at = timezone.now()
+        data_export.save(update_fields=['status', 'generation_started_at'])
+        generate_tenant_data_export_task.delay(data_export.id)
+
+    @extend_schema(
+        summary="Get export coverage manifest",
+        description="Return documented module coverage and supported formats for tenant data exports.",
+        tags=['Data Exports'],
+    )
+    @action(detail=False, methods=['get'])
+    def coverage(self, request):
+        return Response({'modules': get_export_coverage_manifest()})
+
+    @extend_schema(
+        summary="Regenerate tenant data export",
+        description="Start asynchronous generation for a failed or pending tenant data export.",
+        responses={
+            202: OpenApiResponse(description='Export generation started'),
+            400: OpenApiResponse(description='Export already processing or completed'),
+        },
+        tags=['Data Exports'],
+    )
+    @action(detail=True, methods=['post'])
+    def generate(self, request, pk=None):
+        data_export = self.get_object()
+
+        if data_export.status == 'processing':
+            return Response(
+                {'error': 'Export is already being generated'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if data_export.status == 'completed':
+            return Response(
+                {'message': 'Export is already completed'},
+                status=status.HTTP_200_OK,
+            )
+
+        generate_tenant_data_export_task.delay(data_export.id)
+        data_export.status = 'processing'
+        data_export.generation_started_at = timezone.now()
+        data_export.error_message = ''
+        data_export.save(update_fields=['status', 'generation_started_at', 'error_message'])
+        return Response(
+            {
+                'message': 'Export generation started',
+                'export_id': data_export.id,
+                'status': data_export.status,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+    @action(detail=True, methods=['get'])
+    def status_check(self, request, pk=None):
+        data_export = self.get_object()
+        serializer = TenantDataExportSerializer(data_export, context={'request': request})
+        response_data = {
+            'export_id': data_export.id,
+            'status': data_export.status,
+            'message': self._get_export_status_message(data_export),
+            'download_url': serializer.data.get('download_url'),
+            'record_counts': data_export.record_counts,
+        }
+        if data_export.status == 'failed':
+            response_data['error_details'] = data_export.error_message
+
+        return Response(TenantDataExportStatusSerializer(response_data).data)
+
+    @action(detail=True, methods=['get'])
+    def download(self, request, pk=None):
+        data_export = self.get_object()
+        if data_export.status != 'completed' or not data_export.generated_file:
+            return Response(
+                {'error': 'Export is not ready for download'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = TenantDataExportSerializer(data_export, context={'request': request})
+        return Response({
+            'download_url': serializer.data['download_url'],
+            'document_id': data_export.generated_file_id,
+            'filename': data_export.generated_file.file_name,
+            'size': data_export.generated_file.file_size,
+        })
+
+    def _get_export_status_message(self, data_export):
+        if data_export.status == 'pending':
+            return 'Export is queued for generation'
+        if data_export.status == 'processing':
+            return 'Export is being generated'
+        if data_export.status == 'completed':
+            return 'Export has been generated successfully'
+        if data_export.status == 'failed':
+            return f'Export generation failed: {data_export.error_message}'
+        return 'Unknown status'
