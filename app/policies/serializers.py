@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import (
     PolicyCategory, Policy, PolicyVersion,
-    PolicyAcknowledgment, PolicyDistribution
+    PolicyAcknowledgment, PolicyDistribution, PolicyVersionAuditLog
 )
 
 User = get_user_model()
@@ -58,9 +58,10 @@ class PolicyVersionListSerializer(serializers.ModelSerializer):
         model = PolicyVersion
         fields = [
             'id', 'version_number', 'summary', 'is_active', 'is_published',
-            'document_size', 'file_name', 'file_extension', 'is_current', 'is_expired',
+            'lifecycle_state', 'document_size', 'final_pdf_size',
+            'file_name', 'file_extension', 'is_current', 'is_expired',
             'effective_date', 'expiry_date', 'approved_at', 'created_at',
-            'created_by_details', 'approved_by_details'
+            'finalized_at', 'created_by_details', 'approved_by_details'
         ]
         read_only_fields = [
             'id', 'document_size', 'file_name', 'file_extension',
@@ -117,19 +118,22 @@ class PolicyVersionDetailSerializer(serializers.ModelSerializer):
     is_current = serializers.BooleanField(read_only=True)
     is_expired = serializers.BooleanField(read_only=True)
     acknowledgments_count = serializers.SerializerMethodField()
+    finalized_by_details = UserBasicSerializer(source='finalized_by', read_only=True)
 
     class Meta:
         model = PolicyVersion
         fields = [
             'id', 'policy', 'policy_details', 'version_number', 'document',
-            'document_size', 'file_name', 'file_extension', 'summary',
+            'document_size', 'final_pdf', 'final_pdf_size',
+            'file_name', 'file_extension', 'summary', 'lifecycle_state',
             'is_active', 'is_published', 'is_current', 'is_expired',
             'approved_at', 'effective_date', 'expiry_date',
-            'acknowledgments_count', 'created_at',
-            'created_by_details', 'approved_by_details'
+            'finalized_at', 'acknowledgments_count', 'created_at',
+            'created_by_details', 'approved_by_details', 'finalized_by_details'
         ]
         read_only_fields = [
-            'id', 'document_size', 'file_name', 'file_extension',
+            'id', 'document_size', 'final_pdf', 'final_pdf_size',
+            'file_name', 'file_extension', 'finalized_at',
             'is_current', 'is_expired', 'acknowledgments_count', 'created_at'
         ]
 
@@ -140,6 +144,11 @@ class PolicyVersionDetailSerializer(serializers.ModelSerializer):
     def validate_document(self, value):
         """Validate uploaded document."""
         if value:
+            if self.instance and self.instance.lifecycle_state == 'final':
+                raise serializers.ValidationError(
+                    "Finalised policy versions cannot replace the editable source document."
+                )
+
             # Check file size (max 50MB)
             if value.size > 50 * 1024 * 1024:
                 raise serializers.ValidationError(
@@ -155,6 +164,18 @@ class PolicyVersionDetailSerializer(serializers.ModelSerializer):
                 )
 
         return value
+
+
+class PolicyVersionAuditLogSerializer(serializers.ModelSerializer):
+    actor_details = UserBasicSerializer(source='actor', read_only=True)
+
+    class Meta:
+        model = PolicyVersionAuditLog
+        fields = [
+            'id', 'policy_version', 'action', 'actor', 'actor_details',
+            'details', 'created_at'
+        ]
+        read_only_fields = fields
 
 
 class PolicyDetailSerializer(serializers.ModelSerializer):
