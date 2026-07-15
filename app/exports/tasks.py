@@ -3,7 +3,8 @@ from django.utils import timezone
 import logging
 
 from .models import AssessmentReport
-from .services import AssessmentReportGenerator
+from .models import TenantDataExport
+from .services import AssessmentReportGenerator, TenantDataExportGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -144,3 +145,56 @@ def generate_scheduled_reports():
         'status': 'success',
         'message': 'Scheduled report generation placeholder executed'
     }
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=300)
+def generate_tenant_data_export_task(self, export_id):
+    """
+    Generate a tenant-wide GRC data export asynchronously.
+    """
+    try:
+        data_export = TenantDataExport.objects.get(id=export_id)
+        logger.info("Starting tenant data export %s", export_id)
+
+        document = TenantDataExportGenerator(data_export).generate_export()
+
+        logger.info("Tenant data export %s generated successfully: %s", export_id, document.file.name)
+        return {
+            'status': 'success',
+            'export_id': export_id,
+            'document_id': document.id,
+            'filename': document.file.name,
+            'message': 'Tenant data export generated successfully',
+        }
+    except TenantDataExport.DoesNotExist:
+        logger.error("Tenant data export %s not found", export_id)
+        return {
+            'status': 'error',
+            'export_id': export_id,
+            'message': f'Tenant data export {export_id} not found',
+        }
+    except Exception as exc:
+        logger.error("Error generating tenant data export %s: %s", export_id, str(exc))
+
+        try:
+            data_export = TenantDataExport.objects.get(id=export_id)
+            data_export.status = 'failed'
+            data_export.error_message = str(exc)
+            data_export.generation_completed_at = timezone.now()
+            data_export.save(update_fields=['status', 'error_message', 'generation_completed_at'])
+        except TenantDataExport.DoesNotExist:
+            pass
+
+        if self.request.retries < self.max_retries:
+            logger.info(
+                "Retrying tenant data export %s (attempt %s)",
+                export_id,
+                self.request.retries + 1,
+            )
+            raise self.retry(exc=exc)
+
+        return {
+            'status': 'error',
+            'export_id': export_id,
+            'message': f'Tenant data export failed after {self.max_retries + 1} attempts: {str(exc)}',
+        }
