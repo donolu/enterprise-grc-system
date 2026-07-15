@@ -1,5 +1,8 @@
 from rest_framework import serializers
-from .models import Framework, Clause, Control, ControlEvidence, FrameworkMapping, ControlAssessment, AssessmentEvidence
+from .models import (
+    Framework, Clause, Control, ControlEvidence, FrameworkMapping,
+    ControlAssessment, AssessmentEvidence, TemplateDocument
+)
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -110,6 +113,51 @@ class ControlEvidenceSerializer(serializers.ModelSerializer):
         ]
 
 
+class TemplateDocumentSerializer(serializers.ModelSerializer):
+    """Serializer for imported template and sample documents."""
+    document_url = serializers.CharField(source='document.file_url', read_only=True)
+    document_name = serializers.CharField(source='document.file_name', read_only=True)
+    document_size = serializers.IntegerField(source='document.file_size', read_only=True)
+    framework_name = serializers.CharField(source='framework.name', read_only=True)
+    framework_version = serializers.CharField(source='framework.version', read_only=True)
+    clause_identifier = serializers.CharField(source='clause.clause_id', read_only=True)
+    control_identifier = serializers.CharField(source='control.control_id', read_only=True)
+
+    class Meta:
+        model = TemplateDocument
+        fields = [
+            'id', 'title', 'module', 'document_type', 'document_code',
+            'version', 'document', 'document_url', 'document_name',
+            'document_size', 'framework', 'framework_name',
+            'framework_version', 'clause', 'clause_identifier', 'control',
+            'control_identifier', 'source_path', 'source_filename',
+            'source_checksum', 'source_modified_at', 'metadata',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'document_url', 'document_name', 'document_size',
+            'framework_name', 'framework_version', 'clause_identifier',
+            'control_identifier', 'created_at', 'updated_at'
+        ]
+
+
+class TemplateDocumentSummarySerializer(serializers.ModelSerializer):
+    """Compact template document serializer for linked catalogue objects."""
+    document_url = serializers.CharField(source='document.file_url', read_only=True)
+    document_name = serializers.CharField(source='document.file_name', read_only=True)
+    framework_name = serializers.CharField(source='framework.name', read_only=True)
+    clause_identifier = serializers.CharField(source='clause.clause_id', read_only=True)
+    control_identifier = serializers.CharField(source='control.control_id', read_only=True)
+
+    class Meta:
+        model = TemplateDocument
+        fields = [
+            'id', 'title', 'module', 'document_type', 'document_code',
+            'version', 'document_url', 'document_name', 'framework_name',
+            'clause_identifier', 'control_identifier'
+        ]
+
+
 class ControlListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for control listings."""
     control_owner_name = serializers.CharField(source='control_owner.get_full_name', read_only=True)
@@ -144,6 +192,7 @@ class ControlDetailSerializer(serializers.ModelSerializer):
     needs_testing = serializers.ReadOnlyField()
     evidence = ControlEvidenceSerializer(many=True, read_only=True)
     clauses_detail = ClauseListSerializer(source='clauses', many=True, read_only=True)
+    template_documents = TemplateDocumentSummarySerializer(many=True, read_only=True)
     
     class Meta:
         model = Control
@@ -155,7 +204,7 @@ class ControlDetailSerializer(serializers.ModelSerializer):
             'effectiveness_rating', 'evidence_requirements', 'documentation_links',
             'risk_rating', 'remediation_plan', 'version', 'change_log',
             'is_active', 'needs_testing', 'framework_coverage', 'evidence',
-            'created_by_username', 'created_at', 'updated_at'
+            'template_documents', 'created_by_username', 'created_at', 'updated_at'
         ]
         read_only_fields = [
             'is_active', 'needs_testing', 'framework_coverage', 

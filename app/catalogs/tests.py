@@ -2,19 +2,25 @@ import json
 from datetime import date, timedelta
 from django.test import TestCase, TransactionTestCase
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.utils import timezone
 from django.db import IntegrityError
-from rest_framework.test import APITestCase
+from rest_framework.test import APIRequestFactory, APITestCase, force_authenticate
 from rest_framework import status
 from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
 from openpyxl import Workbook
 from core.models import AuditEvent, Tenant
-from .models import Framework, Clause, Control, ControlEvidence, FrameworkMapping, ControlAssessment, AssessmentEvidence
+from .models import (
+    Framework, Clause, Control, ControlEvidence, FrameworkMapping,
+    ControlAssessment, AssessmentEvidence, TemplateDocument
+)
 from .management.commands.import_framework import Command as ImportCommand
+from .views import TemplateDocumentViewSet
 import tempfile
 import os
+import zipfile
 
 User = get_user_model()
 
@@ -652,6 +658,206 @@ class ImportFrameworkCommandTest(TransactionTestCase):
             os.unlink(temp_file)
 
 
+class ImportTemplateLibraryCommandTest(TransactionTestCase):
+    """Test the import_template_library management command."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='templateuser',
+            email='template@example.com',
+            password='testpass123',
+            is_staff=True,
+        )
+
+    def create_temp_zip_file(self, files):
+        """Create a temporary ZIP file from a mapping of path to bytes."""
+        temp_file = tempfile.NamedTemporaryFile(
+            suffix='.zip',
+            delete=False
+        )
+        temp_file.close()
+
+        with zipfile.ZipFile(temp_file.name, 'w') as archive:
+            for path, content in files.items():
+                archive.writestr(path, content)
+        return temp_file.name
+
+    def test_import_template_library_is_idempotent_and_skips_noise(self):
+        """Test duplicate imports and unsupported/system file filtering."""
+        temp_file = self.create_temp_zip_file({
+            'Axim App/Documentation Module/Policies/XXXX-POL-ALL-001 - Information Security Policy.docx': b'policy',
+            'Axim App/Risk Register Module/Sample-ISMS-Risk-Register.xlsx': b'risk',
+            'Axim App/.DS_Store': b'mac',
+            'Axim App/Documentation Module/Policies/~$XX-POL-ALL-010 - Remote Access Policy.docx': b'lock',
+            'Axim App/Documentation Module/Policies/malware.exe': b'unsupported',
+        })
+
+        try:
+            command_args = [
+                'import_template_library',
+                temp_file,
+                '--user',
+                self.user.username,
+            ]
+
+            call_command(*command_args)
+            missing_file = TemplateDocument.objects.get(module='policy').document.file
+            missing_file.storage.delete(missing_file.name)
+            call_command(*command_args)
+
+            self.assertEqual(TemplateDocument.objects.count(), 2)
+            self.assertEqual(AuditEvent.objects.filter(event='TEMPLATE_LIBRARY_IMPORTED').count(), 2)
+
+            policy_template = TemplateDocument.objects.get(module='policy')
+            self.assertEqual(policy_template.document_type, 'policy')
+            self.assertEqual(policy_template.document_code, 'XXXX-POL-ALL-001')
+            self.assertEqual(policy_template.metadata['linkage_status'], 'unlinked')
+            self.assertIsNone(policy_template.framework)
+            self.assertIsNone(policy_template.clause)
+            self.assertIsNone(policy_template.control)
+
+            risk_template = TemplateDocument.objects.get(module='risk')
+            self.assertEqual(risk_template.document_type, 'risk_register')
+            self.assertFalse(
+                TemplateDocument.objects.filter(source_filename='malware.exe').exists()
+            )
+        finally:
+            os.unlink(temp_file)
+
+    def test_import_template_library_links_framework_when_known(self):
+        """Test framework-specific templates can be linked during import."""
+        framework = Framework.objects.create(
+            name='PCI DSS',
+            short_name='PCI-DSS',
+            version='4.0',
+            description='Payment card security standard',
+            framework_type='financial',
+            issuing_organization='PCI Security Standards Council',
+            effective_date=date(2022, 3, 31),
+            status='active',
+            created_by=self.user,
+        )
+        temp_file = self.create_temp_zip_file({
+            'Axim App/PCI Module/PCI V4.0.xlsx': b'pci workbook',
+        })
+
+        try:
+            call_command(
+                'import_template_library',
+                temp_file,
+                '--user',
+                self.user.username,
+                '--framework',
+                'PCI-DSS',
+                '--framework-version',
+                '4.0',
+            )
+
+            template = TemplateDocument.objects.get()
+            self.assertEqual(template.framework, framework)
+            self.assertEqual(template.module, 'pci')
+            self.assertEqual(template.document_type, 'framework_spreadsheet')
+            self.assertEqual(template.metadata['linkage_status'], 'framework')
+        finally:
+            os.unlink(temp_file)
+
+    def test_import_template_library_dry_run_does_not_write_records(self):
+        """Test dry-run reports importable content without writing documents."""
+        temp_file = self.create_temp_zip_file({
+            'Axim App/Asset Register Module/XXXX - Assets Register.xlsx': b'asset',
+        })
+
+        try:
+            call_command(
+                'import_template_library',
+                temp_file,
+                '--user',
+                self.user.username,
+                '--dry-run',
+            )
+
+            self.assertEqual(TemplateDocument.objects.count(), 0)
+        finally:
+            os.unlink(temp_file)
+
+    def test_import_template_library_accepts_single_file(self):
+        """Test a single template file can be imported with explicit metadata."""
+        temp_file = tempfile.NamedTemporaryFile(
+            suffix='.docx',
+            delete=False,
+        )
+        temp_file.write(b'policy')
+        temp_file.close()
+
+        try:
+            call_command(
+                'import_template_library',
+                temp_file.name,
+                '--user',
+                self.user.username,
+                '--module',
+                'policy',
+                '--document-type',
+                'policy',
+            )
+
+            template = TemplateDocument.objects.get()
+            self.assertEqual(template.module, 'policy')
+            self.assertEqual(template.document_type, 'policy')
+            self.assertEqual(template.source_filename, os.path.basename(temp_file.name))
+            self.assertEqual(template.metadata['upload_mode'], 'single_file')
+        finally:
+            os.unlink(temp_file.name)
+
+    def test_admin_upload_endpoint_accepts_single_file(self):
+        """Test staff admins can import a single template through the web endpoint."""
+        factory = APIRequestFactory()
+        upload = SimpleUploadedFile(
+            'Access Control Policy.docx',
+            b'policy',
+            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        )
+        request = factory.post(
+            '/api/catalogs/template-documents/import-library/',
+            {
+                'file': upload,
+                'module': 'policy',
+                'document_type': 'policy',
+                'dry_run': 'false',
+            },
+            format='multipart',
+        )
+        force_authenticate(request, user=self.user)
+        view = TemplateDocumentViewSet.as_view({'post': 'import_library'})
+
+        response = view(request)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['imported_count'], 1)
+        template = TemplateDocument.objects.get()
+        self.assertEqual(template.source_path, 'Access Control Policy.docx')
+        self.assertEqual(template.source_filename, 'Access Control Policy.docx')
+        self.assertEqual(template.module, 'policy')
+
+    def test_admin_upload_endpoint_rejects_non_staff_users(self):
+        """Test non-staff users cannot import templates through the web endpoint."""
+        self.user.is_staff = False
+        self.user.save(update_fields=['is_staff'])
+        factory = APIRequestFactory()
+        upload = SimpleUploadedFile('Access Control Policy.docx', b'policy')
+        request = factory.post(
+            '/api/catalogs/template-documents/import-library/',
+            {'file': upload},
+            format='multipart',
+        )
+        force_authenticate(request, user=self.user)
+        view = TemplateDocumentViewSet.as_view({'post': 'import_library'})
+
+        response = view(request)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
 class CatalogsAPITest(APITestCase):
     """Test the catalogs API endpoints."""
     
@@ -713,7 +919,7 @@ class CatalogsAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
         self.assertEqual(response.data['results'][0]['control_id'], 'API-CTRL-001')
-    
+
     def test_control_testing_endpoint(self):
         """Test the control testing update endpoint."""
         self.client.force_authenticate(user=self.user)

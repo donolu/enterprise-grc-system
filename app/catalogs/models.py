@@ -859,6 +859,97 @@ class AssessmentEvidence(models.Model):
         return f"{self.assessment.assessment_id} - {self.evidence.title}"
 
 
+class TemplateDocument(models.Model):
+    """
+    Reusable template or sample document linked to catalogue content.
+    """
+    MODULE_CHOICES = [
+        ('policy', 'Policy'),
+        ('standard', 'Standard'),
+        ('procedure', 'Procedure'),
+        ('iso_mandatory', 'ISO Mandatory Document'),
+        ('pci', 'PCI'),
+        ('risk', 'Risk'),
+        ('asset', 'Asset'),
+        ('other', 'Other'),
+    ]
+
+    DOCUMENT_TYPE_CHOICES = [
+        ('policy', 'Policy'),
+        ('standard', 'Standard'),
+        ('procedure', 'Procedure'),
+        ('mandatory_document', 'Mandatory Document'),
+        ('risk_register', 'Risk Register'),
+        ('asset_register', 'Asset Register'),
+        ('framework_spreadsheet', 'Framework Spreadsheet'),
+        ('template', 'Template'),
+        ('sample', 'Sample'),
+        ('other', 'Other'),
+    ]
+
+    title = models.CharField(max_length=255)
+    module = models.CharField(max_length=30, choices=MODULE_CHOICES)
+    document_type = models.CharField(max_length=30, choices=DOCUMENT_TYPE_CHOICES)
+    document_code = models.CharField(max_length=80, blank=True)
+    version = models.CharField(max_length=50, blank=True)
+
+    document = models.ForeignKey(
+        'core.Document',
+        on_delete=models.CASCADE,
+        related_name='template_records',
+    )
+    framework = models.ForeignKey(
+        Framework,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='template_documents',
+    )
+    clause = models.ForeignKey(
+        Clause,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='template_documents',
+    )
+    control = models.ForeignKey(
+        Control,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='template_documents',
+    )
+
+    source_path = models.CharField(max_length=500, unique=True)
+    source_filename = models.CharField(max_length=255)
+    source_checksum = models.CharField(max_length=64)
+    source_modified_at = models.DateTimeField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    imported_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='imported_template_documents',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['module', 'document_type', 'title']
+        indexes = [
+            models.Index(fields=['module', 'document_type']),
+            models.Index(fields=['framework']),
+            models.Index(fields=['clause']),
+            models.Index(fields=['control']),
+            models.Index(fields=['source_checksum']),
+        ]
+
+    def __str__(self):
+        return f"{self.get_module_display()}: {self.title}"
+
+
 class AssessmentReminderConfiguration(models.Model):
     """
     Configuration for automated assessment reminders per user.

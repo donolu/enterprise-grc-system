@@ -1,5 +1,9 @@
+import tempfile
+from pathlib import Path
+
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
@@ -7,7 +11,13 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
-from .models import Framework, Clause, Control, ControlEvidence, FrameworkMapping, ControlAssessment, AssessmentEvidence
+from django.db import transaction
+from django.core.management.base import CommandError
+from catalogs.management.commands.import_template_library import Command as TemplateLibraryImportCommand
+from .models import (
+    Framework, Clause, Control, ControlEvidence, FrameworkMapping,
+    ControlAssessment, AssessmentEvidence, TemplateDocument
+)
 from .serializers import (
     FrameworkListSerializer, FrameworkDetailSerializer,
     ClauseListSerializer, ClauseDetailSerializer,
@@ -16,7 +26,9 @@ from .serializers import (
     FrameworkStatsSerializer, ControlTestingSerializer,
     ControlAssessmentListSerializer, ControlAssessmentDetailSerializer, 
     ControlAssessmentCreateUpdateSerializer, AssessmentStatusUpdateSerializer,
-    BulkAssessmentCreateSerializer, AssessmentEvidenceSerializer, AssessmentProgressSerializer
+    BulkAssessmentCreateSerializer, AssessmentEvidenceSerializer,
+    AssessmentProgressSerializer, TemplateDocumentSerializer,
+    TemplateDocumentSummarySerializer
 )
 
 
@@ -308,6 +320,17 @@ class ClauseViewSet(viewsets.ModelViewSet):
         
         serializer = ControlListSerializer(controls, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def templates(self, request, pk=None):
+        """Get template documents linked to a specific clause."""
+        clause = self.get_object()
+        templates = clause.template_documents.select_related(
+            'document', 'framework', 'control'
+        )
+
+        serializer = TemplateDocumentSummarySerializer(templates, many=True)
+        return Response(serializer.data)
     
     @action(detail=True, methods=['get'])
     def subclauses(self, request, pk=None):
@@ -392,6 +415,17 @@ class ControlViewSet(viewsets.ModelViewSet):
         ).order_by('-evidence_date')
         
         serializer = ControlEvidenceSerializer(evidence, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def templates(self, request, pk=None):
+        """Get template documents linked to a specific control."""
+        control = self.get_object()
+        templates = control.template_documents.select_related(
+            'document', 'framework', 'clause'
+        )
+
+        serializer = TemplateDocumentSummarySerializer(templates, many=True)
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
@@ -491,6 +525,127 @@ class ControlEvidenceViewSet(viewsets.ModelViewSet):
             'usage_count': assessment_links.count(),
             'assessments': assessments_data
         })
+
+
+class TemplateDocumentViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for discovering imported template and sample documents.
+    """
+    serializer_class = TemplateDocumentSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = [
+        'module', 'document_type', 'framework', 'clause', 'control'
+    ]
+    search_fields = [
+        'title', 'document_code', 'source_filename', 'source_path'
+    ]
+    ordering_fields = ['title', 'module', 'document_type', 'created_at']
+    ordering = ['module', 'document_type', 'title']
+
+    def get_queryset(self):
+        return TemplateDocument.objects.select_related(
+            'document', 'framework', 'clause', 'control', 'imported_by'
+        )
+
+    @action(
+        detail=False,
+        methods=['post'],
+        parser_classes=[MultiPartParser, FormParser],
+        url_path='import-library',
+    )
+    def import_library(self, request):
+        """Import a ZIP template library from the admin web interface."""
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response(
+                {'detail': 'Only staff administrators can import template libraries.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        upload = request.FILES.get('file')
+        if not upload:
+            return Response(
+                {'file': ['A ZIP file is required.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        dry_run = str(request.data.get('dry_run', '')).lower() in {'1', 'true', 'yes'}
+        framework_identifier = request.data.get('framework') or ''
+        framework_version = request.data.get('framework_version') or ''
+        module = request.data.get('module') or ''
+        document_type = request.data.get('document_type') or ''
+        command = TemplateLibraryImportCommand()
+
+        with tempfile.NamedTemporaryFile(suffix=Path(upload.name).suffix, delete=False) as temp_file:
+            temp_path = Path(temp_file.name)
+            for chunk in upload.chunks():
+                temp_file.write(chunk)
+
+        try:
+            try:
+                framework = command.get_framework(framework_identifier, framework_version)
+                entries = command.collect_entries(
+                    temp_path,
+                    framework,
+                    module=module,
+                    document_type=document_type,
+                )
+            except CommandError as exc:
+                return Response(
+                    {'detail': str(exc)},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if len(entries) == 1 and not upload.name.lower().endswith('.zip'):
+                entries[0]['source_path'] = upload.name
+                entries[0]['source_filename'] = upload.name
+                entries[0]['title'] = command.extract_title(upload.name)
+                entries[0]['document_code'] = command.extract_document_code(upload.name)
+                entries[0]['version'] = command.extract_version(upload.name)
+
+            if dry_run:
+                return Response(
+                    {
+                        'dry_run': True,
+                        'importable_count': len(entries),
+                        'skipped_count': command.skipped_count,
+                        'modules': command.count_by_key(entries, 'module'),
+                        'document_types': command.count_by_key(entries, 'document_type'),
+                        'samples': [
+                            {
+                                'title': entry['title'],
+                                'module': entry['module'],
+                                'document_type': entry['document_type'],
+                                'source_filename': entry['source_filename'],
+                                'linkage_status': entry['metadata']['linkage_status'],
+                            }
+                            for entry in entries[:10]
+                        ],
+                    }
+                )
+
+            with transaction.atomic():
+                imported, updated = command.import_entries(temp_path, entries, request.user)
+                command.record_import_audit_event(
+                    source_path=temp_path,
+                    entries=entries,
+                    user=request.user,
+                    imported=imported,
+                    updated=updated,
+                )
+
+            return Response(
+                {
+                    'dry_run': False,
+                    'imported_count': imported,
+                    'updated_count': updated,
+                    'skipped_count': command.skipped_count,
+                    'total_importable': len(entries),
+                    'modules': command.count_by_key(entries, 'module'),
+                    'document_types': command.count_by_key(entries, 'document_type'),
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        finally:
+            temp_path.unlink(missing_ok=True)
 
 
 class FrameworkMappingViewSet(viewsets.ModelViewSet):
