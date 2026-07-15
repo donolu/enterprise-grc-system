@@ -433,6 +433,13 @@ class ControlEvidenceViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'description']
     ordering_fields = ['evidence_date', 'created_at']
     ordering = ['-evidence_date']
+    throttle_scope_by_action = {"create": "evidence_upload"}
+
+    def get_throttles(self):
+        self.throttle_scope = self.throttle_scope_by_action.get(
+            getattr(self, "action", None)
+        )
+        return super().get_throttles()
     
     def get_queryset(self):
         return ControlEvidence.objects.select_related(
@@ -678,6 +685,16 @@ class ControlAssessmentViewSet(viewsets.ModelViewSet):
     search_fields = ['assessment_id', 'control__control_id', 'control__name', 'assessment_notes']
     ordering_fields = ['due_date', 'created_at', 'updated_at', 'completion_percentage']
     ordering = ['due_date', 'control__control_id']
+    throttle_scope_by_action = {
+        "upload_evidence": "evidence_upload",
+        "bulk_upload_evidence": "evidence_upload",
+    }
+
+    def get_throttles(self):
+        self.throttle_scope = self.throttle_scope_by_action.get(
+            getattr(self, "action", None)
+        )
+        return super().get_throttles()
     
     def get_serializer_class(self):
         if self.action == 'list':
