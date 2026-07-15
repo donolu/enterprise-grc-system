@@ -5,7 +5,7 @@
 - **Product:** Multi-tenant Information Security GRC SaaS
 - **Related BRD:** [business_requirements_document.md](business_requirements_document.md)
 - **Traceability:** [requirements_traceability_matrix.md](requirements_traceability_matrix.md)
-- **Architecture ADR:** [../adr/0034-modular-grc-product-architecture.md](../adr/0034-modular-grc-product-architecture.md)
+- **Architecture ADRs:** [../adr/0034-modular-grc-product-architecture.md](../adr/0034-modular-grc-product-architecture.md), [../adr/0039-audit-versioning-standard.md](../adr/0039-audit-versioning-standard.md)
 
 ## Current Architecture Baseline
 
@@ -88,6 +88,53 @@ Must model targets, schedules, scan jobs and findings. Scanner workers must run 
 
 Must provide tenant-scoped CSV/XLSX/PDF exports for each module, with async lifecycle and audit logging.
 
+## Audit, Versioning and History Requirements
+
+The platform must follow [ADR 0039](../adr/0039-audit-versioning-standard.md) for evidence-grade audit trails and governed content history.
+
+### Audit Event Standard
+
+Material tenant activity must emit tenant-scoped audit events with a consistent payload where available:
+
+- actor ID, email and actor type;
+- object type, object ID and a short non-sensitive display label;
+- event name;
+- previous and new values for material changes;
+- workflow reason or comment where applicable;
+- source IP, user agent and request ID where request context exists;
+- source type and reference for imports, workers and webhooks.
+
+Audit details must not store document contents, evidence file contents, secrets, full payment provider payloads, access tokens or unnecessary personal activity logs.
+
+### Immutable Versioning
+
+Explicit immutable versions or history snapshots are required when a record's previous meaning may be needed as audit evidence. This applies to:
+
+- framework catalogue data, including frameworks, clauses and controls;
+- control assessments, applicability decisions and evidence state;
+- policies, standards, procedures and final PDF artefacts;
+- material risk decisions and risk scoring changes;
+- vendor due diligence decisions, contract milestones and review outcomes;
+- asset register ownership, classification and criticality changes;
+- management review artefacts, non-conformities, scope documents and regulatory obligations.
+
+Routine preferences, generated reminder attempts and read-only access events may use audit events without full historical snapshots unless they affect evidence, billing or access control.
+
+### Retention and Visibility
+
+Tenant-owned audit events must remain tenant-isolated and visible to authorised tenant administrators through audit views and exports. Platform/operator audit events must stay in the platform context and must not expose tenant-owned content.
+
+Enterprise defaults should retain audit evidence for at least seven years unless a client contract requires a longer period. Deletion, anonymisation and retention policy changes must themselves be auditable.
+
+### Implementation Sequence
+
+- #159: shared audit event standard and retention controls.
+- #160: framework catalogue versioning and audit coverage.
+- #162: risk, vendor and asset audit/history coverage.
+- #161: policy version audit standardisation.
+- #163: document, export and download lifecycle audit coverage.
+- #164: subscription, billing and entitlement audit coverage.
+
 ## Integration Requirements
 
 - **Email:** 2FA, reminders, policy acknowledgment, training campaigns, billing and system notifications.
@@ -150,4 +197,3 @@ API and UI access must both enforce entitlements.
 - Vulnerability scanner: OpenVAS/Greenbone vs Nuclei or layered approach.
 - Content import schema and ownership workflow.
 - Product entitlement model granularity.
-
