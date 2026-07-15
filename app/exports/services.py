@@ -131,6 +131,17 @@ EXPORT_COVERAGE = [
         ],
     },
     {
+        'module': 'compliance_governance',
+        'label': 'Regulatory obligations, non-conformities and management review artefacts',
+        'formats': ['xlsx', 'csv_zip'],
+        'sheets': [
+            {'model': 'compliance.GovernanceArtefact', 'worksheet': 'Governance artefacts'},
+            {'model': 'compliance.RegulatoryRequirement', 'worksheet': 'Regulatory requirements'},
+            {'model': 'compliance.NonConformity', 'worksheet': 'Non-conformities'},
+            {'model': 'compliance.ManagementReview', 'worksheet': 'Management reviews'},
+        ],
+    },
+    {
         'module': 'assets',
         'label': 'Information assets and review reminders',
         'formats': ['xlsx', 'csv_zip'],

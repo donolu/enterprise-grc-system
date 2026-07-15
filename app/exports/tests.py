@@ -12,6 +12,7 @@ import zipfile
 from openpyxl import load_workbook
 
 from catalogs.models import Framework, Clause, Control, ControlAssessment, ControlEvidence, AssessmentEvidence
+from compliance.models import GovernanceArtefact, RegulatoryRequirement
 from core.models import Document
 from assets.models import Asset
 from risk.models import Risk
@@ -522,6 +523,7 @@ class TenantDataExportAPITest(ExportTenantAPITestCase):
                 'policies',
                 'training',
                 'knowledge',
+                'compliance_governance',
                 'assets',
                 'calendar',
                 'vulnerabilities',
@@ -635,6 +637,22 @@ class TenantDataExportGeneratorTest(TestCase):
             created_by=self.user,
             risk_owner=self.user,
         )
+        self.artefact = GovernanceArtefact.objects.create(
+            artefact_id='GOV-001',
+            title='ISMS scope statement',
+            artefact_type='scope_document',
+            owner=self.user,
+            created_by=self.user,
+        )
+        self.requirement = RegulatoryRequirement.objects.create(
+            requirement_id='REQ-001',
+            title='Maintain records of processing activities',
+            source_type='regulation',
+            applicability_status='applicable',
+            compliance_status='in_progress',
+            owner=self.user,
+            created_by=self.user,
+        )
 
     def test_generate_xlsx_export_includes_selected_module_records(self):
         data_export = TenantDataExport.objects.create(
@@ -660,6 +678,28 @@ class TenantDataExportGeneratorTest(TestCase):
         risk_rows = list(workbook['Risks'].iter_rows(values_only=True))
         self.assertIn('risk_id', risk_rows[0])
         self.assertIn('RISK-001', risk_rows[1])
+
+    def test_generate_xlsx_export_includes_governance_records(self):
+        data_export = TenantDataExport.objects.create(
+            title='Governance export',
+            export_format='xlsx',
+            selected_modules=['compliance_governance'],
+            requested_by=self.user,
+        )
+
+        document = TenantDataExportGenerator(data_export).generate_export()
+        data_export.refresh_from_db()
+
+        self.assertEqual(data_export.status, 'completed')
+        self.assertEqual(data_export.record_counts['compliance.GovernanceArtefact'], 1)
+        self.assertEqual(data_export.record_counts['compliance.RegulatoryRequirement'], 1)
+
+        workbook = load_workbook(BytesIO(document.file.read()), read_only=True)
+        self.assertIn('Governance artefacts', workbook.sheetnames)
+        self.assertIn('Regulatory requirements', workbook.sheetnames)
+        requirement_rows = list(workbook['Regulatory requirements'].iter_rows(values_only=True))
+        self.assertIn('requirement_id', requirement_rows[0])
+        self.assertIn('REQ-001', requirement_rows[1])
 
     def test_serializer_download_url_uses_document_download_route(self):
         data_export = TenantDataExport.objects.create(

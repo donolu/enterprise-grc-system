@@ -40,8 +40,8 @@ Status values:
 | RTM-027 | Product analytics for Axim | Partial | GRC analytics exist; operator/product usage metrics need explicit design. | #143 |
 | RTM-028 | Client data exports in spreadsheet/PDF | Partial | Reporting/export modules exist; coverage and API reliability incomplete. | #130, #139 |
 | RTM-029 | Asset register | Missing | Source ZIP includes asset register; no first-class module found. | #134 |
-| RTM-030 | Regulatory and contractual sheet | Partial | Source ZIP includes legal/regulatory sheet; not imported as structured data. | #142 |
-| RTM-031 | Non-conformity log, scope doc, metrics, agenda, management review | Partial | Source ZIP includes several ISO mandatory docs; structured workflows not complete. | #142 |
+| RTM-030 | Regulatory and contractual sheet | Done | `compliance.RegulatoryRequirement` and `GovernanceArtefact` model applicable obligations and link them to frameworks, controls, risks and documents. | #142 |
+| RTM-031 | Non-conformity log, scope doc, metrics, agenda, management review | Done | `compliance.NonConformity`, `GovernanceArtefact` and `ManagementReview` provide structured registers and governed artefact links for audit evidence. | #142 |
 | RTM-032 | Azure deployment | Partial | Azure-oriented settings/storage exist; platform-agnostic hosting is also tracked. | #92 |
 | RTM-033 | GitHub-based delivery | Done | GitHub CI/security workflows exist. | Existing CI issues |
 | RTM-034 | ADR documentation | Partial | Many ADRs exist; programme-level BRD/TRD traceability added under #140. | #140 |
