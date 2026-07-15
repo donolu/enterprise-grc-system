@@ -8,6 +8,7 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from django.http import FileResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Q, Avg, Case, When, Value, IntegerField
 from django.utils import timezone
@@ -16,13 +17,14 @@ from datetime import timedelta
 
 from .models import (
     PolicyCategory, Policy, PolicyVersion,
-    PolicyAcknowledgment, PolicyDistribution
+    PolicyAcknowledgment, PolicyDistribution, PolicyVersionAuditLog
 )
+from .document_finalization import DocumentConversionError, finalize_policy_version_pdf
 from .serializers import (
     PolicyCategorySerializer, PolicyListSerializer, PolicyDetailSerializer,
     PolicyCreateUpdateSerializer, PolicyVersionListSerializer, PolicyVersionDetailSerializer,
     PolicyAcknowledgmentSerializer, PolicyAcknowledgmentCreateSerializer,
-    PolicyDistributionSerializer, PolicySummarySerializer
+    PolicyDistributionSerializer, PolicySummarySerializer, PolicyVersionAuditLogSerializer
 )
 from .filters import PolicyFilter, PolicyVersionFilter, PolicyAcknowledgmentFilter
 
@@ -503,7 +505,25 @@ class PolicyVersionViewSet(viewsets.ModelViewSet):
             return PolicyVersionDetailSerializer
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        version = serializer.save(created_by=self.request.user)
+        PolicyVersionAuditLog.objects.create(
+            policy_version=version,
+            action='uploaded',
+            actor=self.request.user,
+            details={'filename': version.file_name, 'lifecycle_state': version.lifecycle_state},
+        )
+
+    def perform_update(self, serializer):
+        version = serializer.save()
+        if self.request.FILES.get('document') and version.lifecycle_state != 'final':
+            version.lifecycle_state = 'client_modified'
+            version.save(update_fields=['lifecycle_state'])
+        PolicyVersionAuditLog.objects.create(
+            policy_version=version,
+            action='edited',
+            actor=self.request.user,
+            details={'filename': version.file_name, 'lifecycle_state': version.lifecycle_state},
+        )
 
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):
@@ -545,7 +565,14 @@ class PolicyVersionViewSet(viewsets.ModelViewSet):
         version = self.get_object()
         version.approved_at = timezone.now()
         version.approved_by = request.user
+        version.lifecycle_state = 'approved'
         version.save()
+        PolicyVersionAuditLog.objects.create(
+            policy_version=version,
+            action='approved',
+            actor=request.user,
+            details={'approved_at': version.approved_at.isoformat()},
+        )
 
         # Also update policy status if it's currently draft
         if version.policy.status == 'draft':
@@ -561,21 +588,129 @@ class PolicyVersionViewSet(viewsets.ModelViewSet):
         """Download policy document."""
         version = self.get_object()
 
-        if not version.document:
-            return Response(
-                {'error': 'No document available'},
-                status=status.HTTP_404_NOT_FOUND
+        if version.lifecycle_state == 'final':
+            if not version.final_pdf:
+                return Response(
+                    {'error': 'Final PDF is not available'},
+                    status=status.HTTP_409_CONFLICT
+                )
+            PolicyVersionAuditLog.objects.create(
+                policy_version=version,
+                action='downloaded_pdf',
+                actor=request.user,
+                details={'filename': version.final_pdf.name},
+            )
+            return FileResponse(
+                version.final_pdf.open('rb'),
+                as_attachment=True,
+                filename=f"{version.policy.policy_code}_v{version.version_number}.pdf"
             )
 
-        from django.http import FileResponse
-        import os
+        if not _can_download_source(request.user, version):
+            return Response(
+                {'error': 'This policy version is not finalised for PDF download.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
-        response = FileResponse(
-            version.document.open('rb'),
-            as_attachment=True,
-            filename=version.file_name or f"{version.policy.policy_code}_v{version.version_number}.pdf"
+        return _source_file_response(version, request.user)
+
+    @action(detail=True, methods=['get'], url_path='download-source')
+    def download_source(self, request, pk=None):
+        """Download editable source document for authorised editors and administrators."""
+        version = self.get_object()
+        if not _can_download_source(request.user, version):
+            return Response(
+                {'error': 'Only authorised editors and administrators can download source documents.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return _source_file_response(version, request.user)
+
+    @action(detail=True, methods=['post'])
+    def finalize(self, request, pk=None):
+        """Generate final PDF and lock normal downloads to PDF."""
+        version = self.get_object()
+        if not _can_download_source(request.user, version):
+            return Response(
+                {'error': 'Only authorised editors and administrators can finalise documents.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        if not version.approved_at:
+            return Response(
+                {'error': 'Version must be approved before finalisation.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            finalize_policy_version_pdf(version)
+        except DocumentConversionError as exc:
+            PolicyVersionAuditLog.objects.create(
+                policy_version=version,
+                action='conversion_failed',
+                actor=request.user,
+                details={'error': str(exc)},
+            )
+            return Response({'error': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        version.lifecycle_state = 'final'
+        version.finalized_at = timezone.now()
+        version.finalized_by = request.user
+        version.is_published = True
+        version.save(update_fields=[
+            'final_pdf', 'final_pdf_size', 'lifecycle_state',
+            'finalized_at', 'finalized_by', 'is_published',
+        ])
+        PolicyVersionAuditLog.objects.create(
+            policy_version=version,
+            action='finalized',
+            actor=request.user,
+            details={'final_pdf': version.final_pdf.name},
         )
-        return response
+        serializer = self.get_serializer(version)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], url_path='audit-logs')
+    def audit_logs(self, request, pk=None):
+        """Return audit events for a policy version."""
+        version = self.get_object()
+        if not _can_download_source(request.user, version):
+            return Response({'error': 'Not authorised'}, status=status.HTTP_403_FORBIDDEN)
+        serializer = PolicyVersionAuditLogSerializer(
+            version.audit_logs.select_related('actor'),
+            many=True,
+        )
+        return Response(serializer.data)
+
+
+def _source_file_response(version, user):
+    if not version.document:
+        return Response(
+            {'error': 'No document available'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    PolicyVersionAuditLog.objects.create(
+        policy_version=version,
+        action='downloaded_source',
+        actor=user,
+        details={'filename': version.file_name},
+    )
+    return FileResponse(
+        version.document.open('rb'),
+        as_attachment=True,
+        filename=version.file_name or f"{version.policy.policy_code}_v{version.version_number}{version.file_extension or ''}"
+    )
+
+
+def _can_download_source(user, version):
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_staff or user.is_superuser:
+        return True
+    return user.id in {
+        version.created_by_id,
+        version.policy.owner_id,
+        version.policy.approver_id,
+    }
 
 
 class PolicyAcknowledgmentViewSet(viewsets.ReadOnlyModelViewSet):

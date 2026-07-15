@@ -22,6 +22,11 @@ def policy_upload_path(instance, filename):
     return f'policies/{instance.policy.id}/{instance.version_number}/{filename}'
 
 
+def policy_final_pdf_upload_path(instance, filename):
+    """Generate upload path for final policy PDFs."""
+    return f'policies/{instance.policy.id}/{instance.version_number}/final/{filename}'
+
+
 class PolicyCategory(models.Model):
     """
     Categories for organizing policies (e.g., HR, Security, IT, Legal).
@@ -198,6 +203,14 @@ class PolicyVersion(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    LIFECYCLE_CHOICES = [
+        ('template', 'Template'),
+        ('draft', 'Draft'),
+        ('client_modified', 'Client Modified'),
+        ('approved', 'Approved'),
+        ('final', 'Final'),
+    ]
+
     policy = models.ForeignKey(
         Policy,
         on_delete=models.CASCADE,
@@ -219,11 +232,25 @@ class PolicyVersion(models.Model):
         blank=True,
         help_text="Document size in bytes"
     )
+    final_pdf = models.FileField(
+        upload_to=policy_final_pdf_upload_path,
+        validators=[FileExtensionValidator(allowed_extensions=['pdf'])],
+        null=True,
+        blank=True,
+        help_text="Final PDF generated from the approved editable source"
+    )
+    final_pdf_size = models.PositiveIntegerField(null=True, blank=True)
 
     # Version metadata
     summary = models.TextField(
         blank=True,
         help_text="Summary of changes in this version"
+    )
+    lifecycle_state = models.CharField(
+        max_length=30,
+        choices=LIFECYCLE_CHOICES,
+        default='draft',
+        help_text="Document lifecycle state from template through final PDF"
     )
     is_active = models.BooleanField(
         default=False,
@@ -245,6 +272,14 @@ class PolicyVersion(models.Model):
         null=True,
         blank=True,
         related_name='approved_policy_versions'
+    )
+    finalized_at = models.DateTimeField(null=True, blank=True)
+    finalized_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='finalized_policy_versions'
     )
 
     # Effective dates
@@ -306,6 +341,8 @@ class PolicyVersion(models.Model):
         # Set document size
         if self.document:
             self.document_size = self.document.size
+        if self.final_pdf:
+            self.final_pdf_size = self.final_pdf.size
 
         # Ensure only one active version per policy
         if self.is_active:
@@ -315,6 +352,45 @@ class PolicyVersion(models.Model):
             ).exclude(pk=self.pk).update(is_active=False)
 
         super().save(*args, **kwargs)
+
+
+class PolicyVersionAuditLog(models.Model):
+    ACTION_CHOICES = [
+        ('uploaded', 'Uploaded'),
+        ('edited', 'Edited'),
+        ('approved', 'Approved'),
+        ('finalized', 'Finalized'),
+        ('conversion_failed', 'Conversion Failed'),
+        ('downloaded_pdf', 'Downloaded PDF'),
+        ('downloaded_source', 'Downloaded Source'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    policy_version = models.ForeignKey(
+        PolicyVersion,
+        on_delete=models.CASCADE,
+        related_name='audit_logs'
+    )
+    action = models.CharField(max_length=40, choices=ACTION_CHOICES)
+    actor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='policy_version_audit_logs'
+    )
+    details = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['policy_version', '-created_at']),
+            models.Index(fields=['action', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.action} for {self.policy_version}'
 
 
 class PolicyAcknowledgment(models.Model):
