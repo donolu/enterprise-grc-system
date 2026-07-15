@@ -23,6 +23,7 @@ urlpatterns = [
 
     # Operational dashboards
     path('operational/', views.operational_dashboard, name='operational_dashboard'),
+    path('operator/usage/', views.operator_usage_dashboard, name='operator_usage_dashboard'),
 
     # Export and reporting
     path('export/', views.export_report, name='export_report'),
