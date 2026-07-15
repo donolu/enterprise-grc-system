@@ -421,5 +421,22 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'calendarhub.tasks.send_calendar_deadline_reminders',
         'schedule': crontab(hour=8, minute=30),
         'options': {'queue': 'default'}
+    },
+
+    # Vulnerability scan schedule dispatcher - hourly
+    'run-due-vulnerability-scan-schedules': {
+        'task': 'vuln.tasks.run_due_scan_schedules',
+        'schedule': crontab(minute=15),
+        'options': {'queue': 'default'}
     }
 }
+
+VULN_SCANNER_ENABLED = bool(int(os.environ.get('VULN_SCANNER_ENABLED', '0')))
+NUCLEI_BINARY = os.environ.get('NUCLEI_BINARY', 'nuclei')
+VULN_SCANNER_TIMEOUT_SECONDS = int(os.environ.get('VULN_SCANNER_TIMEOUT_SECONDS', '900'))
+VULN_ALLOW_PRIVATE_TARGETS = bool(int(os.environ.get('VULN_ALLOW_PRIVATE_TARGETS', '0')))
+VULN_ALLOWED_TARGET_SUFFIXES = [
+    suffix.strip().lstrip('.')
+    for suffix in os.environ.get('VULN_ALLOWED_TARGET_SUFFIXES', '').split(',')
+    if suffix.strip()
+]
