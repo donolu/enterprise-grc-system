@@ -41,6 +41,7 @@ TENANT_APPS = [
     "billing",
     "catalogs",
     "assets",
+    "calendarhub",
     "compliance",
     "risk",
     "vendors",
@@ -412,6 +413,13 @@ CELERY_BEAT_SCHEDULE = {
     'send-asset-review-reminders': {
         'task': 'assets.tasks.send_asset_review_reminders',
         'schedule': crontab(hour=9, minute=30),
+        'options': {'queue': 'default'}
+    },
+
+    # Cross-module calendar and deadline reminders - daily at 8:30 AM
+    'send-calendar-deadline-reminders': {
+        'task': 'calendarhub.tasks.send_calendar_deadline_reminders',
+        'schedule': crontab(hour=8, minute=30),
         'options': {'queue': 'default'}
     }
 }
