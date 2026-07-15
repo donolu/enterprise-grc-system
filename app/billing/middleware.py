@@ -21,6 +21,8 @@ class PlanEnforcementMiddleware(MiddlewareMixin):
         module_key = get_module_for_path(request.path)
         if not module_key or not hasattr(request, 'tenant'):
             return None
+        if request.path.startswith('/api/analytics/operator/'):
+            return None
 
         try:
             tenant = get_public_tenant(request.tenant.schema_name)

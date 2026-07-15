@@ -37,7 +37,7 @@ Status values:
 | RTM-024 | Calendar module | Missing | No unified calendar/event module found. | #136 |
 | RTM-025 | Vulnerability scanning | Missing | Policies/controls mention scanning; scanner integration not implemented. | #137 |
 | RTM-026 | User activity tracking | Partial | AuditEvent exists; coverage and UI/reporting should be validated. | #139 |
-| RTM-027 | Product analytics for Axim | Partial | GRC analytics exist; operator/product usage metrics need explicit design. | #143 |
+| RTM-027 | Product analytics for Axim | Done | Operator-only analytics aggregate tenant, subscription, module adoption and usage metrics without exposing tenant content. | #143 |
 | RTM-028 | Client data exports in spreadsheet/PDF | Partial | Reporting/export modules exist; coverage and API reliability incomplete. | #130, #139 |
 | RTM-029 | Asset register | Missing | Source ZIP includes asset register; no first-class module found. | #134 |
 | RTM-030 | Regulatory and contractual sheet | Done | `compliance.RegulatoryRequirement` and `GovernanceArtefact` model applicable obligations and link them to frameworks, controls, risks and documents. | #142 |
