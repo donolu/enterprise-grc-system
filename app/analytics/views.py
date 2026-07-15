@@ -10,6 +10,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from django.conf import settings
 from django.http import JsonResponse, HttpResponse, Http404
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -22,10 +23,55 @@ import mimetypes
 
 from .services import CrossModuleAnalyticsService, AnalyticsReportGenerator
 from .models import AnalyticsReport, DashboardConfiguration
+from .operator import OperatorAnalyticsWindow, OperatorProductAnalyticsService
 # from .tasks import generate_analytics_report, cache_analytics_metrics  # TODO: Add PDF dependencies
 from billing.decorators import require_advanced_reporting
 
 logger = logging.getLogger(__name__)
+
+
+def _is_operator(user, tenant):
+    public_schema_name = getattr(settings, 'PUBLIC_SCHEMA_NAME', 'public')
+    return bool(
+        user
+        and user.is_authenticated
+        and (user.is_staff or user.is_superuser)
+        and getattr(tenant, 'schema_name', None) == public_schema_name
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def operator_usage_dashboard(request):
+    """
+    Operator-only product analytics across tenants.
+
+    Returns aggregate tenant, subscription, module adoption and usage metrics
+    without returning tenant-owned content such as document names or policy text.
+    """
+    if not _is_operator(request.user, getattr(request, 'tenant', None)):
+        return Response(
+            {'detail': 'Only staff operators can access product analytics.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    try:
+        window = OperatorAnalyticsWindow.from_days(request.query_params.get('days', 90))
+    except ValueError:
+        return Response(
+            {'days': ['Enter a whole number between 1 and 365.']},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    service = OperatorProductAnalyticsService(window=window)
+    dashboard = service.build_dashboard()
+
+    if request.query_params.get('export') == 'csv':
+        response = HttpResponse(service.to_csv(dashboard), content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="operator-product-analytics.csv"'
+        return response
+
+    return Response(dashboard)
 
 
 @api_view(['GET'])
