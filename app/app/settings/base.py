@@ -40,6 +40,7 @@ TENANT_APPS = [
     "sso",
     "billing",
     "catalogs",
+    "assets",
     "compliance",
     "risk",
     "vendors",
@@ -403,6 +404,13 @@ CELERY_BEAT_SCHEDULE = {
     'update-video-view-counts': {
         'task': 'training.tasks.update_video_view_counts',
         'schedule': crontab(hour=2, minute=0),
+        'options': {'queue': 'default'}
+    },
+
+    # Asset review reminders - daily at 9:30 AM
+    'send-asset-review-reminders': {
+        'task': 'assets.tasks.send_asset_review_reminders',
+        'schedule': crontab(hour=9, minute=30),
         'options': {'queue': 'default'}
     }
 }

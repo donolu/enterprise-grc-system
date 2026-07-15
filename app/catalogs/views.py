@@ -589,9 +589,12 @@ class TemplateDocumentViewSet(viewsets.ReadOnlyModelViewSet):
                     module=module,
                     document_type=document_type,
                 )
-            except CommandError as exc:
+            except CommandError:
                 return Response(
-                    {'detail': str(exc)},
+                    {
+                        'detail': 'Template library import failed. Check the file type and supplied metadata.',
+                        'code': 'template_import_invalid',
+                    },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             if len(entries) == 1 and not upload.name.lower().endswith('.zip'):

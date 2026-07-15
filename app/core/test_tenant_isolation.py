@@ -8,6 +8,7 @@ from django_tenants.utils import schema_context, tenant_context
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from assets.models import Asset
 from catalogs.models import Framework
 from core.models import Domain, Tenant
 from core.storage import TenantAwareBlobStorage
@@ -175,6 +176,32 @@ class TestTenantIsolation:
         assert self._response_titles(list_response.json()) == ["Tenant A video"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
+    def test_asset_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_asset(tenant_a, "ASSET-A-001", "Tenant A asset", user_a)
+        with tenant_context(tenant_b):
+            self._create_asset(tenant_b, "ASSET-B-001", "Tenant B first asset", user_b)
+            tenant_b_private_asset = self._create_asset(
+                tenant_b,
+                "ASSET-B-002",
+                "Tenant B private asset",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/assets/assets/")
+        detail_response = client.get(f"/api/assets/assets/{tenant_b_private_asset.pk}/")
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_names(list_response.json()) == ["Tenant A asset"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
     def test_storage_container_name_uses_current_tenant(self):
         tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
         tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
@@ -274,6 +301,16 @@ class TestTenantIsolation:
                 video_provider="custom",
                 video_url="https://example.com/training.mp4",
                 is_published=True,
+                created_by=user,
+            )
+
+    def _create_asset(self, tenant, asset_id, name, user):
+        with tenant_context(tenant):
+            return Asset.objects.create(
+                asset_id=asset_id,
+                name=name,
+                asset_type="server",
+                owner=user,
                 created_by=user,
             )
 

@@ -14,7 +14,8 @@ import {
   BulbFilled,
   UserOutlined,
   LogoutOutlined,
-  BellOutlined
+  BellOutlined,
+  DatabaseOutlined
 } from "@ant-design/icons";
 import Link from "next/link";
 import { useTheme } from "@/theme";
@@ -29,6 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     { key: "dash", icon: <HomeOutlined/>, label: <Link href="/">Dashboard</Link> },
     { key: "assessments", icon: <CheckSquareOutlined/>, label: <Link href="/assessments">Assessments</Link> },
     { key: "risk", icon: <SafetyOutlined/>, label: <Link href="/risk">Risk</Link> },
+    { key: "assets", icon: <DatabaseOutlined/>, label: <Link href="/assets">Assets</Link> },
     { key: "vendors", icon: <TeamOutlined/>, label: <Link href="/vendors">Vendors</Link> },
     { key: "policies", icon: <FileTextOutlined/>, label: <Link href="/policies">Policies</Link> },
     { key: "training", icon: <VideoCameraOutlined/>, label: <Link href="/training">Training</Link> },
