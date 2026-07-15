@@ -521,6 +521,7 @@ class TenantDataExportAPITest(ExportTenantAPITestCase):
                 'vendors',
                 'policies',
                 'training',
+                'knowledge',
                 'assets',
                 'calendar',
                 'vulnerabilities',

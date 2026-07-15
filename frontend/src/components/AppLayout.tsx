@@ -16,7 +16,8 @@ import {
   UserOutlined,
   LogoutOutlined,
   BellOutlined,
-  DatabaseOutlined
+  DatabaseOutlined,
+  QuestionCircleOutlined
 } from "@ant-design/icons";
 import Link from "next/link";
 import { useTheme } from "@/theme";
@@ -52,6 +53,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       { key: "vendors", module: "vendors", icon: <TeamOutlined/>, label: <Link href="/vendors">Vendors</Link> },
       { key: "policies", module: "policies", icon: <FileTextOutlined/>, label: <Link href="/policies">Policies</Link> },
       { key: "training", module: "training", icon: <VideoCameraOutlined/>, label: <Link href="/training">Training</Link> },
+      { key: "knowledge", icon: <QuestionCircleOutlined/>, label: <Link href="/knowledge">Knowledge</Link> },
       { key: "analytics", module: "analytics", icon: <BarChartOutlined/>, label: <Link href="/analytics">Analytics</Link> },
       { key: "scans", module: "vulnerability_scanning", icon: <RadarChartOutlined/>, label: <Link href="/scans">Vulnerabilities</Link> },
       { key: "admin", icon: <SettingOutlined/>, label: <Link href="/admin">Admin</Link> },
