@@ -44,6 +44,7 @@ class Plan(models.Model):
     has_api_access = models.BooleanField(default=False)
     has_advanced_reporting = models.BooleanField(default=False)
     has_priority_support = models.BooleanField(default=False)
+    included_modules = models.JSONField(default=list, blank=True)
     
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -53,6 +54,14 @@ class Plan(models.Model):
     
     def __str__(self):
         return f"{self.name} (${self.price_monthly}/month)"
+
+    def get_included_modules(self):
+        from billing.entitlements import get_default_modules_for_plan, normalise_modules
+
+        explicit_modules = normalise_modules(self.included_modules)
+        if explicit_modules:
+            return explicit_modules
+        return get_default_modules_for_plan(self.slug)
 
 
 class Subscription(models.Model):
@@ -93,6 +102,8 @@ class Subscription(models.Model):
     custom_max_documents = models.PositiveIntegerField(null=True, blank=True, help_text="Override plan's max documents limit")
     custom_max_frameworks = models.PositiveIntegerField(null=True, blank=True, help_text="Override plan's max frameworks limit")
     custom_max_storage_gb = models.PositiveIntegerField(null=True, blank=True, help_text="Override plan's max storage limit")
+    enabled_modules = models.JSONField(default=list, blank=True, help_text="Explicit module grants for this subscription")
+    trial_module = models.CharField(max_length=40, blank=True, help_text="Single module selected for a trial subscription")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -128,6 +139,43 @@ class Subscription(models.Model):
         """Return custom storage limit if set, otherwise plan limit (default 1GB)"""
         plan_storage = getattr(self.plan, 'max_storage_gb', 1)  # Default 1GB if not set
         return self.custom_max_storage_gb if self.custom_max_storage_gb is not None else plan_storage
+
+    @property
+    def is_trial_active(self):
+        if self.status != 'trialing':
+            return False
+        return not self.trial_end or self.trial_end >= timezone.now()
+
+    def get_enabled_modules(self):
+        from billing.entitlements import (
+            ALL_MODULE_KEYS,
+            get_default_modules_for_plan,
+            normalise_modules,
+        )
+
+        if not self.is_active:
+            return []
+
+        if self.plan.slug == 'enterprise' and self.status != 'trialing':
+            return list(ALL_MODULE_KEYS)
+
+        explicit_modules = normalise_modules(self.enabled_modules)
+        plan_modules = explicit_modules or normalise_modules(self.plan.included_modules)
+        if not plan_modules:
+            plan_modules = get_default_modules_for_plan(self.plan.slug)
+
+        if self.status == 'trialing':
+            if not self.is_trial_active:
+                return []
+            trial_modules = normalise_modules([self.trial_module])
+            if trial_modules:
+                return trial_modules[:1]
+            return plan_modules[:1]
+
+        return plan_modules
+
+    def has_module_access(self, module_key):
+        return module_key in self.get_enabled_modules()
 
 
 class BillingEvent(models.Model):
