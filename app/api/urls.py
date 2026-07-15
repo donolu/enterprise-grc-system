@@ -5,6 +5,7 @@ urlpatterns = [
     path('assets/', include('assets.urls')),
     path('calendar/', include('calendarhub.urls')),
     path('catalogs/', include('catalogs.urls')),
+    path('compliance/', include('compliance.urls')),
     path('exports/', include('exports.urls')),
     path('risk/', include('risk.urls')),
     path('policies/', include('policies.urls')),
