@@ -1,5 +1,6 @@
 from typing import Dict, Any, Optional, Tuple
 from django.contrib.auth import get_user_model
+from django_tenants.utils import schema_context
 from core.models import Tenant, Plan, Subscription, Document
 
 User = get_user_model()
@@ -13,7 +14,14 @@ class PlanEnforcementService:
     @staticmethod
     def get_tenant_subscription(tenant: Tenant) -> Optional[Subscription]:
         """Get tenant's current subscription."""
-        return getattr(tenant, 'subscription', None)
+        try:
+            with schema_context("public"):
+                public_tenant = Tenant.objects.select_related("subscription__plan").get(
+                    schema_name=tenant.schema_name
+                )
+                return getattr(public_tenant, 'subscription', None)
+        except Tenant.DoesNotExist:
+            return None
     
     @staticmethod
     def check_feature_access(tenant: Tenant, feature: str) -> Tuple[bool, Optional[str]]:
@@ -126,6 +134,11 @@ class PlanEnforcementService:
                 "status": subscription.status,
                 "is_active": subscription.is_active,
                 "effective_price": float(subscription.effective_price),
+            },
+            "entitlements": {
+                "enabled_modules": subscription.get_enabled_modules(),
+                "trial_module": subscription.trial_module,
+                "is_trial_active": subscription.is_trial_active,
             },
             "limits": {
                 "users": {

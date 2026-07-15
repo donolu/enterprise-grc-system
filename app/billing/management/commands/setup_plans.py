@@ -2,6 +2,7 @@ import stripe
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from core.models import Plan
+from billing.entitlements import get_default_modules_for_plan
 
 
 class Command(BaseCommand):
@@ -29,6 +30,7 @@ class Command(BaseCommand):
                 'has_api_access': False,
                 'has_advanced_reporting': False,
                 'has_priority_support': False,
+                'included_modules': get_default_modules_for_plan('free'),
             },
             {
                 'name': 'Basic',
@@ -41,6 +43,7 @@ class Command(BaseCommand):
                 'has_api_access': True,
                 'has_advanced_reporting': False,
                 'has_priority_support': False,
+                'included_modules': get_default_modules_for_plan('basic'),
             },
             {
                 'name': 'Enterprise',
@@ -53,6 +56,7 @@ class Command(BaseCommand):
                 'has_api_access': True,
                 'has_advanced_reporting': True,
                 'has_priority_support': True,
+                'included_modules': get_default_modules_for_plan('enterprise'),
             }
         ]
         

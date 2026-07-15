@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useMemo, useState } from "react";
 import { Layout, Menu, Avatar, Typography, Dropdown, Space, Switch, Badge } from "antd";
 import {
   HomeOutlined,
@@ -20,24 +21,44 @@ import {
 import Link from "next/link";
 import { useTheme } from "@/theme";
 import { SearchBar } from "@/components/ui";
+import { getCurrentSubscription } from "@/lib/services/billingService";
 
 const { Header, Sider, Content } = Layout;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { mode, toggleMode } = useTheme();
+  const [enabledModules, setEnabledModules] = useState<string[] | null>(null);
 
-  const menuItems = [
-    { key: "dash", icon: <HomeOutlined/>, label: <Link href="/">Dashboard</Link> },
-    { key: "assessments", icon: <CheckSquareOutlined/>, label: <Link href="/assessments">Assessments</Link> },
-    { key: "risk", icon: <SafetyOutlined/>, label: <Link href="/risk">Risk</Link> },
-    { key: "assets", icon: <DatabaseOutlined/>, label: <Link href="/assets">Assets</Link> },
-    { key: "vendors", icon: <TeamOutlined/>, label: <Link href="/vendors">Vendors</Link> },
-    { key: "policies", icon: <FileTextOutlined/>, label: <Link href="/policies">Policies</Link> },
-    { key: "training", icon: <VideoCameraOutlined/>, label: <Link href="/training">Training</Link> },
-    { key: "analytics", icon: <BarChartOutlined/>, label: <Link href="/analytics">Analytics</Link> },
-    { key: "scans", icon: <RadarChartOutlined/>, label: <Link href="/scans">Vulnerabilities</Link> },
-    { key: "admin", icon: <SettingOutlined/>, label: <Link href="/admin">Admin</Link> },
-  ];
+  useEffect(() => {
+    let mounted = true;
+    getCurrentSubscription()
+      .then(subscription => {
+        if (mounted) setEnabledModules(subscription.enabled_module_keys);
+      })
+      .catch(() => {
+        if (mounted) setEnabledModules(null);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const menuItems = useMemo(() => {
+    const allItems = [
+      { key: "dash", icon: <HomeOutlined/>, label: <Link href="/">Dashboard</Link> },
+      { key: "assessments", module: "frameworks", icon: <CheckSquareOutlined/>, label: <Link href="/assessments">Assessments</Link> },
+      { key: "risk", module: "risk", icon: <SafetyOutlined/>, label: <Link href="/risk">Risk</Link> },
+      { key: "assets", module: "assets", icon: <DatabaseOutlined/>, label: <Link href="/assets">Assets</Link> },
+      { key: "vendors", module: "vendors", icon: <TeamOutlined/>, label: <Link href="/vendors">Vendors</Link> },
+      { key: "policies", module: "policies", icon: <FileTextOutlined/>, label: <Link href="/policies">Policies</Link> },
+      { key: "training", module: "training", icon: <VideoCameraOutlined/>, label: <Link href="/training">Training</Link> },
+      { key: "analytics", module: "analytics", icon: <BarChartOutlined/>, label: <Link href="/analytics">Analytics</Link> },
+      { key: "scans", module: "vulnerability_scanning", icon: <RadarChartOutlined/>, label: <Link href="/scans">Vulnerabilities</Link> },
+      { key: "admin", icon: <SettingOutlined/>, label: <Link href="/admin">Admin</Link> },
+    ];
+    if (!enabledModules) return allItems;
+    return allItems.filter(item => !item.module || enabledModules.includes(item.module));
+  }, [enabledModules]);
 
   const userMenuItems = [
     {

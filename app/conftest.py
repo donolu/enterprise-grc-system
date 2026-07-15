@@ -6,7 +6,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.test import Client
 from django_tenants.test.cases import TenantTestCase
-from django_tenants.utils import tenant_context
+from django_tenants.utils import schema_context, tenant_context
 from rest_framework.test import APIClient
 from core.models import Tenant, Domain, Plan, Subscription
 
@@ -28,19 +28,20 @@ def client():
 @pytest.fixture
 def test_tenant(db):
     """Create a test tenant for testing."""
-    tenant = Tenant(
-        name="Test Company",
-        slug="test",
-        schema_name="test"
-    )
-    tenant.save()
-    
-    domain = Domain(
-        domain="test.localhost",
-        tenant=tenant,
-        is_primary=True
-    )
-    domain.save()
+    with schema_context("public"):
+        tenant = Tenant(
+            name="Test Company",
+            slug="test",
+            schema_name="test"
+        )
+        tenant.save()
+
+        domain = Domain(
+            domain="test.localhost",
+            tenant=tenant,
+            is_primary=True
+        )
+        domain.save()
     
     return tenant
 
@@ -86,47 +87,52 @@ def admin_client(api_client, admin_user):
 @pytest.fixture
 def free_plan(db):
     """Create a free subscription plan."""
-    plan = Plan.objects.create(
-        name="Free",
-        slug="free",
-        description="Free plan for testing",
-        price_monthly=0,
-        max_users=3,
-        max_documents=50,
-        max_frameworks=1,
-        has_api_access=False,
-        has_advanced_reporting=False,
-        has_priority_support=False
-    )
+    with schema_context("public"):
+        plan = Plan.objects.create(
+            name="Free",
+            slug="free",
+            description="Free plan for testing",
+            price_monthly=0,
+            max_users=3,
+            max_documents=50,
+            max_frameworks=1,
+            has_api_access=False,
+            has_advanced_reporting=False,
+            has_priority_support=False,
+            included_modules=["frameworks"],
+        )
     return plan
 
 
 @pytest.fixture
 def basic_plan(db):
     """Create a basic subscription plan."""
-    plan = Plan.objects.create(
-        name="Basic",
-        slug="basic",
-        description="Basic plan for testing",
-        price_monthly=49,
-        max_users=10,
-        max_documents=500,
-        max_frameworks=5,
-        has_api_access=True,
-        has_advanced_reporting=False,
-        has_priority_support=False
-    )
+    with schema_context("public"):
+        plan = Plan.objects.create(
+            name="Basic",
+            slug="basic",
+            description="Basic plan for testing",
+            price_monthly=49,
+            max_users=10,
+            max_documents=500,
+            max_frameworks=5,
+            has_api_access=True,
+            has_advanced_reporting=False,
+            has_priority_support=False,
+            included_modules=["frameworks", "risk", "vendors", "policies", "assets", "exports"],
+        )
     return plan
 
 
 @pytest.fixture
 def test_subscription(test_tenant, free_plan):
     """Create a test subscription."""
-    subscription = Subscription.objects.create(
-        tenant=test_tenant,
-        plan=free_plan,
-        status="active"
-    )
+    with schema_context("public"):
+        subscription = Subscription.objects.create(
+            tenant=test_tenant,
+            plan=free_plan,
+            status="active"
+        )
     return subscription
 
 

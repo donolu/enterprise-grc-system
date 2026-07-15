@@ -69,6 +69,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "billing.middleware.PlanEnforcementMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django_otp.middleware.OTPMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",

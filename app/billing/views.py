@@ -7,16 +7,20 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils.decorators import method_decorator
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
+from django_tenants.utils import schema_context
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 
 from core.models import Tenant, Plan, Subscription, BillingEvent
 from .serializers import PlanSerializer, SubscriptionSerializer
+from .entitlements import MODULE_BY_KEY
+from .tenant_access import get_public_tenant
 
 logger = logging.getLogger(__name__)
 
@@ -97,20 +101,17 @@ class BillingViewSet(viewsets.ViewSet):
     def current_subscription(self, request):
         """Get current tenant's subscription details with automatic free plan creation if needed."""
         try:
-            tenant = Tenant.objects.get(schema_name=request.tenant.schema_name)
-            subscription = getattr(tenant, 'subscription', None)
-            
-            if subscription:
-                serializer = SubscriptionSerializer(subscription)
-                return Response(serializer.data)
-            else:
-                # Create free subscription if none exists
-                free_plan = Plan.objects.get(slug='free')
-                subscription = Subscription.objects.create(
-                    tenant=tenant,
-                    plan=free_plan,
-                    status='active'
-                )
+            with schema_context("public"):
+                tenant = get_public_tenant(request.tenant.schema_name)
+                subscription = getattr(tenant, 'subscription', None)
+
+                if not subscription:
+                    free_plan = Plan.objects.get(slug='free')
+                    subscription = Subscription.objects.create(
+                        tenant=tenant,
+                        plan=free_plan,
+                        status='active',
+                    )
                 serializer = SubscriptionSerializer(subscription)
                 return Response(serializer.data)
                 
@@ -274,6 +275,68 @@ class BillingViewSet(viewsets.ViewSet):
                 {'error': 'Failed to create billing portal'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @extend_schema(
+        summary="Start one-module trial",
+        description="Create a one-month trial subscription restricted to a single selected module.",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'module': {'type': 'string', 'description': 'Module key selected for the trial'}
+                },
+                'required': ['module']
+            }
+        },
+        responses={
+            201: SubscriptionSerializer,
+            400: OpenApiResponse(description='Invalid module or tenant already has a non-trial subscription'),
+        },
+        tags=['Billing'],
+    )
+    @action(detail=False, methods=['post'])
+    def start_trial(self, request):
+        """Start a one-month trial restricted to the selected module."""
+        module_key = request.data.get('module')
+        if module_key not in MODULE_BY_KEY:
+            return Response(
+                {
+                    'error': 'Select a valid module for the trial.',
+                    'code': 'invalid_trial_module',
+                    'valid_modules': list(MODULE_BY_KEY.keys()),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with schema_context("public"):
+            tenant = get_public_tenant(request.tenant.schema_name)
+            existing_subscription = getattr(tenant, 'subscription', None)
+            if existing_subscription and existing_subscription.status != 'trialing':
+                return Response(
+                    {
+                        'error': 'This tenant already has a subscription.',
+                        'code': 'subscription_exists',
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            free_plan = Plan.objects.get(slug='free')
+            now = timezone.now()
+            subscription, _ = Subscription.objects.update_or_create(
+                tenant=tenant,
+                defaults={
+                    'plan': free_plan,
+                    'status': 'trialing',
+                    'trial_start': now,
+                    'trial_end': now + timedelta(days=30),
+                    'trial_module': module_key,
+                    'enabled_modules': [module_key],
+                },
+            )
+            tenant.current_plan = free_plan.slug
+            tenant.save(update_fields=['current_plan'])
+            serializer = SubscriptionSerializer(subscription)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
