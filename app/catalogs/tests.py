@@ -9,7 +9,8 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django_tenants.test.cases import TenantTestCase
 from django_tenants.test.client import TenantClient
-from core.models import Tenant
+from openpyxl import Workbook
+from core.models import AuditEvent, Tenant
 from .models import Framework, Clause, Control, ControlEvidence, FrameworkMapping, ControlAssessment, AssessmentEvidence
 from .management.commands.import_framework import Command as ImportCommand
 import tempfile
@@ -493,6 +494,22 @@ class ImportFrameworkCommandTest(TransactionTestCase):
         json.dump(data, temp_file, indent=2)
         temp_file.close()
         return temp_file.name
+
+    def create_temp_xlsx_file(self, rows):
+        """Create a temporary XLSX file with framework rows."""
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = 'Framework'
+        for row in rows:
+            worksheet.append(row)
+
+        temp_file = tempfile.NamedTemporaryFile(
+            suffix='.xlsx',
+            delete=False
+        )
+        temp_file.close()
+        workbook.save(temp_file.name)
+        return temp_file.name
     
     def test_import_json_framework(self):
         """Test importing framework from JSON file."""
@@ -549,6 +566,88 @@ class ImportFrameworkCommandTest(TransactionTestCase):
             
             os.unlink(updated_file)
             
+        finally:
+            os.unlink(temp_file)
+
+    def test_import_xlsx_framework_creates_clauses_and_controls(self):
+        """Test importing a spreadsheet framework with generated controls."""
+        temp_file = self.create_temp_xlsx_file([
+            ['Source', 'Test spreadsheet'],
+            ['Requirement ID', 'Requirement', 'Testing Procedures', 'Guidance'],
+            ['1', 'Governance requirements are defined.', '', ''],
+            ['1.1', 'Access reviews are performed.', 'Inspect access review evidence.', 'Review access quarterly.'],
+            ['1.10', 'Privileged access is reviewed.', 'Inspect privileged access reports.', 'Use PAM reports.'],
+        ])
+
+        try:
+            call_command(
+                'import_framework',
+                temp_file,
+                '--name', 'Spreadsheet Security Framework',
+                '--short-name', 'SSF',
+                '--framework-version', '2024',
+                '--issuing-organization', 'Spreadsheet Standards Body',
+                '--effective-date', '2024-01-01',
+                user=self.user.username,
+            )
+
+            framework = Framework.objects.get(name='Spreadsheet Security Framework')
+            self.assertEqual(framework.short_name, 'SSF')
+            self.assertEqual(framework.clauses.count(), 3)
+
+            parent_clause = framework.clauses.get(clause_id='1')
+            access_clause = framework.clauses.get(clause_id='1.1')
+            privileged_clause = framework.clauses.get(clause_id='1.10')
+            self.assertEqual(access_clause.parent_clause, parent_clause)
+            self.assertEqual(privileged_clause.parent_clause, parent_clause)
+
+            access_control = Control.objects.get(control_id='SSF-1-1')
+            self.assertEqual(access_control.name, 'Access reviews are performed.')
+            self.assertEqual(access_control.control_type, 'administrative')
+            self.assertEqual(access_control.evidence_requirements, 'Inspect access review evidence.')
+            self.assertIn(access_clause, access_control.clauses.all())
+
+            privileged_control = Control.objects.get(control_id='SSF-1-10')
+            self.assertIn(privileged_clause, privileged_control.clauses.all())
+            self.assertFalse(Control.objects.filter(control_id='SSF-1').exists())
+
+            audit_event = AuditEvent.objects.get(event='FRAMEWORK_IMPORTED')
+            self.assertEqual(audit_event.user, self.user)
+            self.assertEqual(audit_event.details['framework_name'], framework.name)
+            self.assertEqual(audit_event.details['framework_version'], '2024')
+            self.assertEqual(audit_event.details['clause_count'], 3)
+            self.assertEqual(audit_event.details['control_count'], 2)
+            self.assertFalse(audit_event.details['updated_existing'])
+        finally:
+            os.unlink(temp_file)
+
+    def test_import_xlsx_framework_update_is_idempotent(self):
+        """Test spreadsheet update replaces clauses without duplicating controls."""
+        temp_file = self.create_temp_xlsx_file([
+            ['Requirement ID', 'Requirement', 'Testing Procedures'],
+            ['1', 'Governance requirements are defined.', 'Inspect governance evidence.'],
+        ])
+
+        try:
+            command_args = [
+                'import_framework',
+                temp_file,
+                '--name', 'Spreadsheet Update Framework',
+                '--short-name', 'SUF',
+                '--framework-version', '2024',
+                '--issuing-organization', 'Spreadsheet Standards Body',
+                '--effective-date', '2024-01-01',
+                '--update',
+            ]
+
+            call_command(*command_args, user=self.user.username)
+            call_command(*command_args, user=self.user.username)
+
+            framework = Framework.objects.get(name='Spreadsheet Update Framework')
+            self.assertEqual(framework.clauses.count(), 1)
+            self.assertEqual(Control.objects.filter(control_id='SUF-1').count(), 1)
+            control = Control.objects.get(control_id='SUF-1')
+            self.assertEqual(control.clauses.filter(framework=framework).count(), 1)
         finally:
             os.unlink(temp_file)
 
