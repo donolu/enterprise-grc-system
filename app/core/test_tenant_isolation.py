@@ -4,6 +4,7 @@ import pytest
 from datetime import timedelta
 from uuid import uuid4
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import Resolver404, resolve
 from django.utils import timezone
@@ -19,7 +20,7 @@ from core.models import AuditEvent, Domain, Tenant
 from core.storage import TenantAwareBlobStorage
 from exports.models import AssessmentReport, TenantDataExport
 from knowledge.models import KnowledgeArticle, KnowledgeCategory
-from policies.models import Policy, PolicyCategory
+from policies.models import Policy, PolicyAcknowledgment, PolicyCategory, PolicyDistribution, PolicyVersion
 from risk.models import Risk, RiskAction, RiskActionReminderConfiguration, RiskCategory, RiskMatrix
 from training.models import TrainingCategory, TrainingVideo
 from vendors.models import (
@@ -219,6 +220,144 @@ class TestTenantIsolation:
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
         assert self._response_titles(list_response.json()) == ["Tenant A policy"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_policy_category_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_policy_category(tenant_a, "Tenant A policy category")
+        with tenant_context(tenant_b):
+            self._create_policy_category(tenant_b, "Tenant B first policy category")
+            tenant_b_private_category = self._create_policy_category(
+                tenant_b,
+                "Tenant B private policy category",
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/policies/categories/")
+        detail_response = client.get(
+            f"/api/policies/categories/{tenant_b_private_category.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_names(list_response.json()) == [
+            "Tenant A policy category"
+        ]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_policy_version_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        policy_a = self._create_policy(tenant_a, "POL-A-001", "Tenant A policy", user_a)
+        self._create_policy_version(tenant_a, policy_a, "1.0", user_a)
+        with tenant_context(tenant_b):
+            policy_b = self._create_policy(
+                tenant_b,
+                "POL-B-001",
+                "Tenant B policy",
+                user_b,
+            )
+            self._create_policy_version(tenant_b, policy_b, "1.0", user_b)
+            tenant_b_private_version = self._create_policy_version(
+                tenant_b,
+                policy_b,
+                "2.0",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/policies/versions/")
+        detail_response = client.get(
+            f"/api/policies/versions/{tenant_b_private_version.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_field(list_response.json(), "version_number") == ["1.0"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_policy_acknowledgment_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        policy_a = self._create_policy(tenant_a, "POL-A-001", "Tenant A policy", user_a)
+        version_a = self._create_policy_version(tenant_a, policy_a, "1.0", user_a)
+        self._create_policy_acknowledgment(tenant_a, version_a, user_a)
+        with tenant_context(tenant_b):
+            policy_b = self._create_policy(
+                tenant_b,
+                "POL-B-001",
+                "Tenant B policy",
+                user_b,
+            )
+            version_b = self._create_policy_version(tenant_b, policy_b, "1.0", user_b)
+            tenant_b_private_acknowledgment = self._create_policy_acknowledgment(
+                tenant_b,
+                version_b,
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/policies/acknowledgments/")
+        detail_response = client.get(
+            f"/api/policies/acknowledgments/{tenant_b_private_acknowledgment.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_field(list_response.json(), "policy_title") == [
+            "Tenant A policy"
+        ]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_policy_distribution_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        policy_a = self._create_policy(tenant_a, "POL-A-001", "Tenant A policy", user_a)
+        version_a = self._create_policy_version(tenant_a, policy_a, "1.0", user_a)
+        self._create_policy_distribution(tenant_a, version_a, user_a, user_a)
+        with tenant_context(tenant_b):
+            policy_b = self._create_policy(
+                tenant_b,
+                "POL-B-001",
+                "Tenant B policy",
+                user_b,
+            )
+            version_b = self._create_policy_version(tenant_b, policy_b, "1.0", user_b)
+            tenant_b_private_distribution = self._create_policy_distribution(
+                tenant_b,
+                version_b,
+                user_b,
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/policies/distributions/")
+        detail_response = client.get(
+            f"/api/policies/distributions/{tenant_b_private_distribution.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_field(list_response.json(), "policy_title") == [
+            "Tenant A policy"
+        ]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_export_report_list_and_detail_are_scoped_to_request_tenant(self):
@@ -820,16 +959,50 @@ class TestTenantIsolation:
 
     def _create_policy(self, tenant, policy_code, title, user):
         with tenant_context(tenant):
-            category = PolicyCategory.objects.create(
-                name=f"{title} category",
-                description=f"{title} category description",
-            )
+            category = self._create_policy_category(tenant, f"{title} category")
             return Policy.objects.create(
                 policy_code=policy_code,
                 title=title,
                 category=category,
                 owner=user,
                 created_by=user,
+            )
+
+    def _create_policy_category(self, tenant, name):
+        with tenant_context(tenant):
+            return PolicyCategory.objects.create(
+                name=name,
+                description=f"{name} description",
+            )
+
+    def _create_policy_version(self, tenant, policy, version_number, user):
+        document = SimpleUploadedFile(
+            f"{policy.policy_code}-{version_number}.pdf",
+            b"%PDF-1.4\n% tenant isolation fixture\n",
+            content_type="application/pdf",
+        )
+        with tenant_context(tenant):
+            return PolicyVersion.objects.create(
+                policy=policy,
+                version_number=version_number,
+                document=document,
+                summary=f"{policy.title} version {version_number}",
+                created_by=user,
+            )
+
+    def _create_policy_acknowledgment(self, tenant, version, user):
+        with tenant_context(tenant):
+            return PolicyAcknowledgment.objects.create(
+                policy_version=version,
+                user=user,
+            )
+
+    def _create_policy_distribution(self, tenant, version, user, distributed_by):
+        with tenant_context(tenant):
+            return PolicyDistribution.objects.create(
+                policy_version=version,
+                distributed_to=user,
+                distributed_by=distributed_by,
             )
 
     def _create_assessment_report(self, tenant, title, user):
