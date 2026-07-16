@@ -16,6 +16,7 @@ from rest_framework.test import APIClient, APITestCase
 from .models import AuditEvent, Tenant, Domain, Plan, Subscription, Document, LimitOverrideRequest
 from billing.entitlements import ALL_MODULE_KEYS
 from billing.services import PlanEnforcementService
+from billing.views import StripeWebhookView
 
 User = get_user_model()
 
@@ -470,6 +471,129 @@ class TestBillingAPI:
         assert response.data["status"] == "trialing"
         assert response.data["trial_module"] == "vendors"
         assert response.data["enabled_module_keys"] == ["vendors"]
+        with tenant_context(test_tenant):
+            audit_event = AuditEvent.objects.get(event="SUBSCRIPTION_TRIAL_STARTED")
+        assert audit_event.details["actor"]["email"] == "trial-starter@example.com"
+        assert audit_event.details["new"]["enabled_modules"] == ["vendors"]
+        assert audit_event.details["new"]["trial_module"] == "vendors"
+        assert audit_event.details["module_grant"] == "vendors"
+        assert "stripe_customer_id" not in str(audit_event.details)
+        assert "stripe_subscription_id" not in str(audit_event.details)
+
+    def test_limit_override_application_is_audited(self, api_client, test_tenant, free_plan):
+        """Test applying an approved limit override audits the decision and subscription limit."""
+        with schema_context("public"):
+            subscription = Subscription.objects.create(
+                tenant=test_tenant,
+                plan=free_plan,
+                status="active",
+            )
+            override_request = LimitOverrideRequest.objects.create(
+                subscription=subscription,
+                limit_type="max_users",
+                current_limit=3,
+                requested_limit=12,
+                business_justification="Client onboarding requires more named users",
+                requested_by="requester@example.com",
+                status="approved",
+                first_approver="approver-one@example.com",
+                first_approved_at=timezone.now(),
+                second_approver="approver-two@example.com",
+                second_approved_at=timezone.now(),
+                final_decision_by="approver-two@example.com",
+                final_decision_at=timezone.now(),
+            )
+        with tenant_context(test_tenant):
+            admin_user = User.objects.create_superuser(
+                username="billing-admin",
+                email="billing-admin@example.com",
+                password="testpass123",
+            )
+        api_client.defaults['HTTP_HOST'] = f"{test_tenant.schema_name}.localhost"
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.post(f'/api/limit-overrides/{override_request.id}/apply_override/')
+
+        assert response.status_code == status.HTTP_200_OK
+        with schema_context("public"):
+            subscription.refresh_from_db()
+            override_request.refresh_from_db()
+            assert subscription.custom_max_users == 12
+            assert override_request.status == "applied"
+        with tenant_context(test_tenant):
+            limit_event = AuditEvent.objects.get(event="LIMIT_OVERRIDE_APPLIED")
+            subscription_event = AuditEvent.objects.get(event="SUBSCRIPTION_LIMITS_UPDATED")
+        assert limit_event.details["actor"]["email"] == "billing-admin@example.com"
+        assert limit_event.details["new"]["status"] == "applied"
+        assert subscription_event.details["new"]["custom_max_users"] == 12
+        assert subscription_event.details["override_request_id"] == override_request.id
+
+    def test_limit_override_request_is_audited(self, api_client, test_tenant, free_plan):
+        """Test requesting a limit override creates a tenant-visible audit event."""
+        with schema_context("public"):
+            Subscription.objects.create(
+                tenant=test_tenant,
+                plan=free_plan,
+                status="active",
+            )
+        with tenant_context(test_tenant):
+            user = User.objects.create_user(
+                username="limit-requester",
+                email="limit-requester@example.com",
+                password="testpass123",
+            )
+        api_client.defaults['HTTP_HOST'] = f"{test_tenant.schema_name}.localhost"
+        api_client.force_authenticate(user=user)
+
+        response = api_client.post(
+            '/api/limit-overrides/',
+            {
+                'limit_type': 'max_documents',
+                'requested_limit': 250,
+                'business_justification': 'Upcoming audit requires substantially more evidence files.',
+                'urgency': 'medium',
+            },
+            format='json',
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        with tenant_context(test_tenant):
+            audit_event = AuditEvent.objects.get(event="LIMIT_OVERRIDE_REQUESTED")
+        assert audit_event.details["actor"]["email"] == "limit-requester@example.com"
+        assert audit_event.details["new"]["limit_type"] == "max_documents"
+        assert audit_event.details["new"]["current_limit"] == 50
+        assert audit_event.details["new"]["requested_limit"] == 250
+
+    def test_webhook_subscription_status_change_is_audited(self, test_tenant, free_plan):
+        """Test Stripe webhook-driven status changes audit source event ID without raw payload."""
+        with schema_context("public"):
+            subscription = Subscription.objects.create(
+                tenant=test_tenant,
+                plan=free_plan,
+                status="active",
+                stripe_subscription_id="sub_test_123",
+                stripe_customer_id="cus_test_123",
+            )
+
+            StripeWebhookView()._handle_payment_failed(
+                {"subscription": "sub_test_123", "hosted_invoice_url": "https://stripe.example/invoice"},
+                "evt_test_payment_failed",
+            )
+            subscription.refresh_from_db()
+            assert subscription.status == "past_due"
+
+        with tenant_context(test_tenant):
+            audit_event = AuditEvent.objects.get(event="SUBSCRIPTION_STATUS_CHANGED")
+        assert audit_event.details["actor"]["type"] == "system"
+        assert audit_event.details["previous"]["status"] == "active"
+        assert audit_event.details["new"]["status"] == "past_due"
+        assert audit_event.details["source"] == {
+            "type": "stripe_webhook",
+            "reference": "evt_test_payment_failed",
+        }
+        assert "hosted_invoice_url" not in str(audit_event.details)
+        assert "sub_test_123" not in str(audit_event.details)
+        assert "cus_test_123" not in str(audit_event.details)
 
 
 # Integration tests

@@ -368,26 +368,6 @@ class LimitOverrideRequest(models.Model):
         self.applied_by = applied_by_name
         self.save()
         
-        from core.audit import log_audit_event
-
-        # Create audit log
-        log_audit_event(
-            event="LIMIT_OVERRIDE_APPLIED",
-            target=self,
-            object_display=f'{self.limit_type} override',
-            previous={'limit': self.current_limit},
-            new={'limit': self.requested_limit},
-            reason='approved limit override applied',
-            source={'type': 'system', 'reference': 'LimitOverrideRequest.apply_override'},
-            details={
-                'limit_type': self.limit_type,
-                'previous_limit': self.current_limit,
-                'new_limit': self.requested_limit,
-                'override_request_id': self.id,
-                'applied_by': applied_by_name
-            }
-        )
-        
         return True
 
 class AuditEvent(models.Model):
