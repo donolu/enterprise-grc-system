@@ -4,6 +4,8 @@ import pytest
 from datetime import timedelta
 from uuid import uuid4
 from django.contrib.auth import get_user_model
+from django.test import override_settings
+from django.urls import Resolver404, resolve
 from django.utils import timezone
 from django_tenants.utils import schema_context, tenant_context
 from rest_framework import status
@@ -364,6 +366,34 @@ class TestTenantIsolation:
         assert container_a == f"tenant-{tenant_a.slug}"
         assert container_b == f"tenant-{tenant_b.slug}"
         assert container_a != container_b
+
+    def test_public_urlconf_does_not_mount_tenant_api_routes(self):
+        with override_settings(ROOT_URLCONF="app.public_urls"):
+            with pytest.raises(Resolver404):
+                resolve("/api/risk/risks/")
+
+            with pytest.raises(Resolver404):
+                resolve("/api/vendors/vendors/")
+
+    def test_session_cookie_from_one_tenant_does_not_authenticate_another_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        self._create_user(tenant_a, "alice", "alice@example.com")
+        self._create_user(tenant_b, "bob", "bob@example.com")
+
+        client = APIClient()
+        client.defaults["HTTP_HOST"] = f"{tenant_b.slug}.localhost"
+        with tenant_context(tenant_b):
+            assert client.login(username="bob", password="testpass123")
+
+        client.defaults["HTTP_HOST"] = f"{tenant_a.slug}.localhost"
+        response = client.get("/api/auth/me/")
+
+        assert response.status_code in (
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_403_FORBIDDEN,
+        )
 
     def _create_tenant(self, schema_name, slug, name):
         suffix = uuid4().hex[:8]
