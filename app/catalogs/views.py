@@ -1,5 +1,7 @@
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
@@ -14,6 +16,22 @@ from drf_spectacular.types import OpenApiTypes
 from django.db import transaction
 from django.core.management.base import CommandError
 from catalogs.management.commands.import_template_library import Command as TemplateLibraryImportCommand
+from .audit import (
+    ASSESSMENT_EVIDENCE_FIELDS,
+    ASSESSMENT_FIELDS,
+    CLAUSE_FIELDS,
+    CONTROL_FIELDS,
+    FRAMEWORK_FIELDS,
+    assessment_display,
+    assessment_evidence_display,
+    audit_catalogue_change,
+    changed_values,
+    clause_display,
+    control_display,
+    framework_display,
+    snapshot_control,
+    snapshot_model,
+)
 from .models import (
     Framework, Clause, Control, ControlEvidence, FrameworkMapping,
     ControlAssessment, AssessmentEvidence, TemplateDocument
@@ -30,6 +48,71 @@ from .serializers import (
     AssessmentProgressSerializer, TemplateDocumentSerializer,
     TemplateDocumentSummarySerializer
 )
+
+
+class CatalogueAuditMixin:
+    request: Any
+    audit_fields: tuple[str, ...] = ()
+    audit_event_prefix: str = ''
+    audit_display: Callable[[Any], str] = staticmethod(lambda instance: '')
+    audit_snapshot: Callable[[Any], dict[str, Any]] | None = None
+    audit_created_by_field: str = ''
+
+    def _audit_snapshot(self, instance):
+        if self.audit_snapshot:
+            return self.audit_snapshot(instance)
+        return snapshot_model(instance, self.audit_fields)
+
+    def _audit_display(self, instance):
+        return self.audit_display(instance)
+
+    def _audit_event(self, action):
+        return f'{self.audit_event_prefix}_{action}'
+
+    def _audit_save_kwargs(self):
+        if self.audit_created_by_field:
+            return {self.audit_created_by_field: self.request.user}
+        return {}
+
+    def perform_create(self, serializer):
+        instance = serializer.save(**self._audit_save_kwargs())
+        audit_catalogue_change(
+            event=self._audit_event('CREATED'),
+            actor=self.request.user,
+            target=instance,
+            object_display=self._audit_display(instance),
+            request=self.request,
+            new=self._audit_snapshot(instance),
+        )
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        previous = self._audit_snapshot(instance)
+        updated = serializer.save()
+        new = self._audit_snapshot(updated)
+        previous_changed, new_changed = changed_values(previous, new)
+        if previous_changed or new_changed:
+            audit_catalogue_change(
+                event=self._audit_event('UPDATED'),
+                actor=self.request.user,
+                target=updated,
+                object_display=self._audit_display(updated),
+                request=self.request,
+                previous=previous_changed,
+                new=new_changed,
+            )
+
+    def perform_destroy(self, instance):
+        previous = self._audit_snapshot(instance)
+        audit_catalogue_change(
+            event=self._audit_event('DELETED'),
+            actor=self.request.user,
+            target=instance,
+            object_display=self._audit_display(instance),
+            request=self.request,
+            previous=previous,
+        )
+        instance.delete()
 
 
 @extend_schema_view(
@@ -110,7 +193,7 @@ from .serializers import (
         tags=['Frameworks'],
     ),
 )
-class FrameworkViewSet(viewsets.ModelViewSet):
+class FrameworkViewSet(CatalogueAuditMixin, viewsets.ModelViewSet):
     """
     **Compliance Framework Management**
     
@@ -134,6 +217,10 @@ class FrameworkViewSet(viewsets.ModelViewSet):
     """
     queryset = Framework.objects.all()
     permission_classes = [IsAuthenticated]
+    audit_fields = FRAMEWORK_FIELDS
+    audit_event_prefix = 'CATALOGUE_FRAMEWORK'
+    audit_display = staticmethod(framework_display)
+    audit_created_by_field = 'created_by'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['framework_type', 'status', 'is_mandatory']
     search_fields = ['name', 'short_name', 'description', 'issuing_organization']
@@ -284,13 +371,16 @@ class FrameworkViewSet(viewsets.ModelViewSet):
         return Response(stats)
 
 
-class ClauseViewSet(viewsets.ModelViewSet):
+class ClauseViewSet(CatalogueAuditMixin, viewsets.ModelViewSet):
     """
     ViewSet for managing framework clauses.
     Provides CRUD operations and clause-specific endpoints.
     """
     queryset = Clause.objects.all()
     permission_classes = [IsAuthenticated]
+    audit_fields = CLAUSE_FIELDS
+    audit_event_prefix = 'CATALOGUE_CLAUSE'
+    audit_display = staticmethod(clause_display)
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['framework', 'clause_type', 'criticality', 'is_testable', 'parent_clause']
     search_fields = ['clause_id', 'title', 'description']
@@ -342,13 +432,17 @@ class ClauseViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class ControlViewSet(viewsets.ModelViewSet):
+class ControlViewSet(CatalogueAuditMixin, viewsets.ModelViewSet):
     """
     ViewSet for managing controls.
     Provides CRUD operations and control-specific endpoints.
     """
     queryset = Control.objects.all()
     permission_classes = [IsAuthenticated]
+    audit_fields = CONTROL_FIELDS
+    audit_event_prefix = 'CATALOGUE_CONTROL'
+    audit_display = staticmethod(control_display)
+    audit_snapshot = staticmethod(snapshot_control)
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
         'control_type', 'automation_level', 'status', 'control_owner',
@@ -394,6 +488,7 @@ class ControlViewSet(viewsets.ModelViewSet):
     def update_testing(self, request, pk=None):
         """Update control testing results."""
         control = self.get_object()
+        previous = snapshot_control(control)
         serializer = ControlTestingSerializer(
             data=request.data, 
             context={'request': request}
@@ -401,6 +496,18 @@ class ControlViewSet(viewsets.ModelViewSet):
         
         if serializer.is_valid():
             updated_control = serializer.update_control_testing(control)
+            new = snapshot_control(updated_control)
+            previous_changed, new_changed = changed_values(previous, new)
+            audit_catalogue_change(
+                event='CATALOGUE_CONTROL_TESTING_UPDATED',
+                actor=request.user,
+                target=updated_control,
+                object_display=control_display(updated_control),
+                request=request,
+                previous=previous_changed,
+                new=new_changed,
+                reason=serializer.validated_data.get('notes', ''),
+            )
             response_serializer = ControlDetailSerializer(updated_control)
             return Response(response_serializer.data)
         
@@ -471,7 +578,7 @@ class ControlEvidenceViewSet(viewsets.ModelViewSet):
 
     def get_throttles(self):
         self.throttle_scope = self.throttle_scope_by_action.get(
-            getattr(self, "action", None)
+            getattr(self, "action", "") or ""
         )
         return super().get_throttles()
     
@@ -802,7 +909,7 @@ def framework_stats(request):
         tags=['Assessments'],
     ),
 )
-class ControlAssessmentViewSet(viewsets.ModelViewSet):
+class ControlAssessmentViewSet(CatalogueAuditMixin, viewsets.ModelViewSet):
     """
     **Control Assessment Management**
     
@@ -835,6 +942,9 @@ class ControlAssessmentViewSet(viewsets.ModelViewSet):
     """
     queryset = ControlAssessment.objects.all()
     permission_classes = [IsAuthenticated]
+    audit_fields = ASSESSMENT_FIELDS
+    audit_event_prefix = 'CONTROL_ASSESSMENT'
+    audit_display = staticmethod(assessment_display)
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
         'applicability', 'status', 'implementation_status', 'assigned_to',
@@ -850,7 +960,7 @@ class ControlAssessmentViewSet(viewsets.ModelViewSet):
 
     def get_throttles(self):
         self.throttle_scope = self.throttle_scope_by_action.get(
-            getattr(self, "action", None)
+            getattr(self, "action", "") or ""
         )
         return super().get_throttles()
     
@@ -863,13 +973,17 @@ class ControlAssessmentViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = ControlAssessment.objects.select_related(
-            'control', 'assigned_to', 'reviewer', 'remediation_owner', 'created_by'
+            'framework', 'control', 'assigned_to', 'reviewer', 'remediation_owner',
+            'created_by'
         ).prefetch_related('control__clauses__framework', 'evidence_links__evidence')
         
         # Filter by framework if specified
         framework_id = self.request.query_params.get('framework')
         if framework_id:
-            queryset = queryset.filter(control__clauses__framework_id=framework_id).distinct()
+            queryset = queryset.filter(
+                Q(framework_id=framework_id)
+                | Q(framework__isnull=True, control__clauses__framework_id=framework_id)
+            ).distinct()
         
         # Filter by overdue status
         overdue = self.request.query_params.get('overdue')
@@ -898,6 +1012,7 @@ class ControlAssessmentViewSet(viewsets.ModelViewSet):
     def update_status(self, request, pk=None):
         """Update assessment status with notes."""
         assessment = self.get_object()
+        previous = snapshot_model(assessment, ASSESSMENT_FIELDS)
         serializer = AssessmentStatusUpdateSerializer(
             data=request.data,
             context={'request': request}
@@ -905,6 +1020,25 @@ class ControlAssessmentViewSet(viewsets.ModelViewSet):
         
         if serializer.is_valid():
             updated_assessment = serializer.update_assessment_status(assessment)
+            new = snapshot_model(updated_assessment, ASSESSMENT_FIELDS)
+            previous_changed, new_changed = changed_values(previous, new)
+            audit_catalogue_change(
+                event='CONTROL_ASSESSMENT_STATUS_UPDATED',
+                actor=request.user,
+                target=updated_assessment,
+                object_display=assessment_display(updated_assessment),
+                request=request,
+                previous=previous_changed,
+                new=new_changed,
+                reason=serializer.validated_data.get('notes', ''),
+                details={
+                    'framework_id': updated_assessment.framework_id,
+                    'framework_version': (
+                        updated_assessment.framework.version
+                        if updated_assessment.framework_id else ''
+                    ),
+                },
+            )
             response_serializer = ControlAssessmentDetailSerializer(updated_assessment)
             return Response(response_serializer.data)
         
@@ -923,7 +1057,15 @@ class ControlAssessmentViewSet(viewsets.ModelViewSet):
         )
         
         if serializer.is_valid():
-            serializer.save()
+            link = serializer.save()
+            audit_catalogue_change(
+                event='ASSESSMENT_EVIDENCE_LINKED',
+                actor=request.user,
+                target=link,
+                object_display=assessment_evidence_display(link),
+                request=request,
+                new=snapshot_model(link, ASSESSMENT_EVIDENCE_FIELDS),
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -1041,7 +1183,16 @@ class ControlAssessmentViewSet(viewsets.ModelViewSet):
         )
         
         if link_serializer.is_valid():
-            link_serializer.save()
+            link = link_serializer.save()
+            audit_catalogue_change(
+                event='ASSESSMENT_EVIDENCE_LINKED',
+                actor=request.user,
+                target=link,
+                object_display=assessment_evidence_display(link),
+                request=request,
+                new=snapshot_model(link, ASSESSMENT_EVIDENCE_FIELDS),
+                source={'type': 'upload', 'reference': uploaded_file.name},
+            )
             
             # Return complete evidence information
             return Response({
@@ -1100,6 +1251,15 @@ class ControlAssessmentViewSet(viewsets.ModelViewSet):
                 assessment=assessment,
                 evidence_id=evidence_id
             )
+            previous = snapshot_model(evidence_link, ASSESSMENT_EVIDENCE_FIELDS)
+            audit_catalogue_change(
+                event='ASSESSMENT_EVIDENCE_UNLINKED',
+                actor=request.user,
+                target=evidence_link,
+                object_display=assessment_evidence_display(evidence_link),
+                request=request,
+                previous=previous,
+            )
             evidence_link.delete()
             
             return Response({
@@ -1155,6 +1315,15 @@ class ControlAssessmentViewSet(viewsets.ModelViewSet):
                     evidence_purpose=request.data.get(f'evidence_purpose_{i}', 'Assessment evidence'),
                     is_primary_evidence=False,
                     created_by=request.user
+                )
+                audit_catalogue_change(
+                    event='ASSESSMENT_EVIDENCE_LINKED',
+                    actor=request.user,
+                    target=assessment_evidence,
+                    object_display=assessment_evidence_display(assessment_evidence),
+                    request=request,
+                    new=snapshot_model(assessment_evidence, ASSESSMENT_EVIDENCE_FIELDS),
+                    source={'type': 'upload', 'reference': uploaded_file.name},
                 )
                 
                 results.append({
@@ -1223,6 +1392,23 @@ class ControlAssessmentViewSet(viewsets.ModelViewSet):
         
         if serializer.is_valid():
             created_assessments = serializer.create_bulk_assessments()
+            framework = Framework.objects.get(id=serializer.validated_data['framework_id'])
+            if created_assessments:
+                audit_catalogue_change(
+                    event='CONTROL_ASSESSMENTS_BULK_CREATED',
+                    actor=request.user,
+                    target=framework,
+                    object_display=framework_display(framework),
+                    request=request,
+                    new={
+                        'framework_id': str(framework.id),
+                        'framework_version': framework.version,
+                        'created_count': len(created_assessments),
+                        'assessment_ids': [
+                            str(assessment.id) for assessment in created_assessments
+                        ],
+                    },
+                )
             response_serializer = ControlAssessmentListSerializer(created_assessments, many=True)
             return Response({
                 'message': f'Created {len(created_assessments)} assessments',
@@ -1302,7 +1488,10 @@ class ControlAssessmentViewSet(viewsets.ModelViewSet):
         framework_id = request.query_params.get('framework')
         
         if framework_id:
-            queryset = queryset.filter(control__clauses__framework_id=framework_id).distinct()
+            queryset = queryset.filter(
+                Q(framework_id=framework_id)
+                | Q(framework__isnull=True, control__clauses__framework_id=framework_id)
+            ).distinct()
         
         # Calculate statistics
         total_assessments = queryset.count()
@@ -1389,13 +1578,16 @@ class ControlAssessmentViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class AssessmentEvidenceViewSet(viewsets.ModelViewSet):
+class AssessmentEvidenceViewSet(CatalogueAuditMixin, viewsets.ModelViewSet):
     """
     ViewSet for managing assessment evidence links.
     """
     queryset = AssessmentEvidence.objects.all()
     serializer_class = AssessmentEvidenceSerializer
     permission_classes = [IsAuthenticated]
+    audit_fields = ASSESSMENT_EVIDENCE_FIELDS
+    audit_event_prefix = 'ASSESSMENT_EVIDENCE'
+    audit_display = staticmethod(assessment_evidence_display)
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['assessment', 'evidence', 'is_primary_evidence']
     search_fields = ['evidence_purpose', 'evidence__title']
@@ -1408,4 +1600,24 @@ class AssessmentEvidenceViewSet(viewsets.ModelViewSet):
         )
     
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        link = serializer.save(created_by=self.request.user)
+        audit_catalogue_change(
+            event='ASSESSMENT_EVIDENCE_LINKED',
+            actor=self.request.user,
+            target=link,
+            object_display=assessment_evidence_display(link),
+            request=self.request,
+            new=snapshot_model(link, ASSESSMENT_EVIDENCE_FIELDS),
+        )
+
+    def perform_destroy(self, instance):
+        previous = snapshot_model(instance, ASSESSMENT_EVIDENCE_FIELDS)
+        audit_catalogue_change(
+            event='ASSESSMENT_EVIDENCE_UNLINKED',
+            actor=self.request.user,
+            target=instance,
+            object_display=assessment_evidence_display(instance),
+            request=self.request,
+            previous=previous,
+        )
+        instance.delete()
