@@ -192,6 +192,9 @@ jobs:
         echo "Django system check..."
         python manage.py check
 
+        echo "Checking OpenAPI schema freshness..."
+        bash ../.github/scripts/check-openapi-schema.sh
+
     - name: Run tests
       working-directory: ./app
       env:
