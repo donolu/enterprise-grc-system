@@ -191,7 +191,7 @@ class Policy(models.Model):
 
         # Set next review date if not provided
         if not self.next_review_date and self.review_frequency_months:
-            from dateutil.relativedelta import relativedelta
+            from dateutil.relativedelta import relativedelta  # type: ignore[import-untyped]
             self.next_review_date = timezone.now().date() + relativedelta(months=self.review_frequency_months)
 
         super().save(*args, **kwargs)
@@ -358,9 +358,13 @@ class PolicyVersionAuditLog(models.Model):
     ACTION_CHOICES = [
         ('uploaded', 'Uploaded'),
         ('edited', 'Edited'),
+        ('published', 'Published'),
+        ('activated', 'Activated'),
         ('approved', 'Approved'),
         ('finalized', 'Finalized'),
         ('conversion_failed', 'Conversion Failed'),
+        ('distributed', 'Distributed'),
+        ('acknowledged', 'Acknowledged'),
         ('downloaded_pdf', 'Downloaded PDF'),
         ('downloaded_source', 'Downloaded Source'),
     ]
