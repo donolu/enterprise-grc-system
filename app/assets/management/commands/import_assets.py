@@ -14,7 +14,7 @@ from django.utils.dateparse import parse_date, parse_datetime
 from openpyxl import load_workbook
 
 from assets.models import Asset
-from core.models import AuditEvent
+from core.audit import log_audit_event
 
 User = get_user_model()
 
@@ -242,9 +242,11 @@ class Command(BaseCommand):
         return imported, updated
 
     def record_import_audit_event(self, file_path, entries, user, imported, updated):
-        AuditEvent.objects.create(
-            user=user,
+        log_audit_event(
+            actor=user,
             event='ASSET_REGISTER_IMPORTED',
+            object_type='assets.Asset',
+            source={'type': 'import', 'reference': str(file_path)},
             details={
                 'source_file': str(file_path),
                 'imported_count': imported,

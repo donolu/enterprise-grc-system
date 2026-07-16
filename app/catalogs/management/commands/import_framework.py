@@ -9,7 +9,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils.dateparse import parse_date
 from django.db import transaction
 from openpyxl import load_workbook
-from core.models import AuditEvent
+from core.audit import log_audit_event
 from catalogs.models import Framework, Clause, Control
 from django.contrib.auth import get_user_model
 
@@ -552,9 +552,12 @@ class Command(BaseCommand):
         update_existing,
     ):
         """Record the catalogue import in the tenant audit trail."""
-        AuditEvent.objects.create(
-            user=user,
+        log_audit_event(
+            actor=user,
             event='FRAMEWORK_IMPORTED',
+            target=framework,
+            object_display=f'{framework.name} {framework.version}',
+            source={'type': 'import', 'reference': str(file_path)},
             details={
                 'framework_id': framework.id,
                 'framework_name': framework.name,

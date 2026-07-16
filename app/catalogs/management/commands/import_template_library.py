@@ -13,7 +13,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from catalogs.models import Framework, TemplateDocument
-from core.models import AuditEvent, Document
+from core.audit import log_audit_event
+from core.models import Document
 
 User = get_user_model()
 
@@ -418,9 +419,11 @@ class Command(BaseCommand):
         return template, created
 
     def record_import_audit_event(self, *, source_path, entries, user, imported, updated):
-        AuditEvent.objects.create(
-            user=user,
+        log_audit_event(
+            actor=user,
             event='TEMPLATE_LIBRARY_IMPORTED',
+            object_type='catalogs.TemplateDocument',
+            source={'type': 'import', 'reference': str(source_path)},
             details={
                 'source_file': str(source_path),
                 'imported_count': imported,

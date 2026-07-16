@@ -78,10 +78,13 @@ class ImportAssetsCommandTest(AssetTenantTestCase):
             self.assertEqual(asset.owner, self.user)
             self.assertEqual(asset.owner_name, self.user.email)
             self.assertEqual(asset.source_sheet, 'Server')
-            self.assertEqual(
-                AuditEvent.objects.filter(event='ASSET_REGISTER_IMPORTED').count(),
-                2,
-            )
+            audit_events = AuditEvent.objects.filter(event='ASSET_REGISTER_IMPORTED')
+            self.assertEqual(audit_events.count(), 2)
+            audit_event = audit_events.first()
+            self.assertEqual(audit_event.details['actor']['id'], str(self.user.id))
+            self.assertEqual(audit_event.details['object']['type'], 'assets.Asset')
+            self.assertEqual(audit_event.details['event'], 'ASSET_REGISTER_IMPORTED')
+            self.assertEqual(audit_event.details['source']['type'], 'import')
         finally:
             os.unlink(temp_file)
 
