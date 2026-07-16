@@ -2,18 +2,47 @@
 Views for document management and Azure Blob Storage testing.
 """
 
-from rest_framework import viewsets, status, permissions
+from rest_framework import filters, viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.http import HttpResponse, Http404
 from django.utils import timezone
-from .models import Document, DocumentAccess, Tenant
-from .serializers import DocumentSerializer, DocumentListSerializer, DocumentAccessSerializer
+from .models import AuditEvent, Document, DocumentAccess, Tenant
+from .serializers import (
+    AuditEventSerializer,
+    DocumentSerializer,
+    DocumentListSerializer,
+    DocumentAccessSerializer,
+)
 from billing.decorators import check_document_limits
 from billing.services import PlanEnforcementService
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List audit events",
+        description="Retrieve the current tenant audit trail. Staff users only.",
+        tags=['Audit'],
+    ),
+    retrieve=extend_schema(
+        summary="Get audit event",
+        description="Retrieve one current-tenant audit event. Staff users only.",
+        tags=['Audit'],
+    ),
+)
+class AuditEventViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = AuditEventSerializer
+    permission_classes = [permissions.IsAdminUser]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['event', 'user__email']
+    ordering_fields = ['event', 'at']
+    ordering = ['-at']
+
+    def get_queryset(self):
+        return AuditEvent.objects.select_related('user')
 
 
 @extend_schema_view(
@@ -94,8 +123,9 @@ class DocumentViewSet(viewsets.ModelViewSet):
     throttle_scope_by_action = {"create": "evidence_upload"}
 
     def get_throttles(self):
+        action = str(getattr(self, "action", ""))
         self.throttle_scope = self.throttle_scope_by_action.get(
-            getattr(self, "action", None)
+            action
         )
         return super().get_throttles()
     

@@ -12,6 +12,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from assets.management.commands.import_assets import Command as AssetImportCommand
+from .audit import (
+    asset_changed_values,
+    asset_display,
+    audit_asset_change,
+    snapshot_asset,
+)
 from .models import Asset, AssetReviewReminderLog
 from .serializers import (
     AssetDetailSerializer,
@@ -57,6 +63,45 @@ class AssetViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return AssetListSerializer
         return AssetDetailSerializer
+
+    def perform_create(self, serializer):
+        asset = serializer.save()
+        audit_asset_change(
+            event='ASSET_CREATED',
+            actor=self.request.user,
+            target=asset,
+            object_display=asset_display(asset),
+            request=self.request,
+            new=snapshot_asset(asset),
+        )
+
+    def perform_update(self, serializer):
+        previous = snapshot_asset(serializer.instance)
+        asset = serializer.save()
+        new = snapshot_asset(asset)
+        previous_changed, new_changed = asset_changed_values(previous, new)
+        if previous_changed or new_changed:
+            audit_asset_change(
+                event='ASSET_UPDATED',
+                actor=self.request.user,
+                target=asset,
+                object_display=asset_display(asset),
+                request=self.request,
+                previous=previous_changed,
+                new=new_changed,
+            )
+
+    def perform_destroy(self, instance):
+        previous = snapshot_asset(instance)
+        audit_asset_change(
+            event='ASSET_DELETED',
+            actor=self.request.user,
+            target=instance,
+            object_display=asset_display(instance),
+            request=self.request,
+            previous=previous,
+        )
+        instance.delete()
 
     @action(detail=False, methods=['get'])
     def due_for_review(self, request):

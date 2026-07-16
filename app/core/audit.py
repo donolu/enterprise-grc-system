@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
+
+from django.db.models import Model
+from django.db.models.fields.files import FieldFile
 
 
 SYSTEM_ACTOR = {'id': None, 'email': 'system', 'type': 'system'}
@@ -157,3 +162,40 @@ def _is_user(value):
         and hasattr(value, 'pk')
         and getattr(value, 'is_authenticated', False)
     )
+
+
+def snapshot_model(instance: Model, fields) -> dict[str, Any]:
+    return {field: serialise_audit_value(getattr(instance, field, None)) for field in fields}
+
+
+def changed_values(previous: Mapping[str, Any], new: Mapping[str, Any]):
+    previous_changed = {}
+    new_changed = {}
+    for key, previous_value in previous.items():
+        new_value = new.get(key)
+        if previous_value != new_value:
+            previous_changed[key] = previous_value
+            new_changed[key] = new_value
+    for key, new_value in new.items():
+        if key not in previous:
+            previous_changed[key] = None
+            new_changed[key] = new_value
+    return previous_changed, new_changed
+
+
+def serialise_audit_value(value):
+    if isinstance(value, date | datetime):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, FieldFile):
+        return {'present': bool(value), 'name': value.name if value else ''}
+    if isinstance(value, Model):
+        return str(value.pk)
+    if isinstance(value, list):
+        return [serialise_audit_value(item) for item in value]
+    if isinstance(value, tuple):
+        return [serialise_audit_value(item) for item in value]
+    if isinstance(value, dict):
+        return {key: serialise_audit_value(item) for key, item in value.items()}
+    return value

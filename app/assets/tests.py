@@ -175,6 +175,15 @@ class AssetAPITest(AssetTenantTestCase):
         self.assertEqual(patch_response.status_code, status.HTTP_200_OK)
         self.assertEqual(patch_response.data['criticality'], 'high')
 
+        event = AuditEvent.objects.get(event='ASSET_UPDATED')
+        self.assertEqual(event.user, self.user)
+        self.assertEqual(event.details['actor']['email'], self.user.email)
+        self.assertEqual(event.details['object']['type'], 'assets.Asset')
+        self.assertEqual(event.details['object']['display'], 'ASSET-001')
+        self.assertEqual(event.details['previous']['criticality'], 'critical')
+        self.assertEqual(event.details['new']['criticality'], 'high')
+        self.assertEqual(event.details['source']['type'], 'api')
+
     def test_due_for_review_endpoint(self):
         Asset.objects.create(
             asset_id='ASSET-DUE',

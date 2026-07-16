@@ -66,7 +66,7 @@ class RiskMatrix(models.Model):
 
     def _generate_default_matrix(self):
         """Generate a default 5x5 risk matrix configuration."""
-        config = {}
+        config: dict[str, dict[str, str]] = {}
         for impact in range(1, self.impact_levels + 1):
             config[str(impact)] = {}
             for likelihood in range(1, self.likelihood_levels + 1):
@@ -563,7 +563,7 @@ class RiskActionEvidence(models.Model):
     validation_notes = models.TextField(blank=True)
     
     # Metadata
-    evidence_date = models.DateField(default=timezone.now)
+    evidence_date = models.DateField(default=timezone.localdate)
     created_at = models.DateTimeField(auto_now_add=True)
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='uploaded_risk_action_evidence')
 

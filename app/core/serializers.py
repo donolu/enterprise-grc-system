@@ -3,7 +3,7 @@ Serializers for core models including document upload functionality.
 """
 
 from rest_framework import serializers
-from .models import Document, DocumentAccess, User
+from .models import AuditEvent, Document, DocumentAccess, User
 
 
 class DocumentSerializer(serializers.ModelSerializer):
@@ -79,3 +79,12 @@ class DocumentAccessSerializer(serializers.ModelSerializer):
             'accessed_at', 'ip_address', 'user_agent'
         ]
         read_only_fields = ['accessed_by', 'accessed_at']
+
+
+class AuditEventSerializer(serializers.ModelSerializer):
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+
+    class Meta:
+        model = AuditEvent
+        fields = ['id', 'event', 'user', 'user_email', 'details', 'at']
+        read_only_fields = ['id', 'event', 'user', 'user_email', 'details', 'at']

@@ -28,6 +28,14 @@ from .serializers import (
     VendorTaskReminderSerializer
 )
 from .filters import VendorFilter, VendorContactFilter, VendorServiceFilter, VendorTaskFilter
+from .audit import (
+    audit_vendor_change,
+    snapshot_vendor,
+    snapshot_vendor_task,
+    vendor_changed_values,
+    vendor_display,
+    vendor_task_display,
+)
 
 
 @extend_schema_view(
@@ -159,7 +167,43 @@ class VendorViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set the creator when creating a vendor."""
-        serializer.save(created_by=self.request.user)
+        vendor = serializer.save(created_by=self.request.user)
+        audit_vendor_change(
+            event='VENDOR_CREATED',
+            actor=self.request.user,
+            target=vendor,
+            object_display=vendor_display(vendor),
+            request=self.request,
+            new=snapshot_vendor(vendor),
+        )
+
+    def perform_update(self, serializer):
+        previous = snapshot_vendor(serializer.instance)
+        vendor = serializer.save()
+        new = snapshot_vendor(vendor)
+        previous_changed, new_changed = vendor_changed_values(previous, new)
+        if previous_changed or new_changed:
+            audit_vendor_change(
+                event='VENDOR_UPDATED',
+                actor=self.request.user,
+                target=vendor,
+                object_display=vendor_display(vendor),
+                request=self.request,
+                previous=previous_changed,
+                new=new_changed,
+            )
+
+    def perform_destroy(self, instance):
+        previous = snapshot_vendor(instance)
+        audit_vendor_change(
+            event='VENDOR_DELETED',
+            actor=self.request.user,
+            target=instance,
+            object_display=vendor_display(instance),
+            request=self.request,
+            previous=previous,
+        )
+        instance.delete()
     
     @extend_schema(
         summary="Update vendor status",
@@ -181,6 +225,7 @@ class VendorViewSet(viewsets.ModelViewSet):
     def update_status(self, request, pk=None):
         """Update vendor status with automatic logging."""
         vendor = self.get_object()
+        previous = snapshot_vendor(vendor)
         old_status = vendor.status
         new_status = request.data.get('status')
         note_content = request.data.get('note', '')
@@ -199,6 +244,18 @@ class VendorViewSet(viewsets.ModelViewSet):
         
         vendor.status = new_status
         vendor.save()
+        new = snapshot_vendor(vendor)
+        previous_changed, new_changed = vendor_changed_values(previous, new)
+        audit_vendor_change(
+            event='VENDOR_STATUS_UPDATED',
+            actor=request.user,
+            target=vendor,
+            object_display=vendor_display(vendor),
+            request=request,
+            previous=previous_changed,
+            new=new_changed,
+            reason=note_content,
+        )
         
         # Create status change note
         note_title = f"Status changed from {old_status} to {new_status}"
@@ -231,7 +288,20 @@ class VendorViewSet(viewsets.ModelViewSet):
         serializer = VendorNoteSerializer(data=request.data, context={'request': request})
         
         if serializer.is_valid():
-            serializer.save(vendor=vendor, created_by=request.user)
+            note = serializer.save(vendor=vendor, created_by=request.user)
+            audit_vendor_change(
+                event='VENDOR_NOTE_ADDED',
+                actor=request.user,
+                target=vendor,
+                object_display=vendor_display(vendor),
+                request=request,
+                new={
+                    'note_id': note.id,
+                    'note_type': note.note_type,
+                    'is_internal': note.is_internal,
+                },
+                source={'type': 'api', 'reference': 'vendor.note'},
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -250,6 +320,19 @@ class VendorViewSet(viewsets.ModelViewSet):
         
         if serializer.is_valid():
             vendors = serializer.save()
+            if vendors:
+                audit_vendor_change(
+                    event='VENDORS_BULK_CREATED',
+                    actor=request.user,
+                    target=vendors[0],
+                    object_display='bulk vendor creation',
+                    request=request,
+                    new={
+                        'created_count': len(vendors),
+                        'vendor_ids': [vendor.vendor_id for vendor in vendors],
+                    },
+                    source={'type': 'api', 'reference': 'vendor.bulk_create'},
+                )
             response_serializer = VendorListSerializer(vendors, many=True, context={'request': request})
             return Response({
                 'created_vendors': response_serializer.data,
@@ -661,6 +744,7 @@ class VendorTaskViewSet(viewsets.ModelViewSet):
     def update_status(self, request, pk=None):
         """Update task status with validation and logging."""
         task = self.get_object()
+        previous = snapshot_vendor_task(task)
         serializer = VendorTaskStatusUpdateSerializer(data=request.data)
         
         if serializer.is_valid():
@@ -673,6 +757,18 @@ class VendorTaskViewSet(viewsets.ModelViewSet):
                 task.completion_notes = completion_notes
             
             task.save()
+            new = snapshot_vendor_task(task)
+            previous_changed, new_changed = vendor_changed_values(previous, new)
+            audit_vendor_change(
+                event='VENDOR_TASK_STATUS_UPDATED',
+                actor=request.user,
+                target=task,
+                object_display=vendor_task_display(task),
+                request=request,
+                previous=previous_changed,
+                new=new_changed,
+                reason=completion_notes,
+            )
             
             # Send completion notification if task was completed
             if new_status == 'completed' and old_status != 'completed':
@@ -701,6 +797,10 @@ class VendorTaskViewSet(viewsets.ModelViewSet):
             action = serializer.validated_data['action']
             
             tasks = VendorTask.objects.filter(id__in=task_ids)
+            previous_by_id = {
+                task.id: snapshot_vendor_task(task)
+                for task in tasks.select_related('vendor', 'assigned_to', 'created_by')
+            }
             updated_count = 0
             
             if action == 'update_status':
@@ -712,17 +812,67 @@ class VendorTaskViewSet(viewsets.ModelViewSet):
                     if notes and not task.completion_notes:
                         task.completion_notes = notes
                     task.save()
+                    new = snapshot_vendor_task(task)
+                    previous_changed, new_changed = vendor_changed_values(
+                        previous_by_id.get(task.id, {}),
+                        new,
+                    )
+                    audit_vendor_change(
+                        event='VENDOR_TASK_BULK_UPDATED',
+                        actor=request.user,
+                        target=task,
+                        object_display=vendor_task_display(task),
+                        request=request,
+                        previous=previous_changed,
+                        new=new_changed,
+                        reason=notes,
+                        source={'type': 'api', 'reference': f'vendor_task.bulk_action.{action}'},
+                    )
                     updated_count += 1
                     
             elif action == 'assign_user':
                 assigned_to = serializer.validated_data['assigned_to']
-                tasks.update(assigned_to=assigned_to)
-                updated_count = tasks.count()
+                for task in tasks:
+                    task.assigned_to = assigned_to
+                    task.save()
+                    new = snapshot_vendor_task(task)
+                    previous_changed, new_changed = vendor_changed_values(
+                        previous_by_id.get(task.id, {}),
+                        new,
+                    )
+                    audit_vendor_change(
+                        event='VENDOR_TASK_BULK_UPDATED',
+                        actor=request.user,
+                        target=task,
+                        object_display=vendor_task_display(task),
+                        request=request,
+                        previous=previous_changed,
+                        new=new_changed,
+                        source={'type': 'api', 'reference': f'vendor_task.bulk_action.{action}'},
+                    )
+                    updated_count += 1
                 
             elif action == 'update_priority':
                 new_priority = serializer.validated_data['priority']
-                tasks.update(priority=new_priority)
-                updated_count = tasks.count()
+                for task in tasks:
+                    task.priority = new_priority
+                    task.save()
+                    new = snapshot_vendor_task(task)
+                    previous_changed, new_changed = vendor_changed_values(
+                        previous_by_id.get(task.id, {}),
+                        new,
+                    )
+                    audit_vendor_change(
+                        event='VENDOR_TASK_BULK_UPDATED',
+                        actor=request.user,
+                        target=task,
+                        object_display=vendor_task_display(task),
+                        request=request,
+                        previous=previous_changed,
+                        new=new_changed,
+                        source={'type': 'api', 'reference': f'vendor_task.bulk_action.{action}'},
+                    )
+                    updated_count += 1
                 
             elif action == 'send_reminders':
                 from .task_notifications import get_notification_service
@@ -858,4 +1008,40 @@ class VendorTaskViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set creator when creating a task."""
-        serializer.save(created_by=self.request.user)
+        task = serializer.save(created_by=self.request.user)
+        audit_vendor_change(
+            event='VENDOR_TASK_CREATED',
+            actor=self.request.user,
+            target=task,
+            object_display=vendor_task_display(task),
+            request=self.request,
+            new=snapshot_vendor_task(task),
+        )
+
+    def perform_update(self, serializer):
+        previous = snapshot_vendor_task(serializer.instance)
+        task = serializer.save()
+        new = snapshot_vendor_task(task)
+        previous_changed, new_changed = vendor_changed_values(previous, new)
+        if previous_changed or new_changed:
+            audit_vendor_change(
+                event='VENDOR_TASK_UPDATED',
+                actor=self.request.user,
+                target=task,
+                object_display=vendor_task_display(task),
+                request=self.request,
+                previous=previous_changed,
+                new=new_changed,
+            )
+
+    def perform_destroy(self, instance):
+        previous = snapshot_vendor_task(instance)
+        audit_vendor_change(
+            event='VENDOR_TASK_DELETED',
+            actor=self.request.user,
+            target=instance,
+            object_display=vendor_task_display(instance),
+            request=self.request,
+            previous=previous,
+        )
+        instance.delete()

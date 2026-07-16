@@ -25,6 +25,17 @@ from .serializers import (
 )
 from .filters import RiskFilter, RiskActionFilter
 from .analytics import RiskAnalyticsService, RiskReportGenerator
+from .audit import (
+    audit_risk_change,
+    risk_action_display,
+    risk_action_evidence_display,
+    risk_changed_values,
+    risk_display,
+    serialise,
+    snapshot_risk,
+    snapshot_risk_action,
+    snapshot_risk_action_evidence,
+)
 
 
 @extend_schema_view(
@@ -204,7 +215,43 @@ class RiskViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Create risk with current user as creator."""
-        serializer.save(created_by=self.request.user)
+        risk = serializer.save(created_by=self.request.user)
+        audit_risk_change(
+            event='RISK_CREATED',
+            actor=self.request.user,
+            target=risk,
+            object_display=risk_display(risk),
+            request=self.request,
+            new=snapshot_risk(risk),
+        )
+
+    def perform_update(self, serializer):
+        previous = snapshot_risk(serializer.instance)
+        risk = serializer.save()
+        new = snapshot_risk(risk)
+        previous_changed, new_changed = risk_changed_values(previous, new)
+        if previous_changed or new_changed:
+            audit_risk_change(
+                event='RISK_UPDATED',
+                actor=self.request.user,
+                target=risk,
+                object_display=risk_display(risk),
+                request=self.request,
+                previous=previous_changed,
+                new=new_changed,
+            )
+
+    def perform_destroy(self, instance):
+        previous = snapshot_risk(instance)
+        audit_risk_change(
+            event='RISK_DELETED',
+            actor=self.request.user,
+            target=instance,
+            object_display=risk_display(instance),
+            request=self.request,
+            previous=previous,
+        )
+        instance.delete()
     
     @extend_schema(
         summary="Update risk status",
@@ -221,6 +268,7 @@ class RiskViewSet(viewsets.ModelViewSet):
     def update_status(self, request, pk=None):
         """Update risk status with notes and automatic logging."""
         risk = self.get_object()
+        previous = snapshot_risk(risk)
         serializer = RiskStatusUpdateSerializer(
             data=request.data,
             context={'request': request}
@@ -228,6 +276,18 @@ class RiskViewSet(viewsets.ModelViewSet):
         
         if serializer.is_valid():
             updated_risk = serializer.update_risk_status(risk)
+            new = snapshot_risk(updated_risk)
+            previous_changed, new_changed = risk_changed_values(previous, new)
+            audit_risk_change(
+                event='RISK_STATUS_UPDATED',
+                actor=request.user,
+                target=updated_risk,
+                object_display=risk_display(updated_risk),
+                request=request,
+                previous=previous_changed,
+                new=new_changed,
+                reason=serializer.validated_data.get('note', ''),
+            )
             response_serializer = RiskDetailSerializer(updated_risk)
             return Response(response_serializer.data)
         
@@ -266,7 +326,19 @@ class RiskViewSet(viewsets.ModelViewSet):
         
         serializer = RiskNoteSerializer(data=note_data)
         if serializer.is_valid():
-            serializer.save(risk=risk, created_by=request.user)
+            note = serializer.save(risk=risk, created_by=request.user)
+            audit_risk_change(
+                event='RISK_NOTE_ADDED',
+                actor=request.user,
+                target=risk,
+                object_display=risk_display(risk),
+                request=request,
+                new={
+                    'note_id': note.id,
+                    'note_type': note.note_type,
+                },
+                source={'type': 'api', 'reference': 'risk.note'},
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -313,6 +385,19 @@ class RiskViewSet(viewsets.ModelViewSet):
         
         if serializer.is_valid():
             created_risks, errors = serializer.create_bulk_risks()
+            if created_risks:
+                audit_risk_change(
+                    event='RISKS_BULK_CREATED',
+                    actor=request.user,
+                    target=created_risks[0],
+                    object_display='bulk risk creation',
+                    request=request,
+                    new={
+                        'created_count': len(created_risks),
+                        'risk_ids': [risk.risk_id for risk in created_risks],
+                    },
+                    source={'type': 'api', 'reference': 'risk.bulk_create'},
+                )
             
             # Serialize created risks
             risk_serializer = RiskListSerializer(created_risks, many=True)
@@ -748,12 +833,48 @@ class RiskActionViewSet(viewsets.ModelViewSet):
         from .notifications import RiskActionReminderService
         
         action = serializer.save(created_by=self.request.user)
+        audit_risk_change(
+            event='RISK_ACTION_CREATED',
+            actor=self.request.user,
+            target=action,
+            object_display=risk_action_display(action),
+            request=self.request,
+            new=snapshot_risk_action(action),
+        )
         
         # Send assignment notification if user is assigned
         if action.assigned_to and action.assigned_to != self.request.user:
             RiskActionReminderService.send_assignment_notification(
                 action, action.assigned_to, self.request.user
             )
+
+    def perform_update(self, serializer):
+        previous = snapshot_risk_action(serializer.instance)
+        action = serializer.save()
+        new = snapshot_risk_action(action)
+        previous_changed, new_changed = risk_changed_values(previous, new)
+        if previous_changed or new_changed:
+            audit_risk_change(
+                event='RISK_ACTION_UPDATED',
+                actor=self.request.user,
+                target=action,
+                object_display=risk_action_display(action),
+                request=self.request,
+                previous=previous_changed,
+                new=new_changed,
+            )
+
+    def perform_destroy(self, instance):
+        previous = snapshot_risk_action(instance)
+        audit_risk_change(
+            event='RISK_ACTION_DELETED',
+            actor=self.request.user,
+            target=instance,
+            object_display=risk_action_display(instance),
+            request=self.request,
+            previous=previous,
+        )
+        instance.delete()
     
     @extend_schema(
         summary="Update risk action status",
@@ -782,6 +903,7 @@ class RiskActionViewSet(viewsets.ModelViewSet):
     def update_status(self, request, pk=None):
         """Update risk action status with automatic progress and note handling."""
         action = self.get_object()
+        previous = snapshot_risk_action(action)
         serializer = RiskActionStatusUpdateSerializer(
             data=request.data,
             context={'request': request}
@@ -789,6 +911,18 @@ class RiskActionViewSet(viewsets.ModelViewSet):
         
         if serializer.is_valid():
             updated_action = serializer.update_action_status(action)
+            new = snapshot_risk_action(updated_action)
+            previous_changed, new_changed = risk_changed_values(previous, new)
+            audit_risk_change(
+                event='RISK_ACTION_STATUS_UPDATED',
+                actor=request.user,
+                target=updated_action,
+                object_display=risk_action_display(updated_action),
+                request=request,
+                previous=previous_changed,
+                new=new_changed,
+                reason=serializer.validated_data.get('note', ''),
+            )
             response_serializer = RiskActionDetailSerializer(
                 updated_action,
                 context={'request': request}
@@ -819,6 +953,19 @@ class RiskActionViewSet(viewsets.ModelViewSet):
         
         if serializer.is_valid():
             note = serializer.save()
+            audit_risk_change(
+                event='RISK_ACTION_NOTE_ADDED',
+                actor=request.user,
+                target=action,
+                object_display=risk_action_display(action),
+                request=request,
+                new={
+                    'note_id': note.id,
+                    'note_type': note.note_type,
+                    'progress_percentage': note.progress_percentage,
+                },
+                source={'type': 'api', 'reference': 'risk_action.note'},
+            )
             response_serializer = RiskActionNoteSerializer(
                 note,
                 context={'request': request}
@@ -849,6 +996,15 @@ class RiskActionViewSet(viewsets.ModelViewSet):
         
         if serializer.is_valid():
             evidence = serializer.save()
+            audit_risk_change(
+                event='RISK_ACTION_EVIDENCE_UPLOADED',
+                actor=request.user,
+                target=evidence,
+                object_display=risk_action_evidence_display(evidence),
+                request=request,
+                new=snapshot_risk_action_evidence(evidence),
+                source={'type': 'api', 'reference': 'risk_action.evidence'},
+            )
             response_serializer = RiskActionEvidenceSerializer(
                 evidence,
                 context={'request': request}
@@ -891,6 +1047,20 @@ class RiskActionViewSet(viewsets.ModelViewSet):
         
         if serializer.is_valid():
             created_actions, errors = serializer.create_bulk_actions()
+            if created_actions:
+                audit_risk_change(
+                    event='RISK_ACTIONS_BULK_CREATED',
+                    actor=request.user,
+                    target=created_actions[0],
+                    object_display='bulk risk action creation',
+                    request=request,
+                    new={
+                        'created_count': len(created_actions),
+                        'action_ids': [action.action_id for action in created_actions],
+                        'risk_id': serialise(serializer.validated_data['risk'].pk),
+                    },
+                    source={'type': 'api', 'reference': 'risk_action.bulk_create'},
+                )
             
             # Serialize created actions for response
             created_serializer = RiskActionListSerializer(
