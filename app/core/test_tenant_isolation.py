@@ -12,14 +12,18 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from assets.models import Asset
+from calendarhub.models import CalendarEvent
 from catalogs.models import Framework
+from compliance.models import GovernanceArtefact
 from core.models import AuditEvent, Domain, Tenant
 from core.storage import TenantAwareBlobStorage
 from exports.models import AssessmentReport, TenantDataExport
+from knowledge.models import KnowledgeArticle, KnowledgeCategory
 from policies.models import Policy, PolicyCategory
 from risk.models import Risk
 from training.models import TrainingCategory, TrainingVideo
 from vendors.models import Vendor, VendorCategory, VendorTask
+from vuln.models import ScanTarget
 
 User = get_user_model()
 
@@ -305,6 +309,114 @@ class TestTenantIsolation:
         assert self._response_titles(list_response.json()) == ["Tenant A vendor task"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
+    def test_compliance_artefact_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_governance_artefact(tenant_a, "Tenant A artefact", user_a)
+        with tenant_context(tenant_b):
+            self._create_governance_artefact(tenant_b, "Tenant B first artefact", user_b)
+            tenant_b_private_artefact = self._create_governance_artefact(
+                tenant_b,
+                "Tenant B private artefact",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/compliance/artefacts/")
+        detail_response = client.get(
+            f"/api/compliance/artefacts/{tenant_b_private_artefact.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A artefact"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_knowledge_article_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_knowledge_article(tenant_a, "Tenant A article", user_a)
+        with tenant_context(tenant_b):
+            self._create_knowledge_article(tenant_b, "Tenant B first article", user_b)
+            tenant_b_private_article = self._create_knowledge_article(
+                tenant_b,
+                "Tenant B private article",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/knowledge/articles/")
+        detail_response = client.get(
+            f"/api/knowledge/articles/{tenant_b_private_article.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A article"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_calendar_event_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_calendar_event(tenant_a, "Tenant A event", user_a)
+        with tenant_context(tenant_b):
+            self._create_calendar_event(tenant_b, "Tenant B first event", user_b)
+            tenant_b_private_event = self._create_calendar_event(
+                tenant_b,
+                "Tenant B private event",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/calendar/events/")
+        detail_response = client.get(
+            f"/api/calendar/events/{tenant_b_private_event.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A event"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_vulnerability_target_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_scan_target(tenant_a, "Tenant A scan target", user_a)
+        with tenant_context(tenant_b):
+            self._create_scan_target(tenant_b, "Tenant B first scan target", user_b)
+            tenant_b_private_target = self._create_scan_target(
+                tenant_b,
+                "Tenant B private scan target",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/vuln/targets/")
+        detail_response = client.get(
+            f"/api/vuln/targets/{tenant_b_private_target.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_names(list_response.json()) == ["Tenant A scan target"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
     def test_audit_event_list_is_staff_only_and_scoped_to_request_tenant(self):
         tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
         tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
@@ -525,6 +637,59 @@ class TestTenantIsolation:
                 task_type="security_review",
                 due_date=timezone.now().date() + timedelta(days=7),
                 assigned_to=user,
+                created_by=user,
+            )
+
+    def _create_governance_artefact(self, tenant, title, user):
+        with tenant_context(tenant):
+            return GovernanceArtefact.objects.create(
+                title=title,
+                artefact_type="scope_document",
+                description=f"{title} description",
+                owner=user,
+                created_by=user,
+            )
+
+    def _create_knowledge_article(self, tenant, title, user):
+        with tenant_context(tenant):
+            slug = title.lower().replace(" ", "-")
+            category = KnowledgeCategory.objects.create(
+                name=f"{title} category",
+                slug=f"{slug}-category",
+                module_key="administration",
+                created_by=user,
+            )
+            return KnowledgeArticle.objects.create(
+                title=title,
+                slug=slug,
+                summary=f"{title} summary",
+                body=f"{title} body",
+                category=category,
+                module_key="administration",
+                status="published",
+                created_by=user,
+                updated_by=user,
+            )
+
+    def _create_calendar_event(self, tenant, title, user):
+        with tenant_context(tenant):
+            return CalendarEvent.objects.create(
+                title=title,
+                description=f"{title} description",
+                due_date=timezone.now().date() + timedelta(days=14),
+                owner=user,
+                created_by=user,
+            )
+
+    def _create_scan_target(self, tenant, name, user):
+        with tenant_context(tenant):
+            slug = name.lower().replace(" ", "-")
+            return ScanTarget.objects.create(
+                name=name,
+                target_type="web",
+                address=f"https://{slug}.example.com",
+                status="approved",
+                owner=user,
                 created_by=user,
             )
 
