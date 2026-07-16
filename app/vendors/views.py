@@ -504,7 +504,7 @@ class VendorViewSet(viewsets.ModelViewSet):
         })
 
 
-@extend_schema_view(tags=['Vendor Categories'])
+@extend_schema(tags=['Vendor Categories'])
 class VendorCategoryViewSet(viewsets.ModelViewSet):
     """
     **Vendor Category Management**
@@ -522,7 +522,7 @@ class VendorCategoryViewSet(viewsets.ModelViewSet):
     ordering = ['name']
 
 
-@extend_schema_view(tags=['Vendor Contacts'])
+@extend_schema(tags=['Vendor Contacts'])
 class VendorContactViewSet(viewsets.ModelViewSet):
     """
     **Vendor Contact Management**
@@ -543,7 +543,7 @@ class VendorContactViewSet(viewsets.ModelViewSet):
         return VendorContact.objects.select_related('vendor').all()
 
 
-@extend_schema_view(tags=['Vendor Services'])
+@extend_schema(tags=['Vendor Services'])
 class VendorServiceViewSet(viewsets.ModelViewSet):
     """
     **Vendor Service Management**
@@ -564,7 +564,7 @@ class VendorServiceViewSet(viewsets.ModelViewSet):
         return VendorService.objects.select_related('vendor').all()
 
 
-@extend_schema_view(tags=['Vendor Notes'])
+@extend_schema(tags=['Vendor Notes'])
 class VendorNoteViewSet(viewsets.ModelViewSet):
     """
     **Vendor Note Management**
@@ -588,7 +588,7 @@ class VendorNoteViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=self.request.user)
 
 
-@extend_schema_view(tags=['Vendor Tasks'])
+@extend_schema(tags=['Vendor Tasks'])
 class VendorTaskViewSet(viewsets.ModelViewSet):
     """
     **Vendor Task Management**
