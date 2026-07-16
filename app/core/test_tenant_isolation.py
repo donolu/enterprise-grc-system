@@ -10,7 +10,7 @@ from rest_framework.test import APIClient
 
 from assets.models import Asset
 from catalogs.models import Framework
-from core.models import Domain, Tenant
+from core.models import AuditEvent, Domain, Tenant
 from core.storage import TenantAwareBlobStorage
 from exports.models import AssessmentReport, TenantDataExport
 from policies.models import Policy, PolicyCategory
@@ -234,6 +234,45 @@ class TestTenantIsolation:
         assert self._response_names(list_response.json()) == ["Tenant A asset"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
+    def test_audit_event_list_is_staff_only_and_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(
+            tenant_a,
+            "alice",
+            "alice@example.com",
+            is_staff=True,
+        )
+        user_b = self._create_user(
+            tenant_b,
+            "bob",
+            "bob@example.com",
+            is_staff=True,
+        )
+        with tenant_context(tenant_a):
+            AuditEvent.objects.create(
+                user=user_a,
+                event="TENANT_A_EVENT",
+                details={"object": {"display": "Tenant A audit event"}},
+            )
+        with tenant_context(tenant_b):
+            AuditEvent.objects.create(
+                user=user_b,
+                event="TENANT_B_EVENT",
+                details={"object": {"display": "Tenant B audit event"}},
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        response = client.get("/api/audit-events/")
+
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        results = payload.get("results", payload) if isinstance(payload, dict) else payload
+        assert [item["event"] for item in results] == ["TENANT_A_EVENT"]
+        assert results[0]["user_email"] == "alice@example.com"
+
     def test_storage_container_name_uses_current_tenant(self):
         tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
         tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
@@ -266,12 +305,13 @@ class TestTenantIsolation:
             )
         return tenant
 
-    def _create_user(self, tenant, username, email):
+    def _create_user(self, tenant, username, email, is_staff=False):
         with tenant_context(tenant):
             return User.objects.create_user(
                 username=username,
                 email=email,
                 password="testpass123",
+                is_staff=is_staff,
             )
 
     def _create_risk(self, tenant, risk_id, title, user):
