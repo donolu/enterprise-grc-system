@@ -20,7 +20,7 @@ from core.storage import TenantAwareBlobStorage
 from exports.models import AssessmentReport, TenantDataExport
 from knowledge.models import KnowledgeArticle, KnowledgeCategory
 from policies.models import Policy, PolicyCategory
-from risk.models import Risk
+from risk.models import Risk, RiskAction, RiskActionReminderConfiguration, RiskCategory, RiskMatrix
 from training.models import TrainingCategory, TrainingVideo
 from vendors.models import (
     Vendor,
@@ -79,6 +79,121 @@ class TestTenantIsolation:
         response = client.get(f"/api/risk/risks/{tenant_b_private_risk.pk}/")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_risk_category_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_risk_category(tenant_a, "Tenant A risk category")
+        with tenant_context(tenant_b):
+            self._create_risk_category(tenant_b, "Tenant B first risk category")
+            tenant_b_private_category = self._create_risk_category(
+                tenant_b,
+                "Tenant B private risk category",
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/risk/categories/")
+        detail_response = client.get(
+            f"/api/risk/categories/{tenant_b_private_category.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_names(list_response.json()) == ["Tenant A risk category"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_risk_matrix_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_risk_matrix(tenant_a, "Tenant A risk matrix", user_a)
+        with tenant_context(tenant_b):
+            self._create_risk_matrix(tenant_b, "Tenant B first risk matrix", user_b)
+            tenant_b_private_matrix = self._create_risk_matrix(
+                tenant_b,
+                "Tenant B private risk matrix",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/risk/matrices/")
+        detail_response = client.get(
+            f"/api/risk/matrices/{tenant_b_private_matrix.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_names(list_response.json()) == ["Tenant A risk matrix"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_risk_action_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        risk_a = self._create_risk(tenant_a, "RISK-A-001", "Tenant A risk", user_a)
+        self._create_risk_action(tenant_a, risk_a, "Tenant A risk action", user_a)
+        with tenant_context(tenant_b):
+            risk_b = self._create_risk(tenant_b, "RISK-B-001", "Tenant B risk", user_b)
+            self._create_risk_action(
+                tenant_b,
+                risk_b,
+                "Tenant B first risk action",
+                user_b,
+            )
+            tenant_b_private_action = self._create_risk_action(
+                tenant_b,
+                risk_b,
+                "Tenant B private risk action",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/risk/actions/")
+        detail_response = client.get(
+            f"/api/risk/actions/{tenant_b_private_action.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A risk action"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_risk_reminder_config_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        user_b_alt = self._create_user(tenant_b, "brian", "brian@example.com")
+        self._create_risk_reminder_config(tenant_a, user_a)
+        with tenant_context(tenant_b):
+            self._create_risk_reminder_config(tenant_b, user_b)
+            tenant_b_private_config = self._create_risk_reminder_config(
+                tenant_b,
+                user_b_alt,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/risk/reminder-config/")
+        detail_response = client.get(
+            f"/api/risk/reminder-config/{tenant_b_private_config.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_field(list_response.json(), "user") == [user_a.pk]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_policy_list_and_detail_are_scoped_to_request_tenant(self):
         tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
@@ -664,6 +779,43 @@ class TestTenantIsolation:
                 likelihood=3,
                 created_by=user,
                 risk_owner=user,
+            )
+
+    def _create_risk_category(self, tenant, name):
+        with tenant_context(tenant):
+            return RiskCategory.objects.create(
+                name=name,
+                description=f"{name} description",
+            )
+
+    def _create_risk_matrix(self, tenant, name, user):
+        with tenant_context(tenant):
+            return RiskMatrix.objects.create(
+                name=name,
+                description=f"{name} description",
+                impact_levels=5,
+                likelihood_levels=5,
+                created_by=user,
+            )
+
+    def _create_risk_action(self, tenant, risk, title, user):
+        with tenant_context(tenant):
+            return RiskAction.objects.create(
+                risk=risk,
+                title=title,
+                description=f"{title} description",
+                action_type="corrective",
+                due_date=timezone.now().date() + timedelta(days=14),
+                assigned_to=user,
+                created_by=user,
+            )
+
+    def _create_risk_reminder_config(self, tenant, user):
+        with tenant_context(tenant):
+            return RiskActionReminderConfiguration.objects.create(
+                user=user,
+                advance_warning_days=7,
+                reminder_frequency="daily",
             )
 
     def _create_policy(self, tenant, policy_code, title, user):
