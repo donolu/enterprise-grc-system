@@ -4,6 +4,7 @@ import json
 import zipfile
 from datetime import date, datetime, time
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -20,6 +21,14 @@ from catalogs.models import ControlAssessment, Framework, AssessmentEvidence
 from risk.analytics import RiskAnalyticsService, RiskReportGenerator
 from risk.models import Risk, RiskAction
 from .models import AssessmentReport, TenantDataExport
+from .audit import (
+    assessment_report_display,
+    audit_export_change,
+    export_changed_values,
+    snapshot_assessment_report,
+    snapshot_tenant_data_export,
+    tenant_data_export_display,
+)
 
 
 EXCLUDED_FIELD_NAMES = {
@@ -257,7 +266,7 @@ class TenantDataExportGenerator:
 
     def __init__(self, data_export: TenantDataExport):
         self.data_export = data_export
-        self.coverage = [
+        self.coverage: list[dict[str, Any]] = [
             entry for entry in EXPORT_COVERAGE
             if entry['module'] in _normalise_selected_modules(data_export.selected_modules)
         ]
@@ -283,6 +292,7 @@ class TenantDataExportGenerator:
                 raise ValueError(f'Unsupported export format: {self.data_export.export_format}')
 
             document = self._save_export_document(content, filename, mime_type)
+            previous = snapshot_tenant_data_export(self.data_export)
             self.data_export.generated_file = document
             self.data_export.record_counts = record_counts
             self.data_export.status = 'completed'
@@ -293,8 +303,20 @@ class TenantDataExportGenerator:
                 'status',
                 'generation_completed_at',
             ])
+            new = snapshot_tenant_data_export(self.data_export)
+            previous_changed, new_changed = export_changed_values(previous, new)
+            audit_export_change(
+                event='TENANT_DATA_EXPORT_GENERATED',
+                actor=self.data_export.requested_by,
+                target=self.data_export,
+                object_display=tenant_data_export_display(self.data_export),
+                previous=previous_changed,
+                new=new_changed,
+                source={'type': 'worker', 'reference': 'TenantDataExportGenerator.generate_export'},
+            )
             return document
         except Exception as exc:
+            previous = snapshot_tenant_data_export(self.data_export)
             self.data_export.status = 'failed'
             self.data_export.error_message = str(exc)
             self.data_export.generation_completed_at = timezone.now()
@@ -303,10 +325,22 @@ class TenantDataExportGenerator:
                 'error_message',
                 'generation_completed_at',
             ])
+            new = snapshot_tenant_data_export(self.data_export)
+            previous_changed, new_changed = export_changed_values(previous, new)
+            audit_export_change(
+                event='TENANT_DATA_EXPORT_FAILED',
+                actor=self.data_export.requested_by,
+                target=self.data_export,
+                object_display=tenant_data_export_display(self.data_export),
+                previous=previous_changed,
+                new=new_changed,
+                reason=str(exc),
+                source={'type': 'worker', 'reference': 'TenantDataExportGenerator.generate_export'},
+            )
             raise
 
     def _iter_sheet_data(self):
-        used_titles = set()
+        used_titles: set[str] = set()
         for module in self.coverage:
             for sheet in module['sheets']:
                 model_class = _get_model(sheet['model'])
@@ -410,18 +444,43 @@ class AssessmentReportGenerator:
             document = self._save_pdf_document(pdf_content, filename)
             
             # Update report status
+            previous = snapshot_assessment_report(self.report)
             self.report.generated_file = document
             self.report.status = 'completed'
             self.report.generation_completed_at = timezone.now()
             self.report.save()
+            new = snapshot_assessment_report(self.report)
+            previous_changed, new_changed = export_changed_values(previous, new)
+            audit_export_change(
+                event='ASSESSMENT_REPORT_GENERATED',
+                actor=self.report.requested_by,
+                target=self.report,
+                object_display=assessment_report_display(self.report),
+                previous=previous_changed,
+                new=new_changed,
+                source={'type': 'worker', 'reference': 'AssessmentReportGenerator.generate_report'},
+            )
             
             return document
             
         except Exception as e:
+            previous = snapshot_assessment_report(self.report)
             self.report.status = 'failed'
             self.report.error_message = str(e)
             self.report.generation_completed_at = timezone.now()
             self.report.save()
+            new = snapshot_assessment_report(self.report)
+            previous_changed, new_changed = export_changed_values(previous, new)
+            audit_export_change(
+                event='ASSESSMENT_REPORT_FAILED',
+                actor=self.report.requested_by,
+                target=self.report,
+                object_display=assessment_report_display(self.report),
+                previous=previous_changed,
+                new=new_changed,
+                reason=str(e),
+                source={'type': 'worker', 'reference': 'AssessmentReportGenerator.generate_report'},
+            )
             raise
     
     def _generate_assessment_summary(self):
