@@ -1,6 +1,7 @@
 """Tenant isolation regression tests."""
 
 import pytest
+from datetime import timedelta
 from uuid import uuid4
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -16,6 +17,7 @@ from exports.models import AssessmentReport, TenantDataExport
 from policies.models import Policy, PolicyCategory
 from risk.models import Risk
 from training.models import TrainingCategory, TrainingVideo
+from vendors.models import Vendor, VendorCategory, VendorTask
 
 User = get_user_model()
 
@@ -234,6 +236,73 @@ class TestTenantIsolation:
         assert self._response_names(list_response.json()) == ["Tenant A asset"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
+    def test_vendor_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_vendor(tenant_a, "Tenant A vendor", user_a)
+        with tenant_context(tenant_b):
+            self._create_vendor(tenant_b, "Tenant B first vendor", user_b)
+            tenant_b_private_vendor = self._create_vendor(
+                tenant_b,
+                "Tenant B private vendor",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/vendors/vendors/")
+        detail_response = client.get(
+            f"/api/vendors/vendors/{tenant_b_private_vendor.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_names(list_response.json()) == ["Tenant A vendor"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_vendor_task_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        vendor_a = self._create_vendor(tenant_a, "Tenant A vendor", user_a)
+        self._create_vendor_task(
+            tenant_a,
+            vendor_a,
+            "Tenant A vendor task",
+            user_a,
+        )
+        with tenant_context(tenant_b):
+            vendor_b = self._create_vendor(tenant_b, "Tenant B vendor", user_b)
+            self._create_vendor_task(
+                tenant_b,
+                vendor_b,
+                "Tenant B first vendor task",
+                user_b,
+            )
+            tenant_b_private_task = self._create_vendor_task(
+                tenant_b,
+                vendor_b,
+                "Tenant B private vendor task",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/vendors/tasks/")
+        detail_response = client.get(
+            f"/api/vendors/tasks/{tenant_b_private_task.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A vendor task"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
     def test_audit_event_list_is_staff_only_and_scoped_to_request_tenant(self):
         tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
         tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
@@ -400,6 +469,32 @@ class TestTenantIsolation:
                 name=name,
                 asset_type="server",
                 owner=user,
+                created_by=user,
+            )
+
+    def _create_vendor(self, tenant, name, user):
+        with tenant_context(tenant):
+            category = VendorCategory.objects.create(
+                name=f"{name} category",
+                description=f"{name} category description",
+            )
+            return Vendor.objects.create(
+                name=name,
+                category=category,
+                business_description=f"{name} description",
+                created_by=user,
+                assigned_to=user,
+            )
+
+    def _create_vendor_task(self, tenant, vendor, title, user):
+        with tenant_context(tenant):
+            return VendorTask.objects.create(
+                vendor=vendor,
+                title=title,
+                description=f"{title} description",
+                task_type="security_review",
+                due_date=timezone.now().date() + timedelta(days=7),
+                assigned_to=user,
                 created_by=user,
             )
 
