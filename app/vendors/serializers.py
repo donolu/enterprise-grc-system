@@ -5,8 +5,11 @@ Comprehensive serializers for vendor management API endpoints
 supporting CRUD operations, filtering, and data validation.
 """
 
-from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
+from rest_framework import serializers
+
 from .models import Vendor, VendorCategory, VendorContact, VendorService, VendorNote, VendorTask
 
 User = get_user_model()
@@ -25,7 +28,7 @@ class VendorCategorySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'vendor_count']
     
-    def get_vendor_count(self, obj):
+    def get_vendor_count(self, obj) -> int:
         """Get the number of vendors in this category."""
         return obj.vendor_set.count()
 
@@ -33,7 +36,7 @@ class VendorCategorySerializer(serializers.ModelSerializer):
 class VendorContactSerializer(serializers.ModelSerializer):
     """Serializer for vendor contacts."""
     
-    full_name = serializers.ReadOnlyField()
+    full_name = serializers.CharField(read_only=True)
     contact_type_display = serializers.CharField(source='get_contact_type_display', read_only=True)
     
     class Meta:
@@ -91,7 +94,7 @@ class VendorNoteSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'created_by', 'created_by_name', 'note_type_display']
     
-    def get_created_by_name(self, obj):
+    def get_created_by_name(self, obj) -> str | None:
         """Get the full name of the user who created the note."""
         if obj.created_by:
             return obj.created_by.get_full_name() or obj.created_by.username
@@ -110,8 +113,8 @@ class VendorListSerializer(serializers.ModelSerializer):
     # Computed fields for list view
     contact_count = serializers.SerializerMethodField()
     service_count = serializers.SerializerMethodField()
-    is_contract_expiring_soon = serializers.ReadOnlyField()
-    days_until_contract_expiry = serializers.ReadOnlyField()
+    is_contract_expiring_soon = serializers.BooleanField(read_only=True)
+    days_until_contract_expiry = serializers.IntegerField(read_only=True, allow_null=True)
     
     class Meta:
         model = Vendor
@@ -129,17 +132,17 @@ class VendorListSerializer(serializers.ModelSerializer):
             'is_contract_expiring_soon', 'days_until_contract_expiry', 'created_at', 'updated_at'
         ]
     
-    def get_assigned_to_name(self, obj):
+    def get_assigned_to_name(self, obj) -> str | None:
         """Get the assigned user's name."""
         if obj.assigned_to:
             return obj.assigned_to.get_full_name() or obj.assigned_to.username
         return None
     
-    def get_contact_count(self, obj):
+    def get_contact_count(self, obj) -> int:
         """Get the number of contacts for this vendor."""
         return obj.contacts.filter(is_active=True).count()
     
-    def get_service_count(self, obj):
+    def get_service_count(self, obj) -> int:
         """Get the number of services for this vendor."""
         return obj.services.filter(is_active=True).count()
 
@@ -159,9 +162,9 @@ class VendorDetailSerializer(serializers.ModelSerializer):
     services = VendorServiceSerializer(many=True, read_only=True)
     
     # Computed fields
-    full_address = serializers.ReadOnlyField()
-    is_contract_expiring_soon = serializers.ReadOnlyField()
-    days_until_contract_expiry = serializers.ReadOnlyField()
+    full_address = serializers.CharField(read_only=True)
+    is_contract_expiring_soon = serializers.BooleanField(read_only=True)
+    days_until_contract_expiry = serializers.IntegerField(read_only=True, allow_null=True)
     
     # Statistics
     contact_count = serializers.SerializerMethodField()
@@ -225,31 +228,31 @@ class VendorDetailSerializer(serializers.ModelSerializer):
             'risk_level_display', 'assigned_to_name'
         ]
     
-    def get_assigned_to_name(self, obj):
+    def get_assigned_to_name(self, obj) -> str | None:
         """Get the assigned user's name."""
         if obj.assigned_to:
             return obj.assigned_to.get_full_name() or obj.assigned_to.username
         return None
     
-    def get_created_by_name(self, obj):
+    def get_created_by_name(self, obj) -> str | None:
         """Get the creator's name."""
         if obj.created_by:
             return obj.created_by.get_full_name() or obj.created_by.username
         return None
     
-    def get_contact_count(self, obj):
+    def get_contact_count(self, obj) -> int:
         """Get total contact count."""
         return obj.contacts.count()
     
-    def get_service_count(self, obj):
+    def get_service_count(self, obj) -> int:
         """Get total service count."""
         return obj.services.count()
     
-    def get_active_service_count(self, obj):
+    def get_active_service_count(self, obj) -> int:
         """Get active service count."""
         return obj.services.filter(is_active=True).count()
     
-    def get_note_count(self, obj):
+    def get_note_count(self, obj) -> int:
         """Get note count."""
         return obj.vendor_notes.count()
 
@@ -407,8 +410,8 @@ class VendorTaskListSerializer(serializers.ModelSerializer):
     task_type_display = serializers.CharField(source='get_task_type_display', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    days_until_due = serializers.ReadOnlyField()
-    is_overdue = serializers.ReadOnlyField()
+    days_until_due = serializers.IntegerField(read_only=True, allow_null=True)
+    is_overdue = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = VendorTask
@@ -438,10 +441,10 @@ class VendorTaskDetailSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     
     # Computed fields
-    days_until_due = serializers.ReadOnlyField()
-    is_overdue = serializers.ReadOnlyField()
-    should_send_reminder = serializers.ReadOnlyField()
-    next_reminder_date = serializers.ReadOnlyField()
+    days_until_due = serializers.IntegerField(read_only=True, allow_null=True)
+    is_overdue = serializers.BooleanField(read_only=True)
+    should_send_reminder = serializers.BooleanField(read_only=True)
+    next_reminder_date = serializers.DateField(read_only=True, allow_null=True)
     
     class Meta:
         model = VendorTask
@@ -464,7 +467,8 @@ class VendorTaskDetailSerializer(serializers.ModelSerializer):
             'auto_generated', 'generation_source', 'created_at', 'updated_at'
         ]
     
-    def get_assigned_to_details(self, obj):
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_assigned_to_details(self, obj) -> dict[str, object] | None:
         """Get assigned user details."""
         if obj.assigned_to:
             return {
@@ -475,7 +479,8 @@ class VendorTaskDetailSerializer(serializers.ModelSerializer):
             }
         return None
     
-    def get_created_by_details(self, obj):
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_created_by_details(self, obj) -> dict[str, object] | None:
         """Get creator user details."""
         if obj.created_by:
             return {
@@ -485,13 +490,14 @@ class VendorTaskDetailSerializer(serializers.ModelSerializer):
             }
         return None
     
-    def get_service_details(self, obj):
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_service_details(self, obj) -> dict[str, object] | None:
         """Get related service details."""
         if obj.service_reference:
             return {
                 'id': obj.service_reference.id,
-                'service_name': obj.service_reference.service_name,
-                'service_category': obj.service_reference.get_service_category_display(),
+                'service_name': obj.service_reference.name,
+                'service_category': obj.service_reference.get_category_display(),
             }
         return None
 
