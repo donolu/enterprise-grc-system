@@ -77,6 +77,18 @@ def test_finalize_pdf_source_creates_final_pdf_and_audit_log(
         policy_version=policy_version,
         action='finalized',
     ).exists()
+    audit_log = PolicyVersionAuditLog.objects.get(
+        policy_version=policy_version,
+        action='finalized',
+    )
+    assert audit_log.details['actor']['email'] == owner.email
+    assert audit_log.details['object']['type'] == 'policies.PolicyVersion'
+    assert audit_log.details['object']['id'] == str(policy_version.id)
+    assert audit_log.details['event'] == 'POLICY_VERSION_FINALIZED'
+    assert audit_log.details['previous']['lifecycle_state'] == 'approved'
+    assert audit_log.details['new']['lifecycle_state'] == 'final'
+    assert audit_log.details['source']['type'] == 'conversion'
+    assert 'source pdf' not in str(audit_log.details)
 
 
 @pytest.mark.django_db
@@ -110,6 +122,12 @@ def test_finalized_normal_download_serves_pdf_and_blocks_source(
         policy_version=policy_version,
         action='downloaded_pdf',
     ).exists()
+    pdf_audit_log = PolicyVersionAuditLog.objects.get(
+        policy_version=policy_version,
+        action='downloaded_pdf',
+    )
+    assert pdf_audit_log.details['event'] == 'POLICY_VERSION_DOWNLOADED_PDF'
+    assert pdf_audit_log.details['source']['reference'] == 'final_pdf'
 
 
 @pytest.mark.django_db
@@ -131,6 +149,12 @@ def test_authorised_editor_can_download_source(
         policy_version=policy_version,
         action='downloaded_source',
     ).exists()
+    source_audit_log = PolicyVersionAuditLog.objects.get(
+        policy_version=policy_version,
+        action='downloaded_source',
+    )
+    assert source_audit_log.details['event'] == 'POLICY_VERSION_DOWNLOADED_SOURCE'
+    assert source_audit_log.details['source']['reference'] == 'source_document'
 
 
 @pytest.mark.django_db
@@ -170,6 +194,12 @@ def test_docx_finalization_failure_is_audited(tenant_client, test_tenant, policy
         policy_version=version,
         action='conversion_failed',
     ).exists()
+    audit_log = PolicyVersionAuditLog.objects.get(
+        policy_version=version,
+        action='conversion_failed',
+    )
+    assert audit_log.details['event'] == 'POLICY_VERSION_CONVERSION_FAILED'
+    assert audit_log.details['source']['type'] == 'conversion'
 
 
 @pytest.mark.django_db
@@ -195,3 +225,49 @@ def test_finalized_version_cannot_replace_source_document(
 
     assert response.status_code == 400
     assert 'document' in response.json()
+
+
+@pytest.mark.django_db
+def test_policy_distribution_and_acknowledgment_are_audited(
+    tenant_client,
+    test_tenant,
+    policy_users,
+    policy_version,
+):
+    owner, normal = policy_users
+    with tenant_context(test_tenant):
+        policy_version.is_active = True
+        policy_version.is_published = True
+        policy_version.lifecycle_state = 'final'
+        policy_version.save(update_fields=['is_active', 'is_published', 'lifecycle_state'])
+
+    tenant_client.defaults['HTTP_HOST'] = f'{test_tenant.schema_name}.localhost'
+    tenant_client.force_authenticate(user=owner)
+    distribute_response = tenant_client.post(
+        f'/api/policies/policies/{policy_version.policy.id}/distribute/',
+        {'user_ids': [normal.id]},
+        format='json',
+    )
+
+    assert distribute_response.status_code == 201
+    distribute_log = PolicyVersionAuditLog.objects.get(
+        policy_version=policy_version,
+        action='distributed',
+    )
+    assert distribute_log.details['event'] == 'POLICY_VERSION_DISTRIBUTED'
+    assert distribute_log.details['new']['distribution_count'] == 1
+    assert distribute_log.details['new']['recipient_ids'] == [str(normal.id)]
+
+    tenant_client.force_authenticate(user=normal)
+    acknowledge_response = tenant_client.post(
+        f'/api/policies/policies/{policy_version.policy.id}/acknowledge/'
+    )
+
+    assert acknowledge_response.status_code == 201
+    acknowledgment_log = PolicyVersionAuditLog.objects.get(
+        policy_version=policy_version,
+        action='acknowledged',
+    )
+    assert acknowledgment_log.details['event'] == 'POLICY_VERSION_ACKNOWLEDGED'
+    assert acknowledgment_log.details['actor']['email'] == normal.email
+    assert acknowledgment_log.details['new']['acknowledgment_id']
