@@ -624,6 +624,12 @@ class ImportFrameworkCommandTest(TransactionTestCase):
             self.assertEqual(audit_event.details['clause_count'], 3)
             self.assertEqual(audit_event.details['control_count'], 2)
             self.assertFalse(audit_event.details['updated_existing'])
+            self.assertEqual(audit_event.details['actor']['id'], str(self.user.id))
+            self.assertEqual(audit_event.details['actor']['email'], self.user.email)
+            self.assertEqual(audit_event.details['object']['type'], 'catalogs.Framework')
+            self.assertEqual(audit_event.details['object']['id'], str(framework.id))
+            self.assertEqual(audit_event.details['event'], 'FRAMEWORK_IMPORTED')
+            self.assertEqual(audit_event.details['source']['type'], 'import')
         finally:
             os.unlink(temp_file)
 
@@ -706,7 +712,13 @@ class ImportTemplateLibraryCommandTest(TransactionTestCase):
             call_command(*command_args)
 
             self.assertEqual(TemplateDocument.objects.count(), 2)
-            self.assertEqual(AuditEvent.objects.filter(event='TEMPLATE_LIBRARY_IMPORTED').count(), 2)
+            audit_events = AuditEvent.objects.filter(event='TEMPLATE_LIBRARY_IMPORTED')
+            self.assertEqual(audit_events.count(), 2)
+            audit_event = audit_events.first()
+            self.assertEqual(audit_event.details['actor']['id'], str(self.user.id))
+            self.assertEqual(audit_event.details['object']['type'], 'catalogs.TemplateDocument')
+            self.assertEqual(audit_event.details['event'], 'TEMPLATE_LIBRARY_IMPORTED')
+            self.assertEqual(audit_event.details['source']['type'], 'import')
 
             policy_template = TemplateDocument.objects.get(module='policy')
             self.assertEqual(policy_template.document_type, 'policy')

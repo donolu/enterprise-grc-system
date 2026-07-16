@@ -368,9 +368,17 @@ class LimitOverrideRequest(models.Model):
         self.applied_by = applied_by_name
         self.save()
         
+        from core.audit import log_audit_event
+
         # Create audit log
-        AuditEvent.objects.create(
+        log_audit_event(
             event="LIMIT_OVERRIDE_APPLIED",
+            target=self,
+            object_display=f'{self.limit_type} override',
+            previous={'limit': self.current_limit},
+            new={'limit': self.requested_limit},
+            reason='approved limit override applied',
+            source={'type': 'system', 'reference': 'LimitOverrideRequest.apply_override'},
             details={
                 'limit_type': self.limit_type,
                 'previous_limit': self.current_limit,
@@ -388,6 +396,14 @@ class AuditEvent(models.Model):
     event = models.CharField(max_length=120)
     details = models.JSONField(default=dict, blank=True)
     at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-at']
+        indexes = [
+            models.Index(fields=['event', '-at']),
+            models.Index(fields=['user', '-at']),
+            models.Index(fields=['at']),
+        ]
 
 
 def tenant_file_upload_path(instance, filename):
