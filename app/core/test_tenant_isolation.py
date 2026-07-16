@@ -22,7 +22,14 @@ from knowledge.models import KnowledgeArticle, KnowledgeCategory
 from policies.models import Policy, PolicyCategory
 from risk.models import Risk
 from training.models import TrainingCategory, TrainingVideo
-from vendors.models import Vendor, VendorCategory, VendorTask
+from vendors.models import (
+    Vendor,
+    VendorCategory,
+    VendorContact,
+    VendorNote,
+    VendorService,
+    VendorTask,
+)
 from vuln.models import ScanTarget
 
 User = get_user_model()
@@ -307,6 +314,120 @@ class TestTenantIsolation:
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
         assert self._response_titles(list_response.json()) == ["Tenant A vendor task"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_vendor_category_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_vendor_category(tenant_a, "Tenant A category")
+        with tenant_context(tenant_b):
+            self._create_vendor_category(tenant_b, "Tenant B first category")
+            tenant_b_private_category = self._create_vendor_category(
+                tenant_b,
+                "Tenant B private category",
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/vendors/categories/")
+        detail_response = client.get(
+            f"/api/vendors/categories/{tenant_b_private_category.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_names(list_response.json()) == ["Tenant A category"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_vendor_contact_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        vendor_a = self._create_vendor(tenant_a, "Tenant A vendor", user_a)
+        self._create_vendor_contact(tenant_a, vendor_a, "Tenant A")
+        with tenant_context(tenant_b):
+            vendor_b = self._create_vendor(tenant_b, "Tenant B vendor", user_b)
+            self._create_vendor_contact(tenant_b, vendor_b, "Tenant B first")
+            tenant_b_private_contact = self._create_vendor_contact(
+                tenant_b,
+                vendor_b,
+                "Tenant B private",
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/vendors/contacts/")
+        detail_response = client.get(
+            f"/api/vendors/contacts/{tenant_b_private_contact.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_field(list_response.json(), "first_name") == ["Tenant A"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_vendor_service_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        vendor_a = self._create_vendor(tenant_a, "Tenant A vendor", user_a)
+        self._create_vendor_service(tenant_a, vendor_a, "Tenant A service")
+        with tenant_context(tenant_b):
+            vendor_b = self._create_vendor(tenant_b, "Tenant B vendor", user_b)
+            self._create_vendor_service(tenant_b, vendor_b, "Tenant B first service")
+            tenant_b_private_service = self._create_vendor_service(
+                tenant_b,
+                vendor_b,
+                "Tenant B private service",
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/vendors/services/")
+        detail_response = client.get(
+            f"/api/vendors/services/{tenant_b_private_service.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_names(list_response.json()) == ["Tenant A service"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_vendor_note_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        vendor_a = self._create_vendor(tenant_a, "Tenant A vendor", user_a)
+        self._create_vendor_note(tenant_a, vendor_a, "Tenant A note", user_a)
+        with tenant_context(tenant_b):
+            vendor_b = self._create_vendor(tenant_b, "Tenant B vendor", user_b)
+            self._create_vendor_note(tenant_b, vendor_b, "Tenant B first note", user_b)
+            tenant_b_private_note = self._create_vendor_note(
+                tenant_b,
+                vendor_b,
+                "Tenant B private note",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/vendors/notes/")
+        detail_response = client.get(
+            f"/api/vendors/notes/{tenant_b_private_note.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A note"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_compliance_artefact_list_and_detail_are_scoped_to_request_tenant(self):
@@ -616,16 +737,20 @@ class TestTenantIsolation:
 
     def _create_vendor(self, tenant, name, user):
         with tenant_context(tenant):
-            category = VendorCategory.objects.create(
-                name=f"{name} category",
-                description=f"{name} category description",
-            )
+            category = self._create_vendor_category(tenant, f"{name} category")
             return Vendor.objects.create(
                 name=name,
                 category=category,
                 business_description=f"{name} description",
                 created_by=user,
                 assigned_to=user,
+            )
+
+    def _create_vendor_category(self, tenant, name):
+        with tenant_context(tenant):
+            return VendorCategory.objects.create(
+                name=name,
+                description=f"{name} description",
             )
 
     def _create_vendor_task(self, tenant, vendor, title, user):
@@ -637,6 +762,37 @@ class TestTenantIsolation:
                 task_type="security_review",
                 due_date=timezone.now().date() + timedelta(days=7),
                 assigned_to=user,
+                created_by=user,
+            )
+
+    def _create_vendor_contact(self, tenant, vendor, first_name):
+        slug = first_name.lower().replace(" ", "-")
+        with tenant_context(tenant):
+            return VendorContact.objects.create(
+                vendor=vendor,
+                first_name=first_name,
+                last_name="Contact",
+                email=f"{slug}@example.com",
+                contact_type="primary",
+            )
+
+    def _create_vendor_service(self, tenant, vendor, name):
+        with tenant_context(tenant):
+            return VendorService.objects.create(
+                vendor=vendor,
+                name=name,
+                description=f"{name} description",
+                category="it_services",
+                data_classification="internal",
+            )
+
+    def _create_vendor_note(self, tenant, vendor, title, user):
+        with tenant_context(tenant):
+            return VendorNote.objects.create(
+                vendor=vendor,
+                title=title,
+                content=f"{title} content",
+                note_type="general",
                 created_by=user,
             )
 
@@ -711,3 +867,7 @@ class TestTenantIsolation:
     def _response_names(self, payload):
         results = payload.get("results", payload) if isinstance(payload, dict) else payload
         return [item["name"] for item in results]
+
+    def _response_field(self, payload, field):
+        results = payload.get("results", payload) if isinstance(payload, dict) else payload
+        return [item[field] for item in results]
