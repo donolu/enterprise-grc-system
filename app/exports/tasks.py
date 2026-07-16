@@ -4,6 +4,13 @@ import logging
 
 from .models import AssessmentReport
 from .models import TenantDataExport
+from .audit import (
+    assessment_report_display,
+    audit_export_change,
+    snapshot_assessment_report,
+    snapshot_tenant_data_export,
+    tenant_data_export_display,
+)
 from .services import AssessmentReportGenerator, TenantDataExportGenerator
 
 logger = logging.getLogger(__name__)
@@ -103,6 +110,7 @@ def cleanup_old_reports(days_old=30):
     
     for report in old_reports:
         try:
+            previous = snapshot_assessment_report(report)
             if report.generated_file:
                 # Track storage saved
                 if report.generated_file.file_size:
@@ -111,6 +119,14 @@ def cleanup_old_reports(days_old=30):
                 # Delete the file and document
                 report.generated_file.delete()
             
+            audit_export_change(
+                event='ASSESSMENT_REPORT_EXPIRED',
+                actor=report.requested_by,
+                target=report,
+                object_display=assessment_report_display(report),
+                previous=previous,
+                source={'type': 'worker', 'reference': 'cleanup_old_reports'},
+            )
             # Delete the report record
             report.delete()
             deleted_count += 1
@@ -125,6 +141,55 @@ def cleanup_old_reports(days_old=30):
         'deleted_count': deleted_count,
         'storage_saved_bytes': storage_saved,
         'message': f'Cleaned up {deleted_count} reports older than {days_old} days'
+    }
+
+
+@shared_task
+def cleanup_old_tenant_data_exports(days_old=30):
+    """
+    Clean up old tenant data exports and audit the expiry.
+    """
+    from datetime import timedelta
+
+    cutoff_date = timezone.now() - timedelta(days=days_old)
+    old_exports = TenantDataExport.objects.filter(
+        requested_at__lt=cutoff_date,
+        status='completed',
+    ).select_related('generated_file', 'requested_by')
+
+    deleted_count = 0
+    storage_saved = 0
+    for data_export in old_exports:
+        try:
+            previous = snapshot_tenant_data_export(data_export)
+            if data_export.generated_file:
+                if data_export.generated_file.file_size:
+                    storage_saved += data_export.generated_file.file_size
+                data_export.generated_file.delete()
+
+            audit_export_change(
+                event='TENANT_DATA_EXPORT_EXPIRED',
+                actor=data_export.requested_by,
+                target=data_export,
+                object_display=tenant_data_export_display(data_export),
+                previous=previous,
+                source={'type': 'worker', 'reference': 'cleanup_old_tenant_data_exports'},
+            )
+            data_export.delete()
+            deleted_count += 1
+        except Exception as exc:
+            logger.error("Error deleting old tenant data export %s: %s", data_export.id, str(exc))
+
+    logger.info(
+        "Cleaned up %s old tenant data exports, saved %s bytes of storage",
+        deleted_count,
+        storage_saved,
+    )
+    return {
+        'status': 'success',
+        'deleted_count': deleted_count,
+        'storage_saved_bytes': storage_saved,
+        'message': f'Cleaned up {deleted_count} tenant data exports older than {days_old} days',
     }
 
 

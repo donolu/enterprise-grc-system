@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.urls import reverse
 from django.utils import timezone
 from django_tenants.test.cases import TenantTestCase
@@ -13,11 +14,12 @@ from openpyxl import load_workbook
 
 from catalogs.models import Framework, Clause, Control, ControlAssessment, ControlEvidence, AssessmentEvidence
 from compliance.models import GovernanceArtefact, RegulatoryRequirement
-from core.models import Document
+from core.models import AuditEvent, Document
 from assets.models import Asset
 from risk.models import Risk
 from .models import AssessmentReport, TenantDataExport
 from .services import AssessmentReportGenerator, TenantDataExportGenerator, get_export_coverage_manifest
+from .tasks import cleanup_old_tenant_data_exports
 
 User = get_user_model()
 
@@ -145,6 +147,10 @@ class AssessmentReportAPITest(ExportTenantAPITestCase):
         self.assertEqual(report.title, 'Test API Report')
         self.assertEqual(report.framework, self.framework)
         self.assertEqual(report.requested_by, self.user)
+        event = AuditEvent.objects.get(event='ASSESSMENT_REPORT_REQUESTED')
+        self.assertEqual(event.details['actor']['email'], self.user.email)
+        self.assertEqual(event.details['object']['type'], 'exports.AssessmentReport')
+        self.assertEqual(event.details['new']['title'], 'Test API Report')
     
     def test_list_assessment_reports(self):
         """Test listing assessment reports."""
@@ -243,6 +249,34 @@ class AssessmentReportAPITest(ExportTenantAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], 'completed')
         self.assertIn('message', response.data)
+
+    def test_download_report_is_audited(self):
+        document = Document.objects.create(
+            title='Assessment report',
+            uploaded_by=self.user,
+            mime_type='application/pdf',
+        )
+        document.file.save('assessment-report.pdf', ContentFile(b'pdf bytes'), save=True)
+        report = AssessmentReport.objects.create(
+            report_type='assessment_summary',
+            title='Completed Report',
+            requested_by=self.user,
+            status='completed',
+            generated_file=document,
+        )
+
+        response = self.client.get(
+            reverse('assessment-reports-download', kwargs={'pk': report.id}),
+            HTTP_USER_AGENT='pytest-report-agent',
+            REMOTE_ADDR='203.0.113.30',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn(f'/api/documents/{document.id}/download/', response.data['download_url'])
+        event = AuditEvent.objects.get(event='ASSESSMENT_REPORT_DOWNLOAD_REQUESTED')
+        self.assertEqual(event.details['request']['ip'], '203.0.113.30')
+        self.assertEqual(event.details['request']['user_agent'], 'pytest-report-agent')
+        self.assertEqual(event.details['new']['filename'], 'assessment-report.pdf')
     
     @patch('exports.tasks.generate_assessment_report_task.delay')
     def test_quick_generate(self, mock_task):
@@ -381,6 +415,10 @@ class AssessmentReportGeneratorTest(TestCase):
             report.refresh_from_db()
             self.assertEqual(report.status, 'completed')
             self.assertIsNotNone(report.generation_completed_at)
+            event = AuditEvent.objects.get(event='ASSESSMENT_REPORT_GENERATED')
+            self.assertEqual(event.details['actor']['email'], self.user.email)
+            self.assertEqual(event.details['new']['status'], 'completed')
+            self.assertEqual(event.details['new']['generated_file_id'], mock_document.id)
             mock_html_instance.write_pdf.assert_called_once()
             _, write_pdf_kwargs = mock_html_instance.write_pdf.call_args
             self.assertFalse(write_pdf_kwargs['presentational_hints'])
@@ -553,6 +591,44 @@ class TenantDataExportAPITest(ExportTenantAPITestCase):
         self.assertEqual(data_export.status, 'processing')
         self.assertEqual(data_export.selected_modules, ['frameworks', 'risk'])
         mock_delay.assert_called_once_with(data_export.id)
+        requested_event = AuditEvent.objects.get(event='TENANT_DATA_EXPORT_REQUESTED')
+        started_event = AuditEvent.objects.get(event='TENANT_DATA_EXPORT_GENERATION_STARTED')
+        self.assertEqual(requested_event.details['actor']['email'], self.user.email)
+        self.assertEqual(requested_event.details['object']['type'], 'exports.TenantDataExport')
+        self.assertEqual(requested_event.details['new']['selected_modules'], ['frameworks', 'risk'])
+        self.assertEqual(started_event.details['previous']['status'], 'pending')
+        self.assertEqual(started_event.details['new']['status'], 'processing')
+
+    def test_download_export_is_audited(self):
+        data_export = TenantDataExport.objects.create(
+            title='Downloadable export',
+            export_format='xlsx',
+            selected_modules=['assets'],
+            requested_by=self.user,
+            status='completed',
+        )
+        document = Document.objects.create(
+            title='Downloadable export',
+            uploaded_by=self.user,
+            mime_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            file_size=12,
+        )
+        document.file.save('tenant-export.xlsx', ContentFile(b'export bytes'), save=True)
+        data_export.generated_file = document
+        data_export.save(update_fields=['generated_file'])
+
+        response = self.client.get(
+            reverse('tenant-data-exports-download', kwargs={'pk': data_export.id}),
+            HTTP_USER_AGENT='pytest-export-agent',
+            REMOTE_ADDR='203.0.113.20',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        event = AuditEvent.objects.get(event='TENANT_DATA_EXPORT_DOWNLOAD_REQUESTED')
+        self.assertEqual(event.details['request']['ip'], '203.0.113.20')
+        self.assertEqual(event.details['request']['user_agent'], 'pytest-export-agent')
+        self.assertEqual(event.details['new']['filename'], 'tenant-export.xlsx')
+        self.assertEqual(event.details['new']['generated_file_id'], document.id)
 
     def test_invalid_module_is_rejected(self):
         url = reverse('tenant-data-exports-list')
@@ -670,6 +746,11 @@ class TenantDataExportGeneratorTest(TestCase):
         self.assertEqual(data_export.record_counts['catalogs.Framework'], 1)
         self.assertEqual(data_export.record_counts['risk.Risk'], 1)
         self.assertEqual(data_export.record_counts['assets.Asset'], 1)
+        generated_event = AuditEvent.objects.get(event='TENANT_DATA_EXPORT_GENERATED')
+        self.assertEqual(generated_event.details['actor']['email'], self.user.email)
+        self.assertEqual(generated_event.details['previous']['status'], 'processing')
+        self.assertEqual(generated_event.details['new']['status'], 'completed')
+        self.assertEqual(generated_event.details['new']['generated_file_id'], document.id)
 
         workbook = load_workbook(BytesIO(document.file.read()), read_only=True)
         self.assertIn('Frameworks', workbook.sheetnames)
@@ -678,6 +759,78 @@ class TenantDataExportGeneratorTest(TestCase):
         risk_rows = list(workbook['Risks'].iter_rows(values_only=True))
         self.assertIn('risk_id', risk_rows[0])
         self.assertIn('RISK-001', risk_rows[1])
+
+    def test_generate_xlsx_export_includes_audit_records(self):
+        AuditEvent.objects.create(
+            user=self.user,
+            event='DOCUMENT_UPLOADED',
+            details={
+                'event': 'DOCUMENT_UPLOADED',
+                'object': {'display': 'document:1'},
+            },
+        )
+        data_export = TenantDataExport.objects.create(
+            title='Audit trail export',
+            export_format='xlsx',
+            selected_modules=['identity'],
+            requested_by=self.user,
+        )
+
+        document = TenantDataExportGenerator(data_export).generate_export()
+
+        workbook = load_workbook(BytesIO(document.file.read()), read_only=True)
+        self.assertIn('Audit events', workbook.sheetnames)
+        audit_rows = list(workbook['Audit events'].iter_rows(values_only=True))
+        self.assertIn('event', audit_rows[0])
+        event_index = audit_rows[0].index('event')
+        self.assertIn('DOCUMENT_UPLOADED', [row[event_index] for row in audit_rows[1:]])
+
+    def test_generate_export_failure_is_audited(self):
+        data_export = TenantDataExport.objects.create(
+            title='Broken export',
+            export_format='xlsx',
+            selected_modules=['assets'],
+            requested_by=self.user,
+        )
+        data_export.export_format = 'bad_format'
+
+        with self.assertRaises(ValueError):
+            TenantDataExportGenerator(data_export).generate_export()
+
+        data_export.refresh_from_db()
+        self.assertEqual(data_export.status, 'failed')
+        failed_event = AuditEvent.objects.get(event='TENANT_DATA_EXPORT_FAILED')
+        self.assertEqual(failed_event.details['actor']['email'], self.user.email)
+        self.assertEqual(failed_event.details['new']['status'], 'failed')
+        self.assertIn('Unsupported export format', failed_event.details['reason'])
+
+    def test_cleanup_old_tenant_data_exports_is_audited(self):
+        data_export = TenantDataExport.objects.create(
+            title='Expired export',
+            export_format='xlsx',
+            selected_modules=['assets'],
+            requested_by=self.user,
+            status='completed',
+        )
+        document = Document.objects.create(
+            title='Expired export',
+            uploaded_by=self.user,
+            mime_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        document.file.save('expired-export.xlsx', ContentFile(b'expired'), save=True)
+        data_export.generated_file = document
+        data_export.save(update_fields=['generated_file'])
+        TenantDataExport.objects.filter(pk=data_export.pk).update(
+            requested_at=timezone.now() - timezone.timedelta(days=60)
+        )
+
+        result = cleanup_old_tenant_data_exports(days_old=30)
+
+        self.assertEqual(result['deleted_count'], 1)
+        self.assertFalse(TenantDataExport.objects.filter(pk=data_export.pk).exists())
+        event = AuditEvent.objects.get(event='TENANT_DATA_EXPORT_EXPIRED')
+        self.assertEqual(event.details['actor']['email'], self.user.email)
+        self.assertEqual(event.details['previous']['status'], 'completed')
 
     def test_generate_xlsx_export_includes_governance_records(self):
         data_export = TenantDataExport.objects.create(
