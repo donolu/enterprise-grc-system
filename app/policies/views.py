@@ -14,10 +14,16 @@ from django.db.models import Count, Q, Avg, Case, When, Value, IntegerField
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from datetime import timedelta
+from typing import Any
 
 from .models import (
     PolicyCategory, Policy, PolicyVersion,
     PolicyAcknowledgment, PolicyDistribution, PolicyVersionAuditLog
+)
+from .audit import (
+    changed_values,
+    log_policy_version_event,
+    snapshot_policy_version,
 )
 from .document_finalization import DocumentConversionError, finalize_policy_version_pdf
 from .serializers import (
@@ -222,6 +228,18 @@ class PolicyViewSet(viewsets.ModelViewSet):
                 distribution.acknowledged_at = timezone.now()
                 distribution.save()
 
+            log_policy_version_event(
+                version=current_version,
+                action='acknowledged',
+                actor=request.user,
+                request=request,
+                new={
+                    'acknowledgment_id': str(acknowledgment.id),
+                    'policy_version_id': str(current_version.id),
+                    'distribution_id': str(distribution.id) if distribution else '',
+                },
+            )
+
             return Response(
                 PolicyAcknowledgmentSerializer(acknowledgment).data,
                 status=status.HTTP_201_CREATED
@@ -267,6 +285,23 @@ class PolicyViewSet(viewsets.ModelViewSet):
                 distributions_created.append(distribution)
 
         serializer = PolicyDistributionSerializer(distributions_created, many=True)
+        if distributions_created:
+            log_policy_version_event(
+                version=current_version,
+                action='distributed',
+                actor=request.user,
+                request=request,
+                new={
+                    'distribution_count': len(distributions_created),
+                    'distribution_ids': [
+                        str(distribution.id) for distribution in distributions_created
+                    ],
+                    'recipient_ids': [
+                        str(distribution.distributed_to_id)
+                        for distribution in distributions_created
+                    ],
+                },
+            )
         return Response({
             'message': f'Policy distributed to {len(distributions_created)} users',
             'distributions': serializer.data
@@ -280,7 +315,7 @@ class PolicyViewSet(viewsets.ModelViewSet):
             'versions__distributions'
         )
 
-        dashboard_data = []
+        dashboard_data: list[dict[str, Any]] = []
         for policy in policies:
             current_version = policy.current_version
             if not current_version:
@@ -506,22 +541,30 @@ class PolicyVersionViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         version = serializer.save(created_by=self.request.user)
-        PolicyVersionAuditLog.objects.create(
-            policy_version=version,
+        log_policy_version_event(
+            version=version,
             action='uploaded',
             actor=self.request.user,
+            request=self.request,
+            new=snapshot_policy_version(version),
             details={'filename': version.file_name, 'lifecycle_state': version.lifecycle_state},
         )
 
     def perform_update(self, serializer):
+        previous = snapshot_policy_version(serializer.instance)
         version = serializer.save()
         if self.request.FILES.get('document') and version.lifecycle_state != 'final':
             version.lifecycle_state = 'client_modified'
             version.save(update_fields=['lifecycle_state'])
-        PolicyVersionAuditLog.objects.create(
-            policy_version=version,
+        new = snapshot_policy_version(version)
+        previous_changed, new_changed = changed_values(previous, new)
+        log_policy_version_event(
+            version=version,
             action='edited',
             actor=self.request.user,
+            request=self.request,
+            previous=previous_changed,
+            new=new_changed,
             details={'filename': version.file_name, 'lifecycle_state': version.lifecycle_state},
         )
 
@@ -543,8 +586,19 @@ class PolicyVersionViewSet(viewsets.ModelViewSet):
         ).update(is_active=False)
 
         # Activate this version
+        previous = snapshot_policy_version(version)
         version.is_active = True
         version.save()
+        new = snapshot_policy_version(version)
+        previous_changed, new_changed = changed_values(previous, new)
+        log_policy_version_event(
+            version=version,
+            action='activated',
+            actor=request.user,
+            request=request,
+            previous=previous_changed,
+            new=new_changed,
+        )
 
         serializer = self.get_serializer(version)
         return Response(serializer.data)
@@ -553,8 +607,19 @@ class PolicyVersionViewSet(viewsets.ModelViewSet):
     def publish(self, request, pk=None):
         """Publish this version."""
         version = self.get_object()
+        previous = snapshot_policy_version(version)
         version.is_published = True
         version.save()
+        new = snapshot_policy_version(version)
+        previous_changed, new_changed = changed_values(previous, new)
+        log_policy_version_event(
+            version=version,
+            action='published',
+            actor=request.user,
+            request=request,
+            previous=previous_changed,
+            new=new_changed,
+        )
 
         serializer = self.get_serializer(version)
         return Response(serializer.data)
@@ -563,14 +628,20 @@ class PolicyVersionViewSet(viewsets.ModelViewSet):
     def approve(self, request, pk=None):
         """Approve this version."""
         version = self.get_object()
+        previous = snapshot_policy_version(version)
         version.approved_at = timezone.now()
         version.approved_by = request.user
         version.lifecycle_state = 'approved'
         version.save()
-        PolicyVersionAuditLog.objects.create(
-            policy_version=version,
+        new = snapshot_policy_version(version)
+        previous_changed, new_changed = changed_values(previous, new)
+        log_policy_version_event(
+            version=version,
             action='approved',
             actor=request.user,
+            request=request,
+            previous=previous_changed,
+            new=new_changed,
             details={'approved_at': version.approved_at.isoformat()},
         )
 
@@ -594,10 +665,12 @@ class PolicyVersionViewSet(viewsets.ModelViewSet):
                     {'error': 'Final PDF is not available'},
                     status=status.HTTP_409_CONFLICT
                 )
-            PolicyVersionAuditLog.objects.create(
-                policy_version=version,
+            log_policy_version_event(
+                version=version,
                 action='downloaded_pdf',
                 actor=request.user,
+                request=request,
+                source={'type': 'download', 'reference': 'final_pdf'},
                 details={'filename': version.final_pdf.name},
             )
             return FileResponse(
@@ -612,7 +685,7 @@ class PolicyVersionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        return _source_file_response(version, request.user)
+        return _source_file_response(version, request)
 
     @action(detail=True, methods=['get'], url_path='download-source')
     def download_source(self, request, pk=None):
@@ -623,7 +696,7 @@ class PolicyVersionViewSet(viewsets.ModelViewSet):
                 {'error': 'Only authorised editors and administrators can download source documents.'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        return _source_file_response(version, request.user)
+        return _source_file_response(version, request)
 
     @action(detail=True, methods=['post'])
     def finalize(self, request, pk=None):
@@ -640,13 +713,16 @@ class PolicyVersionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        previous = snapshot_policy_version(version)
         try:
             finalize_policy_version_pdf(version)
         except DocumentConversionError as exc:
-            PolicyVersionAuditLog.objects.create(
-                policy_version=version,
+            log_policy_version_event(
+                version=version,
                 action='conversion_failed',
                 actor=request.user,
+                request=request,
+                source={'type': 'conversion', 'reference': 'policy_final_pdf'},
                 details={'error': str(exc)},
             )
             return Response({'error': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
@@ -659,10 +735,16 @@ class PolicyVersionViewSet(viewsets.ModelViewSet):
             'final_pdf', 'final_pdf_size', 'lifecycle_state',
             'finalized_at', 'finalized_by', 'is_published',
         ])
-        PolicyVersionAuditLog.objects.create(
-            policy_version=version,
+        new = snapshot_policy_version(version)
+        previous_changed, new_changed = changed_values(previous, new)
+        log_policy_version_event(
+            version=version,
             action='finalized',
             actor=request.user,
+            request=request,
+            previous=previous_changed,
+            new=new_changed,
+            source={'type': 'conversion', 'reference': 'policy_final_pdf'},
             details={'final_pdf': version.final_pdf.name},
         )
         serializer = self.get_serializer(version)
@@ -681,17 +763,19 @@ class PolicyVersionViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-def _source_file_response(version, user):
+def _source_file_response(version, request):
     if not version.document:
         return Response(
             {'error': 'No document available'},
             status=status.HTTP_404_NOT_FOUND
         )
 
-    PolicyVersionAuditLog.objects.create(
-        policy_version=version,
+    log_policy_version_event(
+        version=version,
         action='downloaded_source',
-        actor=user,
+        actor=request.user,
+        request=request,
+        source={'type': 'download', 'reference': 'source_document'},
         details={'filename': version.file_name},
     )
     return FileResponse(
