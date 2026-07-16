@@ -573,6 +573,14 @@ class ControlAssessment(models.Model):
         related_name='assessments',
         help_text="The control being assessed"
     )
+    framework = models.ForeignKey(
+        Framework,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='control_assessments',
+        help_text="Framework version this assessment was created against"
+    )
     
     # Assessment metadata
     assessment_id = models.CharField(
@@ -732,6 +740,7 @@ class ControlAssessment(models.Model):
     class Meta:
         ordering = ['control__control_id', 'due_date']
         indexes = [
+            models.Index(fields=['framework', 'status']),
             models.Index(fields=['status', 'due_date']),
             models.Index(fields=['applicability', 'implementation_status']),
             models.Index(fields=['assigned_to', 'status']),
@@ -780,6 +789,15 @@ class ControlAssessment(models.Model):
         # Auto-generate assessment_id if not provided
         if not self.assessment_id:
             self.assessment_id = f"ASS-{self.control.control_id}-{uuid.uuid4().hex[:8].upper()}"
+
+        if self.control_id and getattr(self, 'framework_id', None) is None:
+            framework_ids = list(
+                self.control.clauses.order_by('framework_id')
+                .values_list('framework_id', flat=True)
+                .distinct()[:2]
+            )
+            if len(framework_ids) == 1:
+                self.framework_id = framework_ids[0]
         
         # Update status-based dates
         if self.status == 'in_progress' and not self.started_date:

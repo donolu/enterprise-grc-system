@@ -317,7 +317,8 @@ class ControlAssessmentListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for assessment listings."""
     control_id = serializers.CharField(source='control.control_id', read_only=True)
     control_name = serializers.CharField(source='control.name', read_only=True)
-    framework_name = serializers.CharField(source='control.clauses.first.framework.name', read_only=True)
+    framework_name = serializers.SerializerMethodField()
+    framework_version = serializers.SerializerMethodField()
     assigned_to_name = serializers.CharField(source='assigned_to.get_full_name', read_only=True)
     reviewer_name = serializers.CharField(source='reviewer.get_full_name', read_only=True)
     is_overdue = serializers.ReadOnlyField()
@@ -334,14 +335,27 @@ class ControlAssessmentListSerializer(serializers.ModelSerializer):
     def get_has_primary_evidence(self, obj):
         """Check if assessment has primary evidence."""
         return obj.evidence_links.filter(is_primary_evidence=True).exists()
+
+    def get_framework_name(self, obj):
+        framework = obj.framework or self._first_control_framework(obj)
+        return framework.name if framework else ''
+
+    def get_framework_version(self, obj):
+        framework = obj.framework or self._first_control_framework(obj)
+        return framework.version if framework else ''
+
+    def _first_control_framework(self, obj):
+        clause = obj.control.clauses.select_related('framework').first()
+        return clause.framework if clause else None
     
     class Meta:
         model = ControlAssessment
         fields = [
-            'id', 'assessment_id', 'control_id', 'control_name', 'framework_name',
-            'applicability', 'status', 'implementation_status', 'assigned_to_name',
-            'reviewer_name', 'due_date', 'completion_percentage', 'is_overdue',
-            'is_complete', 'days_until_due', 'risk_rating', 'compliance_score',
+            'id', 'assessment_id', 'control_id', 'control_name', 'framework',
+            'framework_name', 'framework_version', 'applicability', 'status',
+            'implementation_status', 'assigned_to_name', 'reviewer_name',
+            'due_date', 'completion_percentage', 'is_overdue', 'is_complete',
+            'days_until_due', 'risk_rating', 'compliance_score',
             'evidence_count', 'has_primary_evidence', 'created_at', 'updated_at'
         ]
 
@@ -349,6 +363,8 @@ class ControlAssessmentListSerializer(serializers.ModelSerializer):
 class ControlAssessmentDetailSerializer(serializers.ModelSerializer):
     """Detailed assessment serializer with full information."""
     control_details = ControlListSerializer(source='control', read_only=True)
+    framework_name = serializers.CharField(source='framework.name', read_only=True)
+    framework_version = serializers.CharField(source='framework.version', read_only=True)
     assigned_to_name = serializers.CharField(source='assigned_to.get_full_name', read_only=True)
     reviewer_name = serializers.CharField(source='reviewer.get_full_name', read_only=True)
     remediation_owner_name = serializers.CharField(source='remediation_owner.get_full_name', read_only=True)
@@ -367,20 +383,22 @@ class ControlAssessmentDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = ControlAssessment
         fields = [
-            'id', 'assessment_id', 'control', 'control_details', 'applicability',
+            'id', 'assessment_id', 'framework', 'framework_name',
+            'framework_version', 'control', 'control_details', 'applicability',
             'applicability_rationale', 'status', 'implementation_status',
             'assigned_to', 'assigned_to_name', 'reviewer', 'reviewer_name',
-            'due_date', 'started_date', 'completed_date', 'current_state_description',
-            'target_state_description', 'gap_analysis', 'implementation_approach',
-            'maturity_level', 'risk_rating', 'compliance_score', 'assessment_notes',
+            'due_date', 'started_date', 'completed_date',
+            'current_state_description', 'target_state_description',
+            'gap_analysis', 'implementation_approach', 'maturity_level',
+            'risk_rating', 'compliance_score', 'assessment_notes',
             'reviewer_comments', 'remediation_plan', 'remediation_due_date',
-            'remediation_owner', 'remediation_owner_name', 'version', 'change_log',
-            'is_overdue', 'is_complete', 'completion_percentage', 'days_until_due',
-            'evidence_count', 'primary_evidence', 'created_by_username',
-            'created_at', 'updated_at'
+            'remediation_owner', 'remediation_owner_name', 'version',
+            'change_log', 'is_overdue', 'is_complete', 'completion_percentage',
+            'days_until_due', 'evidence_count', 'primary_evidence',
+            'created_by_username', 'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'assessment_id', 'started_date', 'completed_date', 'version',
+            'assessment_id', 'framework', 'started_date', 'completed_date', 'version',
             'change_log', 'created_at', 'updated_at'
         ]
     
@@ -400,12 +418,13 @@ class ControlAssessmentCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ControlAssessment
         fields = [
-            'control', 'applicability', 'applicability_rationale', 'status',
-            'implementation_status', 'assigned_to', 'reviewer', 'due_date',
-            'current_state_description', 'target_state_description', 'gap_analysis',
-            'implementation_approach', 'maturity_level', 'risk_rating',
-            'compliance_score', 'assessment_notes', 'reviewer_comments',
-            'remediation_plan', 'remediation_due_date', 'remediation_owner'
+            'control', 'framework', 'applicability', 'applicability_rationale',
+            'status', 'implementation_status', 'assigned_to', 'reviewer',
+            'due_date', 'current_state_description', 'target_state_description',
+            'gap_analysis', 'implementation_approach', 'maturity_level',
+            'risk_rating', 'compliance_score', 'assessment_notes',
+            'reviewer_comments', 'remediation_plan', 'remediation_due_date',
+            'remediation_owner'
         ]
     
     def create(self, validated_data):
@@ -511,10 +530,14 @@ class BulkAssessmentCreateSerializer(serializers.Serializer):
         
         for control in controls:
             # Check if assessment already exists
-            existing = ControlAssessment.objects.filter(control=control).first()
+            existing = ControlAssessment.objects.filter(
+                control=control,
+                framework=framework,
+            ).first()
             if not existing:
                 assessment = ControlAssessment.objects.create(
                     control=control,
+                    framework=framework,
                     **defaults
                 )
                 created_assessments.append(assessment)

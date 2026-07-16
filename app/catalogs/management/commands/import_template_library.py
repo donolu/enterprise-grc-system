@@ -436,7 +436,7 @@ class Command(BaseCommand):
         )
 
     def count_by_key(self, entries, key):
-        counts = {}
+        counts: dict[str, int] = {}
         for entry in entries:
             value = entry[key]
             counts[value] = counts.get(value, 0) + 1
