@@ -253,14 +253,19 @@ class TestTenantIsolation:
         with tenant_context(tenant_a):
             AuditEvent.objects.create(
                 user=user_a,
-                event="TENANT_A_EVENT",
-                details={"object": {"display": "Tenant A audit event"}},
+                event="DOCUMENT_UPLOADED",
+                details={"object": {"display": "Tenant A document"}},
+            )
+            AuditEvent.objects.create(
+                user=user_a,
+                event="TENANT_DATA_EXPORT_REQUESTED",
+                details={"object": {"display": "Tenant A export"}},
             )
         with tenant_context(tenant_b):
             AuditEvent.objects.create(
                 user=user_b,
-                event="TENANT_B_EVENT",
-                details={"object": {"display": "Tenant B audit event"}},
+                event="DOCUMENT_UPLOADED",
+                details={"object": {"display": "Tenant B document"}},
             )
 
         client = self._authenticated_client(tenant_a, user_a)
@@ -270,8 +275,11 @@ class TestTenantIsolation:
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
         results = payload.get("results", payload) if isinstance(payload, dict) else payload
-        assert [item["event"] for item in results] == ["TENANT_A_EVENT"]
-        assert results[0]["user_email"] == "alice@example.com"
+        assert {item["event"] for item in results} == {
+            "DOCUMENT_UPLOADED",
+            "TENANT_DATA_EXPORT_REQUESTED",
+        }
+        assert {item["user_email"] for item in results} == {"alice@example.com"}
 
     def test_storage_container_name_uses_current_tenant(self):
         tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")

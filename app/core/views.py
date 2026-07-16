@@ -8,6 +8,12 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.http import HttpResponse, Http404
 from django.utils import timezone
+from .document_audit import (
+    audit_document_change,
+    document_changed_values,
+    document_display,
+    snapshot_document,
+)
 from .models import AuditEvent, Document, DocumentAccess, Tenant
 from .serializers import (
     AuditEventSerializer,
@@ -142,14 +148,51 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Save document with current user as uploader."""
         # Check document limits before creating
-        tenant = Tenant.objects.get(schema_name=self.request.tenant.schema_name)
+        tenant = self.request.tenant
         can_add, usage_info = PlanEnforcementService.check_document_limit(tenant)
         
         if not can_add:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied(usage_info.get('error', 'Document limit exceeded'))
         
-        serializer.save(uploaded_by=self.request.user)
+        document = serializer.save(uploaded_by=self.request.user)
+        audit_document_change(
+            event='DOCUMENT_UPLOADED',
+            actor=self.request.user,
+            target=document,
+            object_display=document_display(document),
+            request=self.request,
+            new=snapshot_document(document),
+        )
+
+    def perform_update(self, serializer):
+        previous = snapshot_document(serializer.instance)
+        document = serializer.save()
+        new = snapshot_document(document)
+        previous_changed, new_changed = document_changed_values(previous, new)
+        if previous_changed or new_changed:
+            event = 'DOCUMENT_REPLACED' if 'file' in new_changed else 'DOCUMENT_UPDATED'
+            audit_document_change(
+                event=event,
+                actor=self.request.user,
+                target=document,
+                object_display=document_display(document),
+                request=self.request,
+                previous=previous_changed,
+                new=new_changed,
+            )
+
+    def perform_destroy(self, instance):
+        previous = snapshot_document(instance)
+        audit_document_change(
+            event='DOCUMENT_DELETED',
+            actor=self.request.user,
+            target=instance,
+            object_display=document_display(instance),
+            request=self.request,
+            previous=previous,
+        )
+        instance.delete()
     
     @extend_schema(
         summary="Download document",
@@ -193,6 +236,20 @@ class DocumentViewSet(viewsets.ModelViewSet):
             accessed_by=request.user,
             ip_address=self._get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')
+        )
+        audit_document_change(
+            event='DOCUMENT_DOWNLOADED',
+            actor=request.user,
+            target=document,
+            object_display=document_display(document),
+            request=request,
+            new={
+                'document_id': document.id,
+                'filename': document.file_name,
+                'file_size': document.file_size,
+                'mime_type': document.mime_type,
+            },
+            source={'type': 'api', 'reference': 'document.download'},
         )
         
         try:

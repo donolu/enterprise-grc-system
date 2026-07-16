@@ -5,6 +5,7 @@ Tests for core application functionality.
 from datetime import timedelta
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -12,7 +13,7 @@ from django_tenants.utils import tenant_context, schema_context
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from .models import Tenant, Domain, Plan, Subscription, Document, LimitOverrideRequest
+from .models import AuditEvent, Tenant, Domain, Plan, Subscription, Document, LimitOverrideRequest
 from billing.entitlements import ALL_MODULE_KEYS
 from billing.services import PlanEnforcementService
 
@@ -186,6 +187,7 @@ class TestPlanEnforcementService:
         )
         
         assert has_access is False
+        assert error is not None
         assert "not available" in error
 
 
@@ -290,6 +292,58 @@ class TestDocumentAPI:
         response = authenticated_client.get('/api/documents/')
         assert response.status_code == status.HTTP_200_OK
         assert 'results' in response.data or isinstance(response.data, list)
+
+    def test_document_upload_download_and_delete_are_audited(
+        self,
+        authenticated_client,
+        test_tenant,
+        test_subscription,
+    ):
+        authenticated_client.defaults['HTTP_HOST'] = f"{test_tenant.schema_name}.localhost"
+        upload = SimpleUploadedFile(
+            "evidence.txt",
+            b"control evidence content",
+            content_type="text/plain",
+        )
+
+        create_response = authenticated_client.post(
+            "/api/documents/",
+            {
+                "title": "Control evidence",
+                "description": "Evidence metadata only",
+                "file": upload,
+                "is_public": False,
+            },
+            format="multipart",
+            HTTP_USER_AGENT="pytest-agent",
+            REMOTE_ADDR="203.0.113.10",
+        )
+
+        assert create_response.status_code == status.HTTP_201_CREATED
+        document_id = create_response.data["id"]
+        upload_event = AuditEvent.objects.get(event="DOCUMENT_UPLOADED")
+        assert upload_event.details["actor"]["email"] == "test@example.com"
+        assert upload_event.details["new"]["file"]["present"] is True
+        assert upload_event.details["new"]["file"]["name"].endswith("evidence.txt")
+        assert b"control evidence content" not in str(upload_event.details).encode()
+
+        download_response = authenticated_client.get(
+            f"/api/documents/{document_id}/download/",
+            HTTP_USER_AGENT="pytest-agent",
+            REMOTE_ADDR="203.0.113.10",
+        )
+
+        assert download_response.status_code == status.HTTP_200_OK
+        download_event = AuditEvent.objects.get(event="DOCUMENT_DOWNLOADED")
+        assert download_event.details["request"]["ip"] == "203.0.113.10"
+        assert download_event.details["request"]["user_agent"] == "pytest-agent"
+        assert download_event.details["new"]["filename"] == "evidence.txt"
+
+        delete_response = authenticated_client.delete(f"/api/documents/{document_id}/")
+
+        assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+        delete_event = AuditEvent.objects.get(event="DOCUMENT_DELETED")
+        assert delete_event.details["previous"]["file"]["name"].endswith("evidence.txt")
 
 
 @pytest.mark.django_db  

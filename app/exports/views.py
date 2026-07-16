@@ -12,6 +12,14 @@ from drf_spectacular.types import OpenApiTypes
 from catalogs.models import Framework, ControlAssessment
 from .models import AssessmentReport
 from .models import TenantDataExport
+from .audit import (
+    assessment_report_display,
+    audit_export_change,
+    export_changed_values,
+    snapshot_assessment_report,
+    snapshot_tenant_data_export,
+    tenant_data_export_display,
+)
 from .serializers import (
     AssessmentReportSerializer, 
     AssessmentReportCreateSerializer,
@@ -121,7 +129,43 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Create report and trigger generation."""
-        serializer.save(requested_by=self.request.user)
+        report = serializer.save(requested_by=self.request.user)
+        audit_export_change(
+            event='ASSESSMENT_REPORT_REQUESTED',
+            actor=self.request.user,
+            target=report,
+            object_display=assessment_report_display(report),
+            request=self.request,
+            new=snapshot_assessment_report(report),
+        )
+
+    def perform_update(self, serializer):
+        previous = snapshot_assessment_report(serializer.instance)
+        report = serializer.save()
+        new = snapshot_assessment_report(report)
+        previous_changed, new_changed = export_changed_values(previous, new)
+        if previous_changed or new_changed:
+            audit_export_change(
+                event='ASSESSMENT_REPORT_UPDATED',
+                actor=self.request.user,
+                target=report,
+                object_display=assessment_report_display(report),
+                request=self.request,
+                previous=previous_changed,
+                new=new_changed,
+            )
+
+    def perform_destroy(self, instance):
+        previous = snapshot_assessment_report(instance)
+        audit_export_change(
+            event='ASSESSMENT_REPORT_DELETED',
+            actor=self.request.user,
+            target=instance,
+            object_display=assessment_report_display(instance),
+            request=self.request,
+            previous=previous,
+        )
+        instance.delete()
     
     @extend_schema(
         summary="Generate report",
@@ -168,9 +212,22 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
             generate_assessment_report_task.delay(report.id)
             
             # Update status
+            previous = snapshot_assessment_report(report)
             report.status = 'processing'
             report.generation_started_at = timezone.now()
             report.save()
+            new = snapshot_assessment_report(report)
+            previous_changed, new_changed = export_changed_values(previous, new)
+            audit_export_change(
+                event='ASSESSMENT_REPORT_GENERATION_STARTED',
+                actor=request.user,
+                target=report,
+                object_display=assessment_report_display(report),
+                request=request,
+                previous=previous_changed,
+                new=new_changed,
+                source={'type': 'api', 'reference': 'assessment_report.generate'},
+            )
             
             return Response({
                 'message': 'Report generation started',
@@ -197,7 +254,7 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
         
         if report.status == 'completed' and report.generated_file:
             response_data['download_url'] = request.build_absolute_uri(
-                f'/api/core/documents/{report.generated_file.id}/download/'
+                f'/api/documents/{report.generated_file.id}/download/'
             )
         elif report.status == 'failed':
             response_data['error_details'] = report.error_message
@@ -217,9 +274,22 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
             )
         
         # Redirect to document download endpoint
+        audit_export_change(
+            event='ASSESSMENT_REPORT_DOWNLOAD_REQUESTED',
+            actor=request.user,
+            target=report,
+            object_display=assessment_report_display(report),
+            request=request,
+            new={
+                'generated_file_id': report.generated_file_id,
+                'filename': report.generated_file.file_name,
+                'file_size': report.generated_file.file_size,
+            },
+            source={'type': 'api', 'reference': 'assessment_report.download'},
+        )
         return Response({
             'download_url': request.build_absolute_uri(
-                f'/api/core/documents/{report.generated_file.id}/download/'
+                f'/api/documents/{report.generated_file.id}/download/'
             )
         })
     
@@ -257,15 +327,37 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
         
         if serializer.is_valid():
             report = serializer.save(requested_by=request.user)
+            audit_export_change(
+                event='ASSESSMENT_REPORT_REQUESTED',
+                actor=request.user,
+                target=report,
+                object_display=assessment_report_display(report),
+                request=request,
+                new=snapshot_assessment_report(report),
+                source={'type': 'api', 'reference': 'assessment_report.quick_generate'},
+            )
             
             try:
                 # Start async generation
                 generate_assessment_report_task.delay(report.id)
                 
                 # Update status
+                previous = snapshot_assessment_report(report)
                 report.status = 'processing'
                 report.generation_started_at = timezone.now()
                 report.save()
+                new = snapshot_assessment_report(report)
+                previous_changed, new_changed = export_changed_values(previous, new)
+                audit_export_change(
+                    event='ASSESSMENT_REPORT_GENERATION_STARTED',
+                    actor=request.user,
+                    target=report,
+                    object_display=assessment_report_display(report),
+                    request=request,
+                    previous=previous_changed,
+                    new=new_changed,
+                    source={'type': 'api', 'reference': 'assessment_report.quick_generate'},
+                )
                 
                 return Response({
                     'message': 'Report created and generation started',
@@ -391,10 +483,43 @@ class TenantDataExportViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         data_export = serializer.save(requested_by=self.request.user)
+        audit_export_change(
+            event='TENANT_DATA_EXPORT_REQUESTED',
+            actor=self.request.user,
+            target=data_export,
+            object_display=tenant_data_export_display(data_export),
+            request=self.request,
+            new=snapshot_tenant_data_export(data_export),
+        )
+        previous = snapshot_tenant_data_export(data_export)
         data_export.status = 'processing'
         data_export.generation_started_at = timezone.now()
         data_export.save(update_fields=['status', 'generation_started_at'])
+        new = snapshot_tenant_data_export(data_export)
+        previous_changed, new_changed = export_changed_values(previous, new)
+        audit_export_change(
+            event='TENANT_DATA_EXPORT_GENERATION_STARTED',
+            actor=self.request.user,
+            target=data_export,
+            object_display=tenant_data_export_display(data_export),
+            request=self.request,
+            previous=previous_changed,
+            new=new_changed,
+            source={'type': 'api', 'reference': 'tenant_data_export.create'},
+        )
         generate_tenant_data_export_task.delay(data_export.id)
+
+    def perform_destroy(self, instance):
+        previous = snapshot_tenant_data_export(instance)
+        audit_export_change(
+            event='TENANT_DATA_EXPORT_DELETED',
+            actor=self.request.user,
+            target=instance,
+            object_display=tenant_data_export_display(instance),
+            request=self.request,
+            previous=previous,
+        )
+        instance.delete()
 
     @extend_schema(
         summary="Get export coverage manifest",
@@ -429,11 +554,24 @@ class TenantDataExportViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_200_OK,
             )
 
+        previous = snapshot_tenant_data_export(data_export)
         generate_tenant_data_export_task.delay(data_export.id)
         data_export.status = 'processing'
         data_export.generation_started_at = timezone.now()
         data_export.error_message = ''
         data_export.save(update_fields=['status', 'generation_started_at', 'error_message'])
+        new = snapshot_tenant_data_export(data_export)
+        previous_changed, new_changed = export_changed_values(previous, new)
+        audit_export_change(
+            event='TENANT_DATA_EXPORT_GENERATION_STARTED',
+            actor=request.user,
+            target=data_export,
+            object_display=tenant_data_export_display(data_export),
+            request=request,
+            previous=previous_changed,
+            new=new_changed,
+            source={'type': 'api', 'reference': 'tenant_data_export.generate'},
+        )
         return Response(
             {
                 'message': 'Export generation started',
@@ -469,6 +607,20 @@ class TenantDataExportViewSet(viewsets.ModelViewSet):
             )
 
         serializer = TenantDataExportSerializer(data_export, context={'request': request})
+        audit_export_change(
+            event='TENANT_DATA_EXPORT_DOWNLOAD_REQUESTED',
+            actor=request.user,
+            target=data_export,
+            object_display=tenant_data_export_display(data_export),
+            request=request,
+            new={
+                'generated_file_id': data_export.generated_file_id,
+                'filename': data_export.generated_file.file_name,
+                'file_size': data_export.generated_file.file_size,
+                'record_counts': data_export.record_counts,
+            },
+            source={'type': 'api', 'reference': 'tenant_data_export.download'},
+        )
         return Response({
             'download_url': serializer.data['download_url'],
             'document_id': data_export.generated_file_id,
