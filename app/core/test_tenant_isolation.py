@@ -16,7 +16,7 @@ from assets.models import Asset
 from calendarhub.models import CalendarEvent
 from catalogs.models import Framework
 from compliance.models import GovernanceArtefact
-from core.models import AuditEvent, Domain, Tenant
+from core.models import AuditEvent, Document, Domain, Tenant
 from core.storage import TenantAwareBlobStorage
 from exports.models import AssessmentReport, TenantDataExport
 from knowledge.models import KnowledgeArticle, KnowledgeCategory
@@ -423,6 +423,157 @@ class TestTenantIsolation:
         assert self._response_count(list_response.json()) == 1
         assert self._response_titles(list_response.json()) == ["Tenant A data export"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_document_list_detail_and_download_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_document(tenant_a, "Tenant A document", user_a)
+
+        with tenant_context(tenant_b):
+            self._create_document(tenant_b, "Tenant B first document", user_b)
+            tenant_b_private_document = self._create_document(
+                tenant_b,
+                "Tenant B private document",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/documents/")
+        detail_response = client.get(f"/api/documents/{tenant_b_private_document.pk}/")
+        download_response = client.get(
+            f"/api/documents/{tenant_b_private_document.pk}/download/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A document"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+        assert download_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_assessment_report_actions_do_not_expose_cross_tenant_generated_files(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        report_a = self._create_assessment_report(tenant_a, "Tenant A report", user_a)
+        document_a = self._create_document(tenant_a, "Tenant A report file", user_a)
+        self._complete_assessment_report(tenant_a, report_a, document_a)
+
+        with tenant_context(tenant_b):
+            self._create_assessment_report(
+                tenant_b,
+                "Tenant B first report",
+                user_b,
+            )
+            document_b = self._create_document(
+                tenant_b,
+                "Tenant B private report file",
+                user_b,
+            )
+            tenant_b_private_report = self._create_assessment_report(
+                tenant_b,
+                "Tenant B private report",
+                user_b,
+            )
+            self._complete_assessment_report(
+                tenant_b,
+                tenant_b_private_report,
+                document_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        status_response = client.get(
+            f"/api/exports/assessment-reports/{report_a.pk}/status_check/"
+        )
+        download_response = client.get(
+            f"/api/exports/assessment-reports/{report_a.pk}/download/"
+        )
+        cross_status_response = client.get(
+            f"/api/exports/assessment-reports/{tenant_b_private_report.pk}/status_check/"
+        )
+        cross_download_response = client.get(
+            f"/api/exports/assessment-reports/{tenant_b_private_report.pk}/download/"
+        )
+
+        assert status_response.status_code == status.HTTP_200_OK
+        assert f"/api/documents/{document_a.pk}/download/" in status_response.json()[
+            "download_url"
+        ]
+        assert download_response.status_code == status.HTTP_200_OK
+        assert download_response.json()["download_url"].endswith(
+            f"/api/documents/{document_a.pk}/download/"
+        )
+        assert cross_status_response.status_code == status.HTTP_404_NOT_FOUND
+        assert cross_download_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_tenant_data_export_actions_do_not_expose_cross_tenant_generated_files(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        export_a = self._create_tenant_data_export(
+            tenant_a,
+            "Tenant A data export",
+            user_a,
+        )
+        document_a = self._create_document(tenant_a, "Tenant A export file", user_a)
+        self._complete_tenant_data_export(tenant_a, export_a, document_a)
+
+        with tenant_context(tenant_b):
+            self._create_tenant_data_export(
+                tenant_b,
+                "Tenant B first data export",
+                user_b,
+            )
+            document_b = self._create_document(
+                tenant_b,
+                "Tenant B private export file",
+                user_b,
+            )
+            tenant_b_private_export = self._create_tenant_data_export(
+                tenant_b,
+                "Tenant B private data export",
+                user_b,
+            )
+            self._complete_tenant_data_export(
+                tenant_b,
+                tenant_b_private_export,
+                document_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        status_response = client.get(
+            f"/api/exports/tenant-data-exports/{export_a.pk}/status_check/"
+        )
+        download_response = client.get(
+            f"/api/exports/tenant-data-exports/{export_a.pk}/download/"
+        )
+        cross_status_response = client.get(
+            f"/api/exports/tenant-data-exports/{tenant_b_private_export.pk}/status_check/"
+        )
+        cross_download_response = client.get(
+            f"/api/exports/tenant-data-exports/{tenant_b_private_export.pk}/download/"
+        )
+
+        assert status_response.status_code == status.HTTP_200_OK
+        assert f"/api/documents/{document_a.pk}/download/" in status_response.json()[
+            "download_url"
+        ]
+        assert download_response.status_code == status.HTTP_200_OK
+        assert download_response.json()["document_id"] == document_a.pk
+        assert download_response.json()["download_url"].endswith(
+            f"/api/documents/{document_a.pk}/download/"
+        )
+        assert cross_status_response.status_code == status.HTTP_404_NOT_FOUND
+        assert cross_download_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_catalog_framework_list_and_detail_are_scoped_to_request_tenant(self):
         tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
@@ -854,6 +1005,21 @@ class TestTenantIsolation:
         assert container_b == f"tenant-{tenant_b.slug}"
         assert container_a != container_b
 
+    def test_storage_fallback_cache_is_scoped_to_current_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+        storage = TenantAwareBlobStorage()
+
+        with tenant_context(tenant_a):
+            location_a = storage.fallback_storage.location
+
+        with tenant_context(tenant_b):
+            location_b = storage.fallback_storage.location
+
+        assert location_a.endswith(f"tenant-{tenant_a.slug}")
+        assert location_b.endswith(f"tenant-{tenant_b.slug}")
+        assert location_a != location_b
+
     def test_public_urlconf_does_not_mount_tenant_api_routes(self):
         with override_settings(ROOT_URLCONF="app.public_urls"):
             with pytest.raises(Resolver404):
@@ -1021,6 +1187,52 @@ class TestTenantIsolation:
                 selected_modules=["all"],
                 requested_by=user,
             )
+
+    def _create_document(self, tenant, title, user):
+        slug = title.lower().replace(" ", "-")
+        upload = SimpleUploadedFile(
+            f"{slug}.pdf",
+            b"%PDF-1.4\n% tenant isolation fixture\n",
+            content_type="application/pdf",
+        )
+        with tenant_context(tenant):
+            return Document.objects.create(
+                title=title,
+                description=f"{title} description",
+                file=upload,
+                uploaded_by=user,
+                mime_type="application/pdf",
+            )
+
+    def _complete_assessment_report(self, tenant, report, document):
+        with tenant_context(tenant):
+            report.status = "completed"
+            report.generated_file = document
+            report.generation_completed_at = timezone.now()
+            report.save(
+                update_fields=[
+                    "status",
+                    "generated_file",
+                    "generation_completed_at",
+                ]
+            )
+            return report
+
+    def _complete_tenant_data_export(self, tenant, data_export, document):
+        with tenant_context(tenant):
+            data_export.status = "completed"
+            data_export.generated_file = document
+            data_export.generation_completed_at = timezone.now()
+            data_export.record_counts = {"documents": 1}
+            data_export.save(
+                update_fields=[
+                    "status",
+                    "generated_file",
+                    "generation_completed_at",
+                    "record_counts",
+                ]
+            )
+            return data_export
 
     def _create_framework(self, tenant, name, short_name, user):
         with tenant_context(tenant):
