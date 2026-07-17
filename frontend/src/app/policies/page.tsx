@@ -102,7 +102,7 @@ export default function PoliciesPage() {
       setPolicies(mockPolicies)
 
       // Uncomment when backend is ready:
-      // const response = await api.get('/api/policies/policies/my_policies/')
+      // const response = await api.get('/policies/policies/my_policies/')
       // setPolicies(response.data.policies || [])
     } catch (error) {
       console.error('Failed to fetch policies:', error)
@@ -115,7 +115,7 @@ export default function PoliciesPage() {
   const handleAcknowledge = async (policyId: string) => {
     try {
       setAcknowledging(policyId)
-      await api.post(`/api/policies/policies/${policyId}/acknowledge/`)
+      await api.post(`/policies/policies/${policyId}/acknowledge/`)
       message.success('Policy acknowledged successfully!')
 
       // Remove the acknowledged policy from the list

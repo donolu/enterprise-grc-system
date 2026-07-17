@@ -68,7 +68,7 @@ export default function VideoPlayerPage() {
   const fetchVideo = async () => {
     try {
       setLoading(true)
-      const response = await api.get(`/api/training/videos/${videoId}/`)
+      const response = await api.get(`/training/videos/${videoId}/`)
       setVideo(response.data)
       setViewStartTime(new Date())
 
@@ -102,7 +102,7 @@ export default function VideoPlayerPage() {
     const durationWatched = Math.floor((new Date().getTime() - viewStartTime.getTime()) / 1000)
 
     try {
-      await api.post(`/api/training/videos/${video.id}/track_view/`, {
+      await api.post(`/training/videos/${video.id}/track_view/`, {
         duration_watched: durationWatched,
         completed,
         completion_percentage: watchProgress

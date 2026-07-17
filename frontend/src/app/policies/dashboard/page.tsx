@@ -86,7 +86,7 @@ export default function PolicyDashboardPage() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
-      const response = await api.get('/api/policies/policies/acknowledgment_dashboard/')
+      const response = await api.get('/policies/policies/acknowledgment_dashboard/')
       setDashboardData(response.data)
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error)

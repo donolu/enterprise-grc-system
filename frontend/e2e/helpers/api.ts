@@ -47,6 +47,72 @@ const analytics = {
   riskTrend: -1,
 };
 
+const vendorCategory = {
+  id: 1,
+  name: "Cloud Services",
+  description: "Cloud hosting and managed services",
+  color_code: "#2F6FED",
+  risk_weight: "high",
+  compliance_requirements: {},
+};
+
+const vendor = {
+  id: 1,
+  vendor_id: "VEN-001",
+  name: "Axim Cloud Services",
+  legal_name: "Axim Cloud Services Ltd",
+  category: vendorCategory,
+  business_description: "Hosts regulated SaaS workloads and managed infrastructure.",
+  website: "https://vendor.example.test",
+  tax_id: "GB123456789",
+  duns_number: "123456789",
+  address_line1: "10 Cloud Street",
+  address_line2: "",
+  city: "London",
+  state_province: "London",
+  postal_code: "EC1A 1AA",
+  country: "United Kingdom",
+  status: "active",
+  vendor_type: "service_provider",
+  risk_level: "high",
+  risk_score: 72,
+  annual_spend: 120000,
+  credit_rating: "A",
+  payment_terms: "Net 30",
+  operating_regions: ["UK", "EU"],
+  primary_region: "UK",
+  custom_fields: {},
+  certifications: ["ISO 27001", "SOC 2 Type II"],
+  compliance_status: { gdpr: "compliant" },
+  data_processing_agreement: true,
+  security_assessment_completed: true,
+  security_assessment_date: "2026-06-01",
+  assigned_to: {
+    id: 1,
+    username: "owner",
+    first_name: "Ada",
+    last_name: "Lovelace",
+    email: "ada@example.com",
+  },
+  relationship_start_date: "2025-01-15",
+  created_at: "2025-01-15T09:00:00Z",
+  updated_at: "2026-07-01T09:00:00Z",
+  created_by: {
+    id: 1,
+    username: "admin",
+    first_name: "Grace",
+    last_name: "Hopper",
+  },
+};
+
+const vendorAnalytics = {
+  totalVendors: 1,
+  contractsExpiring: 0,
+  highRiskVendors: 1,
+  avgPerformance: 86,
+  performanceTrend: 4,
+};
+
 const executiveDashboard = {
   summary_metrics: {
     total_risks: { title: "Total Risks", value: 1 },
@@ -133,6 +199,50 @@ export async function mockAuthenticatedGrcApi(page: Page) {
         status_choices: [{ value: "identified", label: "Identified" }],
         treatment_strategies: [{ value: "mitigate", label: "Mitigate" }],
       });
+      return;
+    }
+
+    if (path === "/api/vendors/vendors/" && request.method() === "GET") {
+      await fulfilJson(route, {
+        results: [vendor],
+        count: 1,
+        next: null,
+        previous: null,
+      });
+      return;
+    }
+
+    if (path === "/api/vendors/vendors/1/" && request.method() === "GET") {
+      await fulfilJson(route, vendor);
+      return;
+    }
+
+    if (path === "/api/vendors/analytics/dashboard/" && request.method() === "GET") {
+      await fulfilJson(route, vendorAnalytics);
+      return;
+    }
+
+    if (path === "/api/vendors/categories/" && request.method() === "GET") {
+      await fulfilJson(route, {
+        results: [vendorCategory],
+        count: 1,
+        next: null,
+        previous: null,
+      });
+      return;
+    }
+
+    if (path === "/api/vendors/choices/" && request.method() === "GET") {
+      await fulfilJson(route, {
+        status_choices: [{ value: "active", label: "Active" }],
+        vendor_type_choices: [{ value: "service_provider", label: "Service Provider" }],
+        risk_level_choices: [{ value: "high", label: "High" }],
+      });
+      return;
+    }
+
+    if (path === "/api/policies/policies/1/acknowledge/" && request.method() === "POST") {
+      await fulfilJson(route, { status: "acknowledged" });
       return;
     }
 
