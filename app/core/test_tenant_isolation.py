@@ -12,9 +12,23 @@ from django_tenants.utils import schema_context, tenant_context
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from assets.models import Asset
-from calendarhub.models import CalendarEvent
-from catalogs.models import Clause, Control, ControlEvidence, Framework, FrameworkMapping
+from assets.models import Asset, AssetReviewReminderLog
+from calendarhub.models import (
+    CalendarAuditLog,
+    CalendarEvent,
+    CalendarNotificationPreference,
+    CalendarReminderLog,
+)
+from catalogs.models import (
+    AssessmentEvidence,
+    Clause,
+    Control,
+    ControlAssessment,
+    ControlEvidence,
+    Framework,
+    FrameworkMapping,
+    TemplateDocument,
+)
 from compliance.models import (
     GovernanceArtefact,
     ManagementReview,
@@ -27,7 +41,13 @@ from exports.models import AssessmentReport, TenantDataExport
 from knowledge.models import KnowledgeArticle, KnowledgeCategory
 from policies.models import Policy, PolicyAcknowledgment, PolicyCategory, PolicyDistribution, PolicyVersion
 from risk.models import Risk, RiskAction, RiskActionReminderConfiguration, RiskCategory, RiskMatrix
-from training.models import TrainingCategory, TrainingVideo
+from training.models import (
+    CampaignDelivery,
+    SecurityAwarenessCampaign,
+    TrainingCategory,
+    TrainingVideo,
+    VideoView,
+)
 from vendors.models import (
     Vendor,
     VendorCategory,
@@ -36,7 +56,7 @@ from vendors.models import (
     VendorService,
     VendorTask,
 )
-from vuln.models import ScanTarget
+from vuln.models import ScanJob, ScanSchedule, ScanTarget, VulnerabilityFinding
 
 User = get_user_model()
 
@@ -811,6 +831,258 @@ class TestTenantIsolation:
         ]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
+    def test_catalog_template_document_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        framework_a = self._create_framework(tenant_a, "Tenant A framework", "TAF", user_a)
+        clause_a = self._create_clause(tenant_a, framework_a, "A.1", "Tenant A clause")
+        control_a = self._create_control(
+            tenant_a,
+            clause_a,
+            "CTRL-A-001",
+            "Tenant A control",
+            user_a,
+        )
+        document_a = self._create_document(tenant_a, "Tenant A template file", user_a)
+        self._create_template_document(
+            tenant_a,
+            "Tenant A template",
+            document_a,
+            framework_a,
+            clause_a,
+            control_a,
+            user_a,
+        )
+        with tenant_context(tenant_b):
+            framework_b = self._create_framework(
+                tenant_b,
+                "Tenant B framework",
+                "TBF",
+                user_b,
+            )
+            clause_b = self._create_clause(tenant_b, framework_b, "B.1", "Tenant B clause")
+            control_b = self._create_control(
+                tenant_b,
+                clause_b,
+                "CTRL-B-001",
+                "Tenant B control",
+                user_b,
+            )
+            document_b_1 = self._create_document(
+                tenant_b,
+                "Tenant B first template file",
+                user_b,
+            )
+            self._create_template_document(
+                tenant_b,
+                "Tenant B first template",
+                document_b_1,
+                framework_b,
+                clause_b,
+                control_b,
+                user_b,
+            )
+            document_b_2 = self._create_document(
+                tenant_b,
+                "Tenant B private template file",
+                user_b,
+            )
+            tenant_b_private_template = self._create_template_document(
+                tenant_b,
+                "Tenant B private template",
+                document_b_2,
+                framework_b,
+                clause_b,
+                control_b,
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/catalogs/api/template-documents/")
+        detail_response = client.get(
+            f"/api/catalogs/api/template-documents/{tenant_b_private_template.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A template"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_control_assessment_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        framework_a = self._create_framework(tenant_a, "Tenant A framework", "TAF", user_a)
+        clause_a = self._create_clause(tenant_a, framework_a, "A.1", "Tenant A clause")
+        control_a = self._create_control(
+            tenant_a,
+            clause_a,
+            "CTRL-A-001",
+            "Tenant A control",
+            user_a,
+        )
+        self._create_control_assessment(
+            tenant_a,
+            control_a,
+            framework_a,
+            "ASS-A-001",
+            user_a,
+        )
+        with tenant_context(tenant_b):
+            framework_b = self._create_framework(
+                tenant_b,
+                "Tenant B framework",
+                "TBF",
+                user_b,
+            )
+            clause_b = self._create_clause(tenant_b, framework_b, "B.1", "Tenant B clause")
+            control_b = self._create_control(
+                tenant_b,
+                clause_b,
+                "CTRL-B-001",
+                "Tenant B control",
+                user_b,
+            )
+            self._create_control_assessment(
+                tenant_b,
+                control_b,
+                framework_b,
+                "ASS-B-001",
+                user_b,
+            )
+            tenant_b_private_assessment = self._create_control_assessment(
+                tenant_b,
+                control_b,
+                framework_b,
+                "ASS-B-002",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/catalogs/api/assessments/")
+        detail_response = client.get(
+            f"/api/catalogs/api/assessments/{tenant_b_private_assessment.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_field(list_response.json(), "assessment_id") == [
+            "ASS-A-001"
+        ]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_assessment_evidence_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        framework_a = self._create_framework(tenant_a, "Tenant A framework", "TAF", user_a)
+        clause_a = self._create_clause(tenant_a, framework_a, "A.1", "Tenant A clause")
+        control_a = self._create_control(
+            tenant_a,
+            clause_a,
+            "CTRL-A-001",
+            "Tenant A control",
+            user_a,
+        )
+        evidence_a = self._create_control_evidence(
+            tenant_a,
+            control_a,
+            "Tenant A evidence",
+            user_a,
+        )
+        assessment_a = self._create_control_assessment(
+            tenant_a,
+            control_a,
+            framework_a,
+            "ASS-A-001",
+            user_a,
+        )
+        self._create_assessment_evidence(
+            tenant_a,
+            assessment_a,
+            evidence_a,
+            "Tenant A assessment evidence",
+            user_a,
+        )
+        with tenant_context(tenant_b):
+            framework_b = self._create_framework(
+                tenant_b,
+                "Tenant B framework",
+                "TBF",
+                user_b,
+            )
+            clause_b = self._create_clause(tenant_b, framework_b, "B.1", "Tenant B clause")
+            control_b = self._create_control(
+                tenant_b,
+                clause_b,
+                "CTRL-B-001",
+                "Tenant B control",
+                user_b,
+            )
+            evidence_b_1 = self._create_control_evidence(
+                tenant_b,
+                control_b,
+                "Tenant B first evidence",
+                user_b,
+            )
+            assessment_b_1 = self._create_control_assessment(
+                tenant_b,
+                control_b,
+                framework_b,
+                "ASS-B-001",
+                user_b,
+            )
+            self._create_assessment_evidence(
+                tenant_b,
+                assessment_b_1,
+                evidence_b_1,
+                "Tenant B first assessment evidence",
+                user_b,
+            )
+            evidence_b_2 = self._create_control_evidence(
+                tenant_b,
+                control_b,
+                "Tenant B private evidence",
+                user_b,
+            )
+            assessment_b_2 = self._create_control_assessment(
+                tenant_b,
+                control_b,
+                framework_b,
+                "ASS-B-002",
+                user_b,
+            )
+            tenant_b_private_link = self._create_assessment_evidence(
+                tenant_b,
+                assessment_b_2,
+                evidence_b_2,
+                "Tenant B private assessment evidence",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/catalogs/api/assessment-evidence/")
+        detail_response = client.get(
+            f"/api/catalogs/api/assessment-evidence/{tenant_b_private_link.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_field(list_response.json(), "evidence_purpose") == [
+            "Tenant A assessment evidence"
+        ]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
     def test_training_video_list_and_detail_are_scoped_to_request_tenant(self):
         tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
         tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
@@ -834,6 +1106,121 @@ class TestTenantIsolation:
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
         assert self._response_titles(list_response.json()) == ["Tenant A video"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_training_category_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_training_category(tenant_a, "Tenant A training category")
+        with tenant_context(tenant_b):
+            self._create_training_category(tenant_b, "Tenant B first training category")
+            tenant_b_private_category = self._create_training_category(
+                tenant_b,
+                "Tenant B private training category",
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/training/categories/")
+        detail_response = client.get(
+            f"/api/training/categories/{tenant_b_private_category.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_names(list_response.json()) == [
+            "Tenant A training category"
+        ]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_training_campaign_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_training_campaign(tenant_a, "Tenant A campaign", user_a)
+        with tenant_context(tenant_b):
+            self._create_training_campaign(tenant_b, "Tenant B first campaign", user_b)
+            tenant_b_private_campaign = self._create_training_campaign(
+                tenant_b,
+                "Tenant B private campaign",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/training/campaigns/")
+        detail_response = client.get(
+            f"/api/training/campaigns/{tenant_b_private_campaign.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_names(list_response.json()) == ["Tenant A campaign"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_campaign_delivery_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        campaign_a = self._create_training_campaign(tenant_a, "Tenant A campaign", user_a)
+        self._create_campaign_delivery(tenant_a, campaign_a, user_a)
+        with tenant_context(tenant_b):
+            campaign_b = self._create_training_campaign(
+                tenant_b,
+                "Tenant B campaign",
+                user_b,
+            )
+            self._create_campaign_delivery(tenant_b, campaign_b, user_b)
+            tenant_b_private_delivery = self._create_campaign_delivery(
+                tenant_b,
+                campaign_b,
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/training/deliveries/")
+        detail_response = client.get(
+            f"/api/training/deliveries/{tenant_b_private_delivery.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_field(list_response.json(), "campaign_name") == [
+            "Tenant A campaign"
+        ]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_video_view_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        video_a = self._create_training_video(tenant_a, "Tenant A video", user_a)
+        self._create_video_view(tenant_a, video_a, user_a)
+        with tenant_context(tenant_b):
+            video_b = self._create_training_video(tenant_b, "Tenant B video", user_b)
+            self._create_video_view(tenant_b, video_b, user_b)
+            tenant_b_private_view = self._create_video_view(tenant_b, video_b, user_b)
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/training/views/")
+        detail_response = client.get(f"/api/training/views/{tenant_b_private_view.pk}/")
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_field(list_response.json(), "video_title") == [
+            "Tenant A video"
+        ]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_asset_list_and_detail_are_scoped_to_request_tenant(self):
@@ -860,6 +1247,43 @@ class TestTenantIsolation:
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
         assert self._response_names(list_response.json()) == ["Tenant A asset"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_asset_review_reminder_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        asset_a = self._create_asset(tenant_a, "ASSET-A-001", "Tenant A asset", user_a)
+        self._create_asset_review_reminder(tenant_a, asset_a, user_a)
+        with tenant_context(tenant_b):
+            asset_b = self._create_asset(
+                tenant_b,
+                "ASSET-B-001",
+                "Tenant B asset",
+                user_b,
+            )
+            self._create_asset_review_reminder(tenant_b, asset_b, user_b)
+            tenant_b_private_reminder = self._create_asset_review_reminder(
+                tenant_b,
+                asset_b,
+                user_b,
+                reminder_type="due_today",
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/assets/review-reminders/")
+        detail_response = client.get(
+            f"/api/assets/review-reminders/{tenant_b_private_reminder.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_field(list_response.json(), "asset_identifier") == [
+            "ASSET-A-001"
+        ]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_vendor_list_and_detail_are_scoped_to_request_tenant(self):
@@ -1200,6 +1624,39 @@ class TestTenantIsolation:
         assert self._response_titles(list_response.json()) == ["Tenant A article"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
+    def test_knowledge_category_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_knowledge_category(tenant_a, "Tenant A knowledge category", user_a)
+        with tenant_context(tenant_b):
+            self._create_knowledge_category(
+                tenant_b,
+                "Tenant B first knowledge category",
+                user_b,
+            )
+            tenant_b_private_category = self._create_knowledge_category(
+                tenant_b,
+                "Tenant B private knowledge category",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/knowledge/categories/")
+        detail_response = client.get(
+            f"/api/knowledge/categories/{tenant_b_private_category.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_names(list_response.json()) == [
+            "Tenant A knowledge category"
+        ]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
     def test_calendar_event_list_and_detail_are_scoped_to_request_tenant(self):
         tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
         tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
@@ -1227,6 +1684,100 @@ class TestTenantIsolation:
         assert self._response_titles(list_response.json()) == ["Tenant A event"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
+    def test_calendar_preferences_are_scoped_to_request_user_and_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_calendar_preference(tenant_a, user_a, advance_reminder_days=3)
+        self._create_calendar_preference(tenant_b, user_b, advance_reminder_days=21)
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        get_response = client.get("/api/calendar/preferences/")
+        update_response = client.post(
+            "/api/calendar/preferences/",
+            {"advance_reminder_days": 5, "email_enabled": False},
+            format="json",
+        )
+
+        assert get_response.status_code == status.HTTP_200_OK
+        assert get_response.json()["advance_reminder_days"] == 3
+        assert update_response.status_code == status.HTTP_200_OK
+        assert update_response.json()["advance_reminder_days"] == 5
+        with tenant_context(tenant_b):
+            user_b_preference = CalendarNotificationPreference.objects.get(user=user_b)
+            assert user_b_preference.advance_reminder_days == 21
+
+    def test_calendar_reminder_log_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_calendar_reminder_log(tenant_a, "Tenant A reminder", user_a)
+        with tenant_context(tenant_b):
+            self._create_calendar_reminder_log(
+                tenant_b,
+                "Tenant B first reminder",
+                user_b,
+            )
+            tenant_b_private_reminder = self._create_calendar_reminder_log(
+                tenant_b,
+                "Tenant B private reminder",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/calendar/reminders/")
+        detail_response = client.get(
+            f"/api/calendar/reminders/{tenant_b_private_reminder.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A reminder"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_calendar_audit_log_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        event_a = self._create_calendar_event(tenant_a, "Tenant A event", user_a)
+        self._create_calendar_audit_log(tenant_a, event_a, "tenant-a-source", user_a)
+        with tenant_context(tenant_b):
+            event_b = self._create_calendar_event(tenant_b, "Tenant B event", user_b)
+            self._create_calendar_audit_log(
+                tenant_b,
+                event_b,
+                "tenant-b-first-source",
+                user_b,
+            )
+            tenant_b_private_audit = self._create_calendar_audit_log(
+                tenant_b,
+                event_b,
+                "tenant-b-private-source",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/calendar/audit/")
+        detail_response = client.get(
+            f"/api/calendar/audit/{tenant_b_private_audit.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_field(list_response.json(), "source_id") == [
+            "tenant-a-source"
+        ]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
     def test_vulnerability_target_list_and_detail_are_scoped_to_request_tenant(self):
         tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
         tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
@@ -1252,6 +1803,122 @@ class TestTenantIsolation:
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
         assert self._response_names(list_response.json()) == ["Tenant A scan target"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_scan_schedule_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        target_a = self._create_scan_target(tenant_a, "Tenant A scan target", user_a)
+        self._create_scan_schedule(tenant_a, target_a, "Tenant A scan schedule", user_a)
+        with tenant_context(tenant_b):
+            target_b = self._create_scan_target(
+                tenant_b,
+                "Tenant B scan target",
+                user_b,
+            )
+            self._create_scan_schedule(
+                tenant_b,
+                target_b,
+                "Tenant B first scan schedule",
+                user_b,
+            )
+            tenant_b_private_schedule = self._create_scan_schedule(
+                tenant_b,
+                target_b,
+                "Tenant B private scan schedule",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/vuln/schedules/")
+        detail_response = client.get(
+            f"/api/vuln/schedules/{tenant_b_private_schedule.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_names(list_response.json()) == ["Tenant A scan schedule"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_scan_job_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        target_a = self._create_scan_target(tenant_a, "Tenant A scan target", user_a)
+        self._create_scan_job(tenant_a, target_a, user_a)
+        with tenant_context(tenant_b):
+            target_b = self._create_scan_target(
+                tenant_b,
+                "Tenant B scan target",
+                user_b,
+            )
+            self._create_scan_job(tenant_b, target_b, user_b)
+            tenant_b_private_job = self._create_scan_job(tenant_b, target_b, user_b)
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/vuln/jobs/")
+        detail_response = client.get(f"/api/vuln/jobs/{tenant_b_private_job.pk}/")
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_field(list_response.json(), "target_name") == [
+            "Tenant A scan target"
+        ]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_vulnerability_finding_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        target_a = self._create_scan_target(tenant_a, "Tenant A scan target", user_a)
+        job_a = self._create_scan_job(tenant_a, target_a, user_a)
+        self._create_vulnerability_finding(
+            tenant_a,
+            target_a,
+            job_a,
+            "Tenant A vulnerability finding",
+        )
+        with tenant_context(tenant_b):
+            target_b = self._create_scan_target(
+                tenant_b,
+                "Tenant B scan target",
+                user_b,
+            )
+            job_b = self._create_scan_job(tenant_b, target_b, user_b)
+            self._create_vulnerability_finding(
+                tenant_b,
+                target_b,
+                job_b,
+                "Tenant B first vulnerability finding",
+            )
+            tenant_b_private_finding = self._create_vulnerability_finding(
+                tenant_b,
+                target_b,
+                job_b,
+                "Tenant B private vulnerability finding",
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/vuln/findings/")
+        detail_response = client.get(
+            f"/api/vuln/findings/{tenant_b_private_finding.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == [
+            "Tenant A vulnerability finding"
+        ]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_audit_event_list_is_staff_only_and_scoped_to_request_tenant(self):
@@ -1613,12 +2280,84 @@ class TestTenantIsolation:
                 created_by=user,
             )
 
+    def _create_template_document(
+        self,
+        tenant,
+        title,
+        document,
+        framework,
+        clause,
+        control,
+        user,
+    ):
+        with tenant_context(tenant):
+            slug = title.lower().replace(" ", "-")
+            return TemplateDocument.objects.create(
+                title=title,
+                module="policy",
+                document_type="template",
+                document_code=slug.upper()[:80],
+                version="1.0",
+                document=document,
+                framework=framework,
+                clause=clause,
+                control=control,
+                source_path=f"tenant-isolation/{slug}.docx",
+                source_filename=f"{slug}.docx",
+                source_checksum=uuid4().hex,
+                imported_by=user,
+            )
+
+    def _create_control_assessment(
+        self,
+        tenant,
+        control,
+        framework,
+        assessment_id,
+        user,
+    ):
+        with tenant_context(tenant):
+            return ControlAssessment.objects.create(
+                control=control,
+                framework=framework,
+                assessment_id=assessment_id,
+                applicability="applicable",
+                status="in_progress",
+                implementation_status="partially_implemented",
+                assigned_to=user,
+                reviewer=user,
+                due_date=timezone.now().date() + timedelta(days=30),
+                assessment_notes=f"{assessment_id} notes",
+                created_by=user,
+            )
+
+    def _create_assessment_evidence(
+        self,
+        tenant,
+        assessment,
+        evidence,
+        purpose,
+        user,
+    ):
+        with tenant_context(tenant):
+            return AssessmentEvidence.objects.create(
+                assessment=assessment,
+                evidence=evidence,
+                evidence_purpose=purpose,
+                is_primary_evidence=True,
+                created_by=user,
+            )
+
+    def _create_training_category(self, tenant, name):
+        with tenant_context(tenant):
+            return TrainingCategory.objects.create(
+                name=name,
+                description=f"{name} description",
+            )
+
     def _create_training_video(self, tenant, title, user):
         with tenant_context(tenant):
-            category = TrainingCategory.objects.create(
-                name=f"{title} category",
-                description=f"{title} category description",
-            )
+            category = self._create_training_category(tenant, f"{title} category")
             return TrainingVideo.objects.create(
                 title=title,
                 description=f"{title} description",
@@ -1629,6 +2368,39 @@ class TestTenantIsolation:
                 created_by=user,
             )
 
+    def _create_training_campaign(self, tenant, name, user):
+        with tenant_context(tenant):
+            return SecurityAwarenessCampaign.objects.create(
+                name=name,
+                description=f"{name} description",
+                subject_line=f"{name} subject",
+                email_content=f"<p>{name}</p>",
+                send_frequency="monthly",
+                start_date=timezone.now() - timedelta(days=1),
+                next_send_date=timezone.now() + timedelta(days=7),
+                created_by=user,
+            )
+
+    def _create_campaign_delivery(self, tenant, campaign, user):
+        with tenant_context(tenant):
+            return CampaignDelivery.objects.create(
+                campaign=campaign,
+                user=user,
+                email_subject=campaign.subject_line,
+                recipient_email=user.email,
+                delivery_status="sent",
+            )
+
+    def _create_video_view(self, tenant, video, user):
+        with tenant_context(tenant):
+            return VideoView.objects.create(
+                video=video,
+                user=user,
+                duration_watched=120,
+                completed=True,
+                completion_percentage=100,
+            )
+
     def _create_asset(self, tenant, asset_id, name, user):
         with tenant_context(tenant):
             return Asset.objects.create(
@@ -1637,6 +2409,22 @@ class TestTenantIsolation:
                 asset_type="server",
                 owner=user,
                 created_by=user,
+            )
+
+    def _create_asset_review_reminder(
+        self,
+        tenant,
+        asset,
+        user,
+        reminder_type="advance_warning",
+    ):
+        with tenant_context(tenant):
+            return AssetReviewReminderLog.objects.create(
+                asset=asset,
+                owner=user,
+                reminder_type=reminder_type,
+                review_date=timezone.now().date() + timedelta(days=7),
+                email_sent=True,
             )
 
     def _create_vendor(self, tenant, name, user):
@@ -1747,11 +2535,10 @@ class TestTenantIsolation:
     def _create_knowledge_article(self, tenant, title, user):
         with tenant_context(tenant):
             slug = title.lower().replace(" ", "-")
-            category = KnowledgeCategory.objects.create(
-                name=f"{title} category",
-                slug=f"{slug}-category",
-                module_key="administration",
-                created_by=user,
+            category = self._create_knowledge_category(
+                tenant,
+                f"{title} category",
+                user,
             )
             return KnowledgeArticle.objects.create(
                 title=title,
@@ -1765,6 +2552,16 @@ class TestTenantIsolation:
                 updated_by=user,
             )
 
+    def _create_knowledge_category(self, tenant, name, user):
+        with tenant_context(tenant):
+            slug = name.lower().replace(" ", "-")
+            return KnowledgeCategory.objects.create(
+                name=name,
+                slug=slug,
+                module_key="administration",
+                created_by=user,
+            )
+
     def _create_calendar_event(self, tenant, title, user):
         with tenant_context(tenant):
             return CalendarEvent.objects.create(
@@ -1773,6 +2570,41 @@ class TestTenantIsolation:
                 due_date=timezone.now().date() + timedelta(days=14),
                 owner=user,
                 created_by=user,
+            )
+
+    def _create_calendar_preference(
+        self,
+        tenant,
+        user,
+        advance_reminder_days,
+    ):
+        with tenant_context(tenant):
+            return CalendarNotificationPreference.objects.create(
+                user=user,
+                advance_reminder_days=advance_reminder_days,
+            )
+
+    def _create_calendar_reminder_log(self, tenant, title, user):
+        with tenant_context(tenant):
+            return CalendarReminderLog.objects.create(
+                source_type="risk_action",
+                source_id=title.lower().replace(" ", "-"),
+                title=title,
+                due_date=timezone.now().date() + timedelta(days=7),
+                recipient=user,
+                reminder_type="advance_warning",
+                email_sent=True,
+            )
+
+    def _create_calendar_audit_log(self, tenant, event, source_id, user):
+        with tenant_context(tenant):
+            return CalendarAuditLog.objects.create(
+                action="created",
+                event=event,
+                source_type="calendar_event",
+                source_id=source_id,
+                actor=user,
+                details={"title": event.title},
             )
 
     def _create_scan_target(self, tenant, name, user):
@@ -1785,6 +2617,48 @@ class TestTenantIsolation:
                 status="approved",
                 owner=user,
                 created_by=user,
+            )
+
+    def _create_scan_schedule(self, tenant, target, name, user):
+        with tenant_context(tenant):
+            return ScanSchedule.objects.create(
+                target=target,
+                name=name,
+                frequency="weekly",
+                is_active=True,
+                next_run_at=timezone.now() + timedelta(days=7),
+                created_by=user,
+            )
+
+    def _create_scan_job(self, tenant, target, user, schedule=None):
+        with tenant_context(tenant):
+            return ScanJob.objects.create(
+                target=target,
+                schedule=schedule,
+                status="queued",
+                requested_by=user,
+            )
+
+    def _create_vulnerability_finding(self, tenant, target, job, title):
+        with tenant_context(tenant):
+            fingerprint = VulnerabilityFinding.make_fingerprint(
+                "nuclei",
+                uuid4().hex,
+                target.address,
+                title,
+            )
+            return VulnerabilityFinding.objects.create(
+                target=target,
+                job=job,
+                fingerprint=fingerprint,
+                scanner_name="nuclei",
+                scanner_finding_id=uuid4().hex,
+                template_id="tenant-isolation-template",
+                title=title,
+                severity="high",
+                description=f"{title} description",
+                remediation=f"{title} remediation",
+                matched_at=target.address,
             )
 
     def _authenticated_client(self, tenant, user):
