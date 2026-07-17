@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getAccessToken } from '@/lib/auth';
+import { getAccessToken, refresh, setAccessToken } from '@/lib/auth';
 import { Spin } from 'antd';
 
 interface AuthWrapperProps {
@@ -18,21 +18,37 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
   const isPublicPage = publicPages.some(page => pathname.startsWith(page));
 
   useEffect(() => {
+    let cancelled = false;
     const token = getAccessToken();
 
     if (!token && !isPublicPage) {
-      // No token and not on a public page - redirect to login
-      router.push('/login');
-      return;
+      refresh()
+        .then((newToken) => {
+          if (cancelled) return;
+          setAccessToken(newToken);
+          setIsAuthenticated(true);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          router.push('/login');
+        });
+      return () => {
+        cancelled = true;
+      };
     }
 
     if (token && isPublicPage) {
       // Has token but on login page - redirect to dashboard
       router.push('/');
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
     setIsAuthenticated(!!token);
+    return () => {
+      cancelled = true;
+    };
   }, [pathname, isPublicPage, router]);
 
   // Show loading spinner while checking authentication

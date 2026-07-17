@@ -1,16 +1,26 @@
+import { getApiBaseUrl } from "./config";
+import { getTenantFromHost } from "./tenant";
+
 let accessToken: string | null = null;
 
 export function setAccessToken(t: string | null) { accessToken = t; }
 export function getAccessToken() { return accessToken; }
 
 export async function login(email: string, password: string, otp?: string) {
-  const r = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/auth/login/`, {
+  const tenant = getTenantFromHost();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (tenant) {
+    headers["X-Tenancy-Mode"] = "header";
+    headers["X-Tenant-Id"] = tenant;
+  }
+
+  const r = await fetch(`${getApiBaseUrl()}/auth/login/`, {
     method: "POST",
     credentials: "include", // set refresh cookie on server
-    headers: { 
-      "Content-Type": "application/json",
-      "Host": "demo.localhost"  // Add tenant header
-    },
+    headers,
     body: JSON.stringify({ 
       username: email,  // Django expects username field
       password, 
@@ -24,7 +34,7 @@ export async function login(email: string, password: string, otp?: string) {
 }
 
 export async function refresh(): Promise<string> {
-  const r = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/auth/refresh/`, {
+  const r = await fetch(`${getApiBaseUrl()}/auth/refresh/`, {
     method: "POST",
     credentials: "include",
   });
@@ -34,7 +44,7 @@ export async function refresh(): Promise<string> {
 }
 
 export async function logout() {
-  await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/auth/logout/`, {
+  await fetch(`${getApiBaseUrl()}/auth/logout/`, {
     method: "POST", credentials: "include"
   });
   setAccessToken(null);
