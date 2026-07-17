@@ -4,6 +4,7 @@ import { getAccessToken, login, logout, refresh, setAccessToken } from "./auth";
 describe("auth helpers", () => {
   afterEach(() => {
     setAccessToken(null);
+    window.history.replaceState({}, "", "http://localhost:3000/");
     vi.unstubAllGlobals();
   });
 
@@ -18,6 +19,7 @@ describe("auth helpers", () => {
   });
 
   it("logs in with credentials included and stores the returned access token", async () => {
+    window.history.replaceState({}, "", "http://localhost:3000/login?tenant=demo");
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ access: "new-access" }),
@@ -29,7 +31,7 @@ describe("auth helpers", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "undefined/auth/login/",
+      "/api/auth/login/",
       expect.objectContaining({
         body: JSON.stringify({
           username: "alice@example.com",
@@ -37,6 +39,11 @@ describe("auth helpers", () => {
           otp: "123456",
         }),
         credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenancy-Mode": "header",
+          "X-Tenant-Id": "demo",
+        },
         method: "POST",
       }),
     );
@@ -53,7 +60,7 @@ describe("auth helpers", () => {
     await expect(refresh()).resolves.toBe("refreshed-access");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "undefined/auth/refresh/",
+      "/api/auth/refresh/",
       expect.objectContaining({
         credentials: "include",
         method: "POST",
@@ -69,7 +76,7 @@ describe("auth helpers", () => {
     await logout();
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "undefined/auth/logout/",
+      "/api/auth/logout/",
       expect.objectContaining({
         credentials: "include",
         method: "POST",
