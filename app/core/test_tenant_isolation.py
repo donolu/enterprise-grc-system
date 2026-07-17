@@ -15,7 +15,12 @@ from rest_framework.test import APIClient
 from assets.models import Asset
 from calendarhub.models import CalendarEvent
 from catalogs.models import Framework
-from compliance.models import GovernanceArtefact
+from compliance.models import (
+    GovernanceArtefact,
+    ManagementReview,
+    NonConformity,
+    RegulatoryRequirement,
+)
 from core.models import AuditEvent, Document, Domain, Tenant
 from core.storage import TenantAwareBlobStorage
 from exports.models import AssessmentReport, TenantDataExport
@@ -862,6 +867,109 @@ class TestTenantIsolation:
         assert self._response_titles(list_response.json()) == ["Tenant A artefact"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
+    def test_regulatory_requirement_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_regulatory_requirement(
+            tenant_a,
+            "Tenant A regulatory requirement",
+            user_a,
+        )
+        with tenant_context(tenant_b):
+            self._create_regulatory_requirement(
+                tenant_b,
+                "Tenant B first regulatory requirement",
+                user_b,
+            )
+            tenant_b_private_requirement = self._create_regulatory_requirement(
+                tenant_b,
+                "Tenant B private regulatory requirement",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/compliance/regulatory-requirements/")
+        detail_response = client.get(
+            f"/api/compliance/regulatory-requirements/{tenant_b_private_requirement.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == [
+            "Tenant A regulatory requirement"
+        ]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_nonconformity_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_nonconformity(tenant_a, "Tenant A nonconformity", user_a)
+        with tenant_context(tenant_b):
+            self._create_nonconformity(
+                tenant_b,
+                "Tenant B first nonconformity",
+                user_b,
+            )
+            tenant_b_private_nonconformity = self._create_nonconformity(
+                tenant_b,
+                "Tenant B private nonconformity",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/compliance/non-conformities/")
+        detail_response = client.get(
+            f"/api/compliance/non-conformities/{tenant_b_private_nonconformity.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == [
+            "Tenant A nonconformity"
+        ]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_management_review_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        self._create_management_review(tenant_a, "Tenant A management review", user_a)
+        with tenant_context(tenant_b):
+            self._create_management_review(
+                tenant_b,
+                "Tenant B first management review",
+                user_b,
+            )
+            tenant_b_private_review = self._create_management_review(
+                tenant_b,
+                "Tenant B private management review",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/compliance/management-reviews/")
+        detail_response = client.get(
+            f"/api/compliance/management-reviews/{tenant_b_private_review.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == [
+            "Tenant A management review"
+        ]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
     def test_knowledge_article_list_and_detail_are_scoped_to_request_tenant(self):
         tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
         tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
@@ -1340,6 +1448,40 @@ class TestTenantIsolation:
                 artefact_type="scope_document",
                 description=f"{title} description",
                 owner=user,
+                created_by=user,
+            )
+
+    def _create_regulatory_requirement(self, tenant, title, user):
+        with tenant_context(tenant):
+            return RegulatoryRequirement.objects.create(
+                title=title,
+                source_type="regulation",
+                issuing_body="Information Commissioner's Office",
+                jurisdiction="United Kingdom",
+                reference=f"REF-{uuid4().hex[:8]}",
+                description=f"{title} description",
+                owner=user,
+                created_by=user,
+            )
+
+    def _create_nonconformity(self, tenant, title, user):
+        with tenant_context(tenant):
+            return NonConformity.objects.create(
+                title=title,
+                description=f"{title} description",
+                severity="minor",
+                source_type="assessment",
+                owner=user,
+                raised_by=user,
+            )
+
+    def _create_management_review(self, tenant, title, user):
+        with tenant_context(tenant):
+            return ManagementReview.objects.create(
+                title=title,
+                meeting_date=timezone.now().date() + timedelta(days=30),
+                chair=user,
+                agenda=f"{title} agenda",
                 created_by=user,
             )
 
