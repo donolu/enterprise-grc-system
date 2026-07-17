@@ -141,8 +141,8 @@ export default function TrainingPage() {
       // Try to fetch from API first, fallback to mock data
       try {
         const [videosResponse, categoriesResponse] = await Promise.all([
-          api.get('/api/training/videos/'),
-          api.get('/api/training/categories/')
+          api.get('/training/videos/'),
+          api.get('/training/categories/')
         ])
 
         setVideos(videosResponse.data.results || videosResponse.data)
@@ -170,7 +170,7 @@ export default function TrainingPage() {
 
   const trackVideoView = async (videoId: string) => {
     try {
-      await api.post(`/api/training/videos/${videoId}/track_view/`, {
+      await api.post(`/training/videos/${videoId}/track_view/`, {
         duration_watched: 0,
         completed: false,
         completion_percentage: 0
