@@ -165,6 +165,8 @@ frontend/.next/
 frontend/out/
 frontend/.vercel/
 frontend/.env.local
+frontend/playwright-report/
+frontend/test-results/
 
 # Yarn
 frontend/.yarn/

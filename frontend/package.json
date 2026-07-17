@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "type-check": "tsc --noEmit",
-    "test": "echo 'No tests configured yet' && exit 0"
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@ant-design/nextjs-registry": "^1.0.1",
@@ -21,12 +23,20 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^26.1.1",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^6.0.3",
     "eslint": "^8.57.1",
     "eslint-config-next": "15.5.20",
-    "typescript": "^5.6.3"
+    "jsdom": "^29.1.1",
+    "typescript": "^5.6.3",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "postcss": "8.5.10"
