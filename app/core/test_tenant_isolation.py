@@ -14,7 +14,7 @@ from rest_framework.test import APIClient
 
 from assets.models import Asset
 from calendarhub.models import CalendarEvent
-from catalogs.models import Framework
+from catalogs.models import Clause, Control, ControlEvidence, Framework, FrameworkMapping
 from compliance.models import (
     GovernanceArtefact,
     ManagementReview,
@@ -606,6 +606,209 @@ class TestTenantIsolation:
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
         assert self._response_names(list_response.json()) == ["Tenant A framework"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_catalog_clause_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        framework_a = self._create_framework(tenant_a, "Tenant A framework", "TAF", user_a)
+        self._create_clause(tenant_a, framework_a, "A.1", "Tenant A clause")
+        with tenant_context(tenant_b):
+            framework_b = self._create_framework(
+                tenant_b,
+                "Tenant B framework",
+                "TBF",
+                user_b,
+            )
+            self._create_clause(tenant_b, framework_b, "B.1", "Tenant B first clause")
+            tenant_b_private_clause = self._create_clause(
+                tenant_b,
+                framework_b,
+                "B.2",
+                "Tenant B private clause",
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/catalogs/api/clauses/")
+        detail_response = client.get(
+            f"/api/catalogs/api/clauses/{tenant_b_private_clause.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A clause"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_catalog_control_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        framework_a = self._create_framework(tenant_a, "Tenant A framework", "TAF", user_a)
+        clause_a = self._create_clause(tenant_a, framework_a, "A.1", "Tenant A clause")
+        self._create_control(tenant_a, clause_a, "CTRL-A-001", "Tenant A control", user_a)
+        with tenant_context(tenant_b):
+            framework_b = self._create_framework(
+                tenant_b,
+                "Tenant B framework",
+                "TBF",
+                user_b,
+            )
+            clause_b = self._create_clause(tenant_b, framework_b, "B.1", "Tenant B clause")
+            self._create_control(
+                tenant_b,
+                clause_b,
+                "CTRL-B-001",
+                "Tenant B first control",
+                user_b,
+            )
+            tenant_b_private_control = self._create_control(
+                tenant_b,
+                clause_b,
+                "CTRL-B-002",
+                "Tenant B private control",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/catalogs/api/controls/")
+        detail_response = client.get(
+            f"/api/catalogs/api/controls/{tenant_b_private_control.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_names(list_response.json()) == ["Tenant A control"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_catalog_control_evidence_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        framework_a = self._create_framework(tenant_a, "Tenant A framework", "TAF", user_a)
+        clause_a = self._create_clause(tenant_a, framework_a, "A.1", "Tenant A clause")
+        control_a = self._create_control(
+            tenant_a,
+            clause_a,
+            "CTRL-A-001",
+            "Tenant A control",
+            user_a,
+        )
+        self._create_control_evidence(tenant_a, control_a, "Tenant A evidence", user_a)
+        with tenant_context(tenant_b):
+            framework_b = self._create_framework(
+                tenant_b,
+                "Tenant B framework",
+                "TBF",
+                user_b,
+            )
+            clause_b = self._create_clause(tenant_b, framework_b, "B.1", "Tenant B clause")
+            control_b = self._create_control(
+                tenant_b,
+                clause_b,
+                "CTRL-B-001",
+                "Tenant B control",
+                user_b,
+            )
+            self._create_control_evidence(
+                tenant_b,
+                control_b,
+                "Tenant B first evidence",
+                user_b,
+            )
+            tenant_b_private_evidence = self._create_control_evidence(
+                tenant_b,
+                control_b,
+                "Tenant B private evidence",
+                user_b,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/catalogs/api/evidence/")
+        detail_response = client.get(
+            f"/api/catalogs/api/evidence/{tenant_b_private_evidence.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_titles(list_response.json()) == ["Tenant A evidence"]
+        assert detail_response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_catalog_framework_mapping_list_and_detail_are_scoped_to_request_tenant(self):
+        tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
+        tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
+
+        user_a = self._create_user(tenant_a, "alice", "alice@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
+        source_a = self._create_framework(tenant_a, "Tenant A source", "TAS", user_a)
+        target_a = self._create_framework(tenant_a, "Tenant A target", "TAT", user_a)
+        source_clause_a = self._create_clause(tenant_a, source_a, "A.1", "Tenant A source clause")
+        target_clause_a = self._create_clause(tenant_a, target_a, "A.2", "Tenant A target clause")
+        self._create_framework_mapping(
+            tenant_a,
+            source_clause_a,
+            target_clause_a,
+            user_a,
+            "Tenant A mapping",
+        )
+        with tenant_context(tenant_b):
+            source_b = self._create_framework(tenant_b, "Tenant B source", "TBS", user_b)
+            target_b = self._create_framework(tenant_b, "Tenant B target", "TBT", user_b)
+            source_clause_b = self._create_clause(
+                tenant_b,
+                source_b,
+                "B.1",
+                "Tenant B source clause",
+            )
+            target_clause_b = self._create_clause(
+                tenant_b,
+                target_b,
+                "B.2",
+                "Tenant B target clause",
+            )
+            alternate_target_clause_b = self._create_clause(
+                tenant_b,
+                target_b,
+                "B.3",
+                "Tenant B alternate target clause",
+            )
+            self._create_framework_mapping(
+                tenant_b,
+                source_clause_b,
+                alternate_target_clause_b,
+                user_b,
+                "Tenant B first mapping",
+            )
+            tenant_b_private_mapping = self._create_framework_mapping(
+                tenant_b,
+                source_clause_b,
+                target_clause_b,
+                user_b,
+                "Tenant B private mapping",
+                confidence_level=70,
+            )
+
+        client = self._authenticated_client(tenant_a, user_a)
+
+        list_response = client.get("/api/catalogs/api/mappings/")
+        detail_response = client.get(
+            f"/api/catalogs/api/mappings/{tenant_b_private_mapping.pk}/"
+        )
+
+        assert list_response.status_code == status.HTTP_200_OK
+        assert self._response_count(list_response.json()) == 1
+        assert self._response_field(list_response.json(), "mapping_rationale") == [
+            "Tenant A mapping"
+        ]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_training_video_list_and_detail_are_scoped_to_request_tenant(self):
@@ -1351,6 +1554,62 @@ class TestTenantIsolation:
                 issuing_organization="Axim Cyber",
                 effective_date=timezone.now().date(),
                 status="active",
+                created_by=user,
+            )
+
+    def _create_clause(self, tenant, framework, clause_id, title):
+        with tenant_context(tenant):
+            return Clause.objects.create(
+                framework=framework,
+                clause_id=clause_id,
+                title=title,
+                description=f"{title} description",
+                sort_order=1,
+                clause_type="control",
+                criticality="medium",
+            )
+
+    def _create_control(self, tenant, clause, control_id, name, user):
+        with tenant_context(tenant):
+            control = Control.objects.create(
+                control_id=control_id,
+                name=name,
+                description=f"{name} description",
+                control_type="administrative",
+                automation_level="manual",
+                status="active",
+                control_owner=user,
+                created_by=user,
+            )
+            control.clauses.set([clause])
+            return control
+
+    def _create_control_evidence(self, tenant, control, title, user):
+        with tenant_context(tenant):
+            return ControlEvidence.objects.create(
+                control=control,
+                title=title,
+                evidence_type="document",
+                description=f"{title} description",
+                collected_by=user,
+            )
+
+    def _create_framework_mapping(
+        self,
+        tenant,
+        source_clause,
+        target_clause,
+        user,
+        rationale,
+        confidence_level=80,
+    ):
+        with tenant_context(tenant):
+            return FrameworkMapping.objects.create(
+                source_clause=source_clause,
+                target_clause=target_clause,
+                mapping_type="related",
+                mapping_rationale=rationale,
+                confidence_level=confidence_level,
                 created_by=user,
             )
 
