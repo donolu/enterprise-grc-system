@@ -303,11 +303,11 @@ export default function AnalyticsPage() {
       // Uncomment when backend API is ready:
       /*
       const [executiveResponse, complianceResponse, vendorResponse, policyResponse, trainingResponse] = await Promise.all([
-        api.get('/api/analytics/executive/'),
-        api.get('/api/analytics/compliance/'),
-        api.get('/api/analytics/vendor-risk/'),
-        api.get('/api/analytics/policy-management/'),
-        api.get('/api/analytics/training-effectiveness/')
+        api.get('/analytics/executive/'),
+        api.get('/analytics/compliance/'),
+        api.get('/analytics/vendor-risk/'),
+        api.get('/analytics/policy-management/'),
+        api.get('/analytics/training-effectiveness/')
       ])
 
       setExecutiveData(executiveResponse.data)
