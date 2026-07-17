@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { getAccessToken, setAccessToken, refresh } from "./auth";
+import { getApiBaseUrl } from "./config";
 import { getTenantFromHost } from "./tenant";
 
 // Define API error interface for Django backend
@@ -26,7 +27,7 @@ export class APIException extends Error {
 }
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE,
+  baseURL: getApiBaseUrl(),
   withCredentials: true, // allow refresh cookie
 });
 
@@ -34,7 +35,10 @@ api.interceptors.request.use((config) => {
   const token = getAccessToken();
   const tenant = getTenantFromHost();
   if (token) config.headers.Authorization = `Bearer ${token}`;
-  if (tenant) config.headers["X-Tenant-Id"] = tenant;
+  if (tenant) {
+    config.headers["X-Tenancy-Mode"] = "header";
+    config.headers["X-Tenant-Id"] = tenant;
+  }
   return config;
 });
 

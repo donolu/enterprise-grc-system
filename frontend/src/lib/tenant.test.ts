@@ -13,6 +13,14 @@ describe("getTenantFromHost", () => {
     expect(getTenantFromHost()).toBe("demo");
   });
 
+  it("does not treat loopback IP address segments as tenant subdomains", () => {
+    window.history.replaceState({}, "", "http://localhost:3000/?tenant=demo");
+
+    expect(getTenantFromHost("127.0.0.1:3000")).toBe("demo");
+    window.history.replaceState({}, "", "http://localhost:3000/");
+    expect(getTenantFromHost("127.0.0.1:3000")).toBeNull();
+  });
+
   it("returns null when no tenant signal exists", () => {
     window.history.replaceState({}, "", "http://localhost:3000/");
 

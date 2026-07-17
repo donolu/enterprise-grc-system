@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import AuthWrapper from "./AuthWrapper";
 
 const pushMock = vi.fn();
+const refreshMock = vi.fn();
+const setAccessTokenMock = vi.fn();
 let pathname = "/";
 let accessToken: string | null = null;
 
@@ -13,6 +15,8 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/auth", () => ({
   getAccessToken: () => accessToken,
+  refresh: () => refreshMock(),
+  setAccessToken: (token: string | null) => setAccessTokenMock(token),
 }));
 
 describe("AuthWrapper", () => {
@@ -20,9 +24,29 @@ describe("AuthWrapper", () => {
     accessToken = null;
     pathname = "/";
     pushMock.mockClear();
+    refreshMock.mockReset();
+    setAccessTokenMock.mockClear();
   });
 
-  it("redirects unauthenticated users away from protected pages", async () => {
+  it("refreshes the access token before rendering protected pages", async () => {
+    refreshMock.mockResolvedValue("refreshed-access");
+
+    render(
+      <AuthWrapper>
+        <main>Protected content</main>
+      </AuthWrapper>,
+    );
+
+    await waitFor(() => {
+      expect(setAccessTokenMock).toHaveBeenCalledWith("refreshed-access");
+    });
+    expect(await screen.findByText("Protected content")).toBeInTheDocument();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("redirects unauthenticated users away from protected pages when refresh fails", async () => {
+    refreshMock.mockRejectedValue(new Error("Refresh failed"));
+
     render(
       <AuthWrapper>
         <main>Protected content</main>
