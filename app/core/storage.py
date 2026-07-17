@@ -37,7 +37,7 @@ class TenantAwareBlobStorage(Storage):
         )
         self.container_prefix = container_prefix
         self._blob_client = None
-        self._fallback_storage = None
+        self._fallback_storages = {}
         
     @property
     def blob_client(self):
@@ -51,15 +51,17 @@ class TenantAwareBlobStorage(Storage):
     @property 
     def fallback_storage(self):
         """Fallback to local file system storage if Azure is unavailable."""
-        if self._fallback_storage is None:
+        container_name = self._get_tenant_container_name()
+        if container_name not in self._fallback_storages:
             # Create tenant-aware local storage
             from django.conf import settings
             media_root = getattr(settings, 'MEDIA_ROOT', '/tmp/media')
-            container_name = self._get_tenant_container_name()
             tenant_media_root = os.path.join(media_root, container_name)
             os.makedirs(tenant_media_root, exist_ok=True)
-            self._fallback_storage = FileSystemStorage(location=tenant_media_root)
-        return self._fallback_storage
+            self._fallback_storages[container_name] = FileSystemStorage(
+                location=tenant_media_root
+            )
+        return self._fallback_storages[container_name]
     
     def _is_azure_available(self):
         """Check if Azure Storage is available."""
