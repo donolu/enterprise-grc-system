@@ -1966,7 +1966,7 @@ class TestTenantIsolation:
             "DOCUMENT_UPLOADED",
             "TENANT_DATA_EXPORT_REQUESTED",
         }
-        assert {item["user_email"] for item in results} == {"alice@example.com"}
+        assert {item["user_email"] for item in results} == {user_a.email}
 
     def test_storage_container_name_uses_current_tenant(self):
         tenant_a = self._create_tenant("tenant_a", "tenant-a", "Tenant A")
@@ -2011,12 +2011,12 @@ class TestTenantIsolation:
         tenant_b = self._create_tenant("tenant_b", "tenant-b", "Tenant B")
 
         self._create_user(tenant_a, "alice", "alice@example.com")
-        self._create_user(tenant_b, "bob", "bob@example.com")
+        user_b = self._create_user(tenant_b, "bob", "bob@example.com")
 
         client = APIClient()
         client.defaults["HTTP_HOST"] = f"{tenant_b.slug}.localhost"
         with tenant_context(tenant_b):
-            assert client.login(username="bob", password="testpass123")
+            assert client.login(username=user_b.username, password="testpass123")
 
         client.defaults["HTTP_HOST"] = f"{tenant_a.slug}.localhost"
         response = client.get("/api/auth/me/")
@@ -2044,10 +2044,12 @@ class TestTenantIsolation:
         return tenant
 
     def _create_user(self, tenant, username, email, is_staff=False):
+        suffix = uuid4().hex[:8]
+        email_name, email_domain = email.split("@", 1)
         with tenant_context(tenant):
             return User.objects.create_user(
-                username=username,
-                email=email,
+                username=f"{username}-{suffix}",
+                email=f"{email_name}+{suffix}@{email_domain}",
                 password="testpass123",
                 is_staff=is_staff,
             )
