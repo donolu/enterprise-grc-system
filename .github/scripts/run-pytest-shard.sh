@@ -65,4 +65,4 @@ python -m pytest \
   --cov-fail-under=0 \
   --durations=25 \
   --verbose \
-  --nomigrations
+  --migrations
