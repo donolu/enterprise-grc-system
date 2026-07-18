@@ -1,29 +1,18 @@
 import api from "@/lib/api";
+import type {
+  OperationQuery,
+  OperationRequestBody,
+  OperationResponse,
+} from "@/lib/api/types";
 
-export interface Asset {
-  id: number;
-  asset_id: string;
-  name: string;
-  asset_type: string;
-  description?: string;
-  classification: string;
-  criticality: string;
-  lifecycle_status: string;
-  owner?: number | null;
-  owner_display?: string;
-  owner_name?: string;
-  location?: string;
-  next_review_date?: string | null;
-  is_review_overdue?: boolean;
-  days_until_review?: number | null;
-}
+type AssetListResponse = OperationResponse<"assets_assets_list", 200>;
 
-export interface PaginatedResponse<T> {
+export type Asset = AssetListResponse["results"][number];
+export type AssetCreatePayload = OperationRequestBody<"assets_assets_create">;
+export type AssetUpdatePayload = OperationRequestBody<"assets_assets_partial_update">;
+export type PaginatedResponse<T> = Omit<AssetListResponse, "results"> & {
   results: T[];
-  count: number;
-  next: string | null;
-  previous: string | null;
-}
+};
 
 export interface AssetImportResponse {
   dry_run: boolean;
@@ -35,18 +24,24 @@ export interface AssetImportResponse {
   samples?: Array<Record<string, string>>;
 }
 
-export async function getAssets(params: { search?: string; page?: number } = {}) {
-  const { data } = await api.get<PaginatedResponse<Asset>>("/assets/assets/", { params });
+export async function getAssets(params: OperationQuery<"assets_assets_list"> = {}) {
+  const { data } = await api.get<AssetListResponse>("/assets/assets/", { params });
   return data;
 }
 
-export async function createAsset(payload: Partial<Asset>) {
-  const { data } = await api.post<Asset>("/assets/assets/", payload);
+export async function createAsset(payload: AssetCreatePayload) {
+  const { data } = await api.post<OperationResponse<"assets_assets_create", 201>>(
+    "/assets/assets/",
+    payload,
+  );
   return data;
 }
 
-export async function updateAsset(id: number, payload: Partial<Asset>) {
-  const { data } = await api.patch<Asset>(`/assets/assets/${id}/`, payload);
+export async function updateAsset(id: number, payload: AssetUpdatePayload) {
+  const { data } = await api.patch<OperationResponse<"assets_assets_partial_update", 200>>(
+    `/assets/assets/${id}/`,
+    payload,
+  );
   return data;
 }
 
