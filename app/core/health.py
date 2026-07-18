@@ -2,7 +2,9 @@
 Health check views for monitoring and deployment verification.
 """
 
-from django.http import JsonResponse
+import hmac
+
+from django.http import HttpResponse, JsonResponse
 from django.views import View
 from django.db import connection
 from django.core.cache import cache
@@ -10,6 +12,8 @@ from django.conf import settings
 import os
 import time
 from datetime import datetime
+
+from .observability import render_prometheus_metrics
 
 
 class HealthCheckView(View):
@@ -198,3 +202,34 @@ class StartupCheckView(View):
             startup_data['deployment_time'] = os.environ['DEPLOYMENT_TIME']
         
         return JsonResponse(startup_data)
+
+
+class MetricsView(View):
+    """
+    Prometheus-compatible process metrics endpoint.
+    """
+
+    def get(self, request):
+        """Return request and Celery task metrics in Prometheus text format."""
+        if not getattr(settings, "METRICS_ENABLED", True):
+            return JsonResponse({"detail": "Metrics are disabled."}, status=404)
+
+        expected_token = getattr(settings, "METRICS_BEARER_TOKEN", "")
+        if expected_token:
+            auth_header = request.headers.get("Authorization", "")
+            header_token = request.headers.get("X-Metrics-Token", "")
+            bearer_token = (
+                auth_header.removeprefix("Bearer ").strip()
+                if auth_header.startswith("Bearer ")
+                else ""
+            )
+            if not (
+                hmac.compare_digest(expected_token, bearer_token)
+                or hmac.compare_digest(expected_token, header_token)
+            ):
+                return JsonResponse({"detail": "Authentication required."}, status=401)
+
+        return HttpResponse(
+            render_prometheus_metrics(),
+            content_type="text/plain; version=0.0.4; charset=utf-8",
+        )
