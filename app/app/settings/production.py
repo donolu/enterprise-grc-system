@@ -128,6 +128,13 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
 # Health check settings
 HEALTH_CHECK_ENABLED = True
 
+# Metrics are useful in production, but must not be exposed publicly by default.
+METRICS_BEARER_TOKEN = os.environ.get('METRICS_BEARER_TOKEN', '')
+METRICS_ENABLED = (
+    os.environ.get('METRICS_ENABLED', '1').lower() == 'true'
+    or os.environ.get('METRICS_ENABLED', '1') == '1'
+) and bool(METRICS_BEARER_TOKEN)
+
 # Stripe production settings
 STRIPE_LIVE_MODE = os.environ.get('STRIPE_LIVE_MODE', 'False').lower() == 'true'
 if STRIPE_LIVE_MODE:

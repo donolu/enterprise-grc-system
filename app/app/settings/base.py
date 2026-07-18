@@ -3,6 +3,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from celery.schedules import crontab
 
+from core.observability import configure_sentry
+
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -71,6 +73,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "core.middleware.ObservabilityMiddleware",
     "billing.middleware.PlanEnforcementMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django_otp.middleware.OTPMiddleware",
@@ -441,3 +444,9 @@ VULN_ALLOWED_TARGET_SUFFIXES = [
     for suffix in os.environ.get('VULN_ALLOWED_TARGET_SUFFIXES', '').split(',')
     if suffix.strip()
 ]
+
+# Observability
+METRICS_ENABLED = bool(int(os.environ.get('METRICS_ENABLED', '1')))
+METRICS_BEARER_TOKEN = os.environ.get('METRICS_BEARER_TOKEN', '')
+
+SENTRY_ENABLED = configure_sentry()
