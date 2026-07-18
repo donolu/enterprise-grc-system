@@ -5,7 +5,13 @@ URL configuration for core app including document management.
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import AuditEventViewSet, DocumentViewSet
-from .health import HealthCheckView, ReadinessCheckView, LivenessCheckView, StartupCheckView
+from .health import (
+    HealthCheckView,
+    LivenessCheckView,
+    MetricsView,
+    ReadinessCheckView,
+    StartupCheckView,
+)
 
 app_name = 'core'
 
@@ -23,4 +29,5 @@ urlpatterns = [
     path('health/ready/', ReadinessCheckView.as_view(), name='readiness_check'),
     path('health/live/', LivenessCheckView.as_view(), name='liveness_check'),
     path('health/startup/', StartupCheckView.as_view(), name='startup_check'),
+    path('metrics/', MetricsView.as_view(), name='metrics'),
 ]
