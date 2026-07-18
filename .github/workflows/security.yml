@@ -241,32 +241,34 @@ jobs:
 
     - name: Generate security summary
       run: |
-        echo "# Security Scan Summary" >> security-summary.md
-        echo "Generated on: $(date)" >> security-summary.md
-        echo "" >> security-summary.md
-        
-        echo "## Scans Performed" >> security-summary.md
-        echo "- ✅ Dependency vulnerability check (Safety)" >> security-summary.md
-        echo "- ✅ Code security analysis (Bandit)" >> security-summary.md
-        echo "- ✅ Secrets detection (TruffleHog)" >> security-summary.md
-        echo "- ✅ Dockerfile security (Hadolint)" >> security-summary.md
-        echo "- ✅ Static analysis (CodeQL)" >> security-summary.md
-        echo "- ✅ Infrastructure security (Checkov)" >> security-summary.md
-        echo "- ✅ License compliance check" >> security-summary.md
-        echo "" >> security-summary.md
-        
-        echo "## Reports Generated" >> security-summary.md
-        echo "Check the Actions artifacts for detailed reports:" >> security-summary.md
-        echo "- \`safety-report.json\` - Python dependency vulnerabilities" >> security-summary.md
-        echo "- \`bandit-report.json\` - Code security issues" >> security-summary.md
-        echo "- \`licenses-report.json\` - License compliance" >> security-summary.md
-        echo "" >> security-summary.md
-        
-        echo "## Next Steps" >> security-summary.md
-        echo "1. Review any HIGH or CRITICAL findings" >> security-summary.md
-        echo "2. Update dependencies with known vulnerabilities" >> security-summary.md
-        echo "3. Address code security issues identified by Bandit" >> security-summary.md
-        echo "4. Ensure no secrets are committed to the repository" >> security-summary.md
+        {
+          echo "# Security Scan Summary"
+          echo "Generated on: $(date)"
+          echo ""
+
+          echo "## Scans Performed"
+          echo "- ✅ Dependency vulnerability check (Safety)"
+          echo "- ✅ Code security analysis (Bandit)"
+          echo "- ✅ Secrets detection (TruffleHog)"
+          echo "- ✅ Dockerfile security (Hadolint)"
+          echo "- ✅ Static analysis (CodeQL)"
+          echo "- ✅ Infrastructure security (Checkov)"
+          echo "- ✅ License compliance check"
+          echo ""
+
+          echo "## Reports Generated"
+          echo "Check the Actions artifacts for detailed reports:"
+          echo "- \`safety-report.json\` - Python dependency vulnerabilities"
+          echo "- \`bandit-report.json\` - Code security issues"
+          echo "- \`licenses-report.json\` - License compliance"
+          echo ""
+
+          echo "## Next Steps"
+          echo "1. Review any HIGH or CRITICAL findings"
+          echo "2. Update dependencies with known vulnerabilities"
+          echo "3. Address code security issues identified by Bandit"
+          echo "4. Ensure no secrets are committed to the repository"
+        } >> security-summary.md
 
     - name: Upload security summary
       uses: actions/upload-artifact@v7
