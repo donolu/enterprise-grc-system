@@ -15,12 +15,25 @@ permissions:
 env:
   PYTHON_VERSION: '3.12'
   NODE_VERSION: '20'
+  DJANGO_SETTINGS_MODULE: app.settings.test
+  POSTGRES_DB: grc_test
+  POSTGRES_USER: grc
+  POSTGRES_PASSWORD: grc
+  POSTGRES_HOST: localhost
+  POSTGRES_PORT: '5432'
+  POSTGRES_TEST_DB: test_grc_${{ github.run_id }}_${{ github.run_attempt }}
+  DATABASE_URL: postgres://grc:grc@localhost:5432/grc_test
+  CELERY_BROKER_URL: redis://localhost:6379/0
+  CELERY_RESULT_BACKEND: redis://localhost:6379/1
+  AZURE_STORAGE_CONNECTION_STRING: UseDevelopmentStorage=true
+  SECRET_KEY: test-secret-key-for-ci
+  DEBUG: '0'
 
 jobs:
-  test-backend:
-    name: Backend Tests
+  backend-quality:
+    name: Backend Quality
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 20
     
     services:
       postgres:
@@ -37,7 +50,6 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      
       redis:
         image: redis:7
         options: >-
@@ -47,7 +59,6 @@ jobs:
           --health-retries 5
         ports:
           - 6379:6379
-      
       azurite:
         image: mcr.microsoft.com/azure-storage/azurite:latest
         ports:
@@ -70,14 +81,10 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Cache pip dependencies
-      uses: actions/cache@v6
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+        cache: pip
+        cache-dependency-path: |
+          requirements.txt
+          pyproject.toml
 
     - name: Install system dependencies
       run: |
@@ -102,90 +109,16 @@ jobs:
         pip install -r requirements.txt
         pip install pytest pytest-django pytest-cov ruff mypy
 
-    - name: Set up environment variables
-      run: |
-        cp .env.dev.example .env.test
-        # Override for test environment
-        cat >> .env.test << EOF
-        DJANGO_SETTINGS_MODULE=app.settings.test
-        POSTGRES_DB=grc_test
-        POSTGRES_USER=grc
-        POSTGRES_PASSWORD=grc
-        POSTGRES_HOST=localhost
-        POSTGRES_PORT=5432
-        DATABASE_URL=postgres://grc:grc@localhost:5432/grc_test
-        CELERY_BROKER_URL=redis://localhost:6379/0
-        CELERY_RESULT_BACKEND=redis://localhost:6379/1
-        AZURE_STORAGE_CONNECTION_STRING=UseDevelopmentStorage=true
-        SECRET_KEY=test-secret-key-for-ci
-        DEBUG=0
-        EOF
-
     - name: Wait for services
       timeout-minutes: 3
-      run: |
-        wait_for() {
-          local name="$1"
-          local command="$2"
-          local delay="${3:-2}"
-          local attempts="${4:-30}"
+      run: bash .github/scripts/wait-for-ci-services.sh
 
-          for attempt in $(seq 1 "$attempts"); do
-            if eval "$command" >/dev/null 2>&1; then
-              echo "$name is ready."
-              return 0
-            fi
-            echo "Waiting for $name... ($attempt/$attempts)"
-            sleep "$delay"
-          done
-
-          echo "::error::$name did not become ready in time."
-          return 1
-        }
-
-        wait_for "PostgreSQL" "pg_isready -h localhost -p 5432 -U grc"
-        wait_for "Redis" "redis-cli -h localhost -p 6379 ping"
-        wait_for "Azurite" "(echo > /dev/tcp/127.0.0.1/10000)" 3 20
-
-    - name: Run database migrations
-      working-directory: ./app
-      env:
-        DJANGO_SETTINGS_MODULE: app.settings.test
-      run: |
-        # Load environment variables
-        set -a && source ../.env.test && set +a
-        
-        # Create public schema migrations
-        python manage.py migrate_schemas --shared
-        
-        # Create test tenant
-        python manage.py shell << EOF
-        from core.models import Tenant, Domain
-        from django_tenants.utils import schema_context
-        
-        # Create test tenant
-        tenant = Tenant(name='Test Company', slug='test', schema_name='test')
-        tenant.save()
-        
-        # Create domain
-        domain = Domain(domain='test.localhost', tenant=tenant, is_primary=True)
-        domain.save()
-        
-        # Run tenant migrations
-        with schema_context(tenant.schema_name):
-            from django.core.management import execute_from_command_line
-            execute_from_command_line(['manage.py', 'migrate'])
-        
-        print("Test tenant created successfully")
-        EOF
+    - name: Run database migration smoke
+      run: bash .github/scripts/bootstrap-backend-ci-db.sh
 
     - name: Code quality checks
       working-directory: ./app
-      env:
-        DJANGO_SETTINGS_MODULE: app.settings.test
       run: |
-        set -a && source ../.env.test && set +a
-        
         echo "Running Ruff linter..."
         ruff check .
         
@@ -195,33 +128,156 @@ jobs:
         echo "Checking OpenAPI schema freshness..."
         bash ../.github/scripts/check-openapi-schema.sh
 
-    - name: Run tests
-      working-directory: ./app
-      env:
-        DJANGO_SETTINGS_MODULE: app.settings.test
+  backend-test-shards:
+    name: Backend Test Shard ${{ matrix.shard_number }}/${{ matrix.total_shards }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        total_shards: [6]
+        shard_index: [0, 1, 2, 3, 4, 5]
+        include:
+          - shard_index: 0
+            total_shards: 6
+            shard_number: 1
+          - shard_index: 1
+            total_shards: 6
+            shard_number: 2
+          - shard_index: 2
+            total_shards: 6
+            shard_number: 3
+          - shard_index: 3
+            total_shards: 6
+            shard_number: 4
+          - shard_index: 4
+            total_shards: 6
+            shard_number: 5
+          - shard_index: 5
+            total_shards: 6
+            shard_number: 6
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: grc_test
+          POSTGRES_USER: grc
+          POSTGRES_PASSWORD: grc
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd "pg_isready -U grc -d grc_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      azurite:
+        image: mcr.microsoft.com/azure-storage/azurite:latest
+        ports:
+          - 10000:10000
+          - 10001:10001
+          - 10002:10002
+        options: >-
+          --health-cmd "node -e \"require('net').connect(10000,'127.0.0.1')
+          .on('connect',()=>process.exit(0))
+          .on('error',()=>process.exit(1))\""
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: pip
+        cache-dependency-path: |
+          requirements.txt
+          pyproject.toml
+
+    - name: Install system dependencies
       run: |
-        set -a && source ../.env.test && set +a
-        
-        # Run maintained backend tests with coverage reporting. The generated
-        # risk/tests suite and catalogs/test_reminders.py are stale against the
-        # current models/routes and should be re-enabled after they are updated.
-        python -m pytest \
+        sudo apt-get update
+        sudo apt-get install -y \
+          libpq-dev \
+          gettext \
+          build-essential \
+          python3-dev \
+          libffi-dev \
+          libssl-dev \
+          libxml2-dev \
+          libxslt1-dev \
+          libjpeg-dev \
+          libfreetype6-dev \
+          zlib1g-dev \
+          redis-tools
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-django pytest-cov ruff mypy
+
+    - name: Wait for services
+      timeout-minutes: 3
+      run: bash .github/scripts/wait-for-ci-services.sh
+
+    - name: Run backend test shard
+      working-directory: ./app
+      run: |
+        bash ../.github/scripts/run-pytest-shard.sh \
+          "${{ matrix.shard_index }}" \
+          "${{ matrix.total_shards }}" \
           --ignore=risk/tests \
           --ignore=catalogs/test_reminders.py \
-          --cov=. \
-          --cov-report=xml \
-          --cov-report=term-missing \
-          --cov-fail-under=0 \
-          --verbose \
-          --migrations
+          .
 
     - name: Upload coverage reports
       if: always() && hashFiles('app/coverage.xml') != ''
       uses: codecov/codecov-action@v5
       with:
         files: ./app/coverage.xml
-        flags: backend
-        name: backend-coverage
+        flags: backend-shard-${{ matrix.shard_number }}
+        name: backend-coverage-${{ matrix.shard_number }}
+
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    needs: [backend-quality, backend-test-shards]
+    if: always()
+    steps:
+    - name: Check backend quality and test shards
+      run: |
+        failures=0
+
+        if [[ "${{ needs.backend-quality.result }}" != "success" ]]; then
+          echo "::error::Backend Quality finished with '${{ needs.backend-quality.result }}'."
+          failures=1
+        fi
+
+        if [[ "${{ needs.backend-test-shards.result }}" != "success" ]]; then
+          echo "::error::One or more backend test shards finished with '${{ needs.backend-test-shards.result }}'."
+          failures=1
+        fi
+
+        if (( failures > 0 )); then
+          exit 1
+        fi
+
+        echo "Backend quality checks and all backend test shards passed."
 
   test-frontend:
     name: Frontend Tests
