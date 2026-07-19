@@ -1,0 +1,201 @@
+services:
+  - type: web
+    name: axim-grc-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /health/
+    preDeployCommand: cd /workspace/app && python manage.py migrate_schemas --shared && python manage.py migrate_schemas
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: app.settings.production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: axim-grc-postgres
+          property: connectionString
+      - key: DIRECT_DATABASE_URL
+        fromDatabase:
+          name: axim-grc-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: axim-grc-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: axim-grc-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: axim-grc-redis
+          property: connectionString
+      - key: PUBLIC_HOSTNAME
+        fromService:
+          type: web
+          name: axim-grc-api
+          property: host
+      - key: RENDER_EXTERNAL_HOSTNAME
+        fromService:
+          type: web
+          name: axim-grc-api
+          property: host
+      - key: STORAGE_BACKEND
+        value: s3
+      - key: OBJECT_STORAGE_BUCKET
+        sync: false
+      - key: OBJECT_STORAGE_ENDPOINT_URL
+        sync: false
+      - key: OBJECT_STORAGE_REGION
+        value: eu-west-2
+      - key: OBJECT_STORAGE_ACCESS_KEY_ID
+        sync: false
+      - key: OBJECT_STORAGE_SECRET_ACCESS_KEY
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+
+  - type: worker
+    name: axim-grc-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    dockerCommand: cd /workspace/app && celery -A app worker -l info --concurrency=4
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: DJANGO_SETTINGS_MODULE
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: SECRET_KEY
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: DATABASE_URL
+      - key: DIRECT_DATABASE_URL
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: DIRECT_DATABASE_URL
+      - key: REDIS_URL
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: REDIS_URL
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: CELERY_BROKER_URL
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: CELERY_RESULT_BACKEND
+      - key: STORAGE_BACKEND
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: STORAGE_BACKEND
+      - key: OBJECT_STORAGE_BUCKET
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: OBJECT_STORAGE_BUCKET
+      - key: OBJECT_STORAGE_ENDPOINT_URL
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: OBJECT_STORAGE_ENDPOINT_URL
+      - key: OBJECT_STORAGE_REGION
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: OBJECT_STORAGE_REGION
+      - key: OBJECT_STORAGE_ACCESS_KEY_ID
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: OBJECT_STORAGE_ACCESS_KEY_ID
+      - key: OBJECT_STORAGE_SECRET_ACCESS_KEY
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: OBJECT_STORAGE_SECRET_ACCESS_KEY
+
+  - type: worker
+    name: axim-grc-beat
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    dockerCommand: cd /workspace/app && celery -A app beat -l info
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: DJANGO_SETTINGS_MODULE
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: SECRET_KEY
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: DATABASE_URL
+      - key: REDIS_URL
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: REDIS_URL
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: CELERY_BROKER_URL
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: web
+          name: axim-grc-api
+          envVarKey: CELERY_RESULT_BACKEND
+
+  - type: redis
+    name: axim-grc-redis
+    plan: starter
+    ipAllowList: []
+
+databases:
+  - name: axim-grc-postgres
+    databaseName: grc
+    user: grc
+    plan: basic-256mb

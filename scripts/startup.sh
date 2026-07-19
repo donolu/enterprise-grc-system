@@ -15,14 +15,23 @@ cd /workspace/app
 # Function to run migrations
 run_migrations() {
     echo "📋 Running database migrations..."
+    migration_database_url="${DIRECT_DATABASE_URL:-${DATABASE_URL:-}}"
     
     # First, run shared schema migrations
     echo "Running shared schema migrations..."
-    python manage.py migrate_schemas --shared
+    if [[ -n "$migration_database_url" ]]; then
+        DATABASE_URL="$migration_database_url" python manage.py migrate_schemas --shared
+    else
+        python manage.py migrate_schemas --shared
+    fi
     
     # Check if we have any existing tenants and run their migrations
     echo "Running tenant schema migrations..."
-    python manage.py migrate_schemas --tenant
+    if [[ -n "$migration_database_url" ]]; then
+        DATABASE_URL="$migration_database_url" python manage.py migrate_schemas --tenant
+    else
+        python manage.py migrate_schemas --tenant
+    fi
     
     echo "✅ Migrations completed successfully"
 }
@@ -176,15 +185,18 @@ EOF
 validate_environment() {
     echo "🔍 Validating environment..."
     
-    # Check required environment variables
-    required_vars=(
-        "SECRET_KEY"
-        "POSTGRES_DB"
-        "POSTGRES_USER"
-        "POSTGRES_PASSWORD"
-        "POSTGRES_HOST"
-    )
-    
+    if [[ -n "${DATABASE_URL}" ]]; then
+        required_vars=("SECRET_KEY" "DATABASE_URL")
+    else
+        required_vars=(
+            "SECRET_KEY"
+            "POSTGRES_DB"
+            "POSTGRES_USER"
+            "POSTGRES_PASSWORD"
+            "POSTGRES_HOST"
+        )
+    fi
+
     for var in "${required_vars[@]}"; do
         if [[ -z "${!var}" ]]; then
             echo "❌ Missing required environment variable: $var"
