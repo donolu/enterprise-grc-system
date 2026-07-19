@@ -24,10 +24,10 @@ def _maturity_score():
 
 def _effectiveness_score():
     return Case(
-        When(assessments__effectiveness_rating="not_effective", then=Value(1.0)),
-        When(assessments__effectiveness_rating="partially_effective", then=Value(2.0)),
-        When(assessments__effectiveness_rating="largely_effective", then=Value(3.0)),
-        When(assessments__effectiveness_rating="fully_effective", then=Value(4.0)),
+        When(effectiveness_rating="not_effective", then=Value(1.0)),
+        When(effectiveness_rating="partially_effective", then=Value(2.0)),
+        When(effectiveness_rating="largely_effective", then=Value(3.0)),
+        When(effectiveness_rating="fully_effective", then=Value(4.0)),
         output_field=FloatField(),
     )
 
