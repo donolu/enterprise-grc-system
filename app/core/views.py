@@ -1,7 +1,8 @@
 """
-Views for document management and Azure Blob Storage testing.
+Views for document management and storage testing.
 """
 
+from django.conf import settings
 from rest_framework import filters, viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -298,22 +299,22 @@ class DocumentViewSet(viewsets.ModelViewSet):
         Useful for testing and debugging.
         """
         from django.core.files.storage import default_storage
-        from core.storage import TenantAwareBlobStorage
-        
-        if isinstance(default_storage, TenantAwareBlobStorage):
+
+        if hasattr(default_storage, "_get_tenant_container_name"):
             container_name = default_storage._get_tenant_container_name()
-            
+
             return Response({
-                'storage_backend': 'TenantAwareBlobStorage',
+                'storage_backend': default_storage.__class__.__name__,
                 'container_name': container_name,
-                'connection_string': 'Configured' if default_storage.connection_string else 'Not configured',
-                'tenant_isolation': True
+                'tenant_isolation': True,
+                'configured_backend': getattr(settings, "STORAGE_BACKEND", "unknown"),
             })
-        else:
-            return Response({
-                'storage_backend': str(type(default_storage)),
-                'tenant_isolation': False
-            })
+
+        return Response({
+            'storage_backend': str(type(default_storage)),
+            'tenant_isolation': False,
+            'configured_backend': getattr(settings, "STORAGE_BACKEND", "unknown"),
+        })
     
     @action(detail=False, methods=['get'])
     def plan_usage(self, request):

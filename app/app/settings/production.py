@@ -1,8 +1,9 @@
 """
-Production settings for Azure App Service deployment.
+Production settings for container deployments.
 """
 
 from .base import *
+from .base import _database_config_from_url
 
 
 def _csv_env(name):
@@ -17,28 +18,42 @@ DEBUG = False
 ALLOWED_HOSTS = [
     '.azurewebsites.net',
     os.environ.get('CUSTOM_DOMAIN', ''),
+    os.environ.get('PUBLIC_HOSTNAME', ''),
+    os.environ.get('RENDER_EXTERNAL_HOSTNAME', ''),
 ] + [host.strip() for host in os.environ.get('ADDITIONAL_HOSTS', '').split(',') if host.strip()]
+ALLOWED_HOSTS = [host for host in ALLOWED_HOSTS if host]
 
 CORS_ALLOWED_ORIGINS = _csv_env('CORS_ALLOWED_ORIGINS')
 CSRF_TRUSTED_ORIGINS = _csv_env('CSRF_TRUSTED_ORIGINS') or CORS_ALLOWED_ORIGINS
 
-# Database configuration for Azure
-DATABASES = {
-    'default': {
-        'ENGINE': 'django_tenants.postgresql_backend',
-        'NAME': os.environ.get('POSTGRES_DB', 'grc'),
-        'USER': os.environ.get('POSTGRES_USER', 'grc'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
-        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
-        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
-        'OPTIONS': {
-            'sslmode': 'require',
-        },
-        'CONN_MAX_AGE': 60,
+# Database configuration. Prefer DATABASE_URL so the same image runs on Render,
+# DigitalOcean, AWS, Azure, or self-hosted Postgres.
+if os.environ.get('DATABASE_URL'):
+    DATABASES = {'default': _database_config_from_url(os.environ['DATABASE_URL'])}
+    DATABASES['default'].setdefault('OPTIONS', {})
+    DATABASES['default']['OPTIONS'].setdefault(
+        'sslmode',
+        os.environ.get('DATABASE_SSLMODE', 'require'),
+    )
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django_tenants.postgresql_backend',
+            'NAME': os.environ.get('POSTGRES_DB', 'grc'),
+            'USER': os.environ.get('POSTGRES_USER', 'grc'),
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
+            'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            'OPTIONS': {
+                'sslmode': os.environ.get('DATABASE_SSLMODE', 'require'),
+            },
+            'CONN_MAX_AGE': 60,
+        }
     }
-}
 
-# Cache configuration (Redis on Azure)
+DATABASES['default']['CONN_MAX_AGE'] = int(os.environ.get('DATABASE_CONN_MAX_AGE', '60'))
+
+# Cache configuration
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
@@ -80,6 +95,23 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
 
 # Logging configuration
+_log_handlers = {
+    'console': {
+        'class': 'logging.StreamHandler',
+        'formatter': 'verbose',
+    },
+}
+if os.environ.get('DJANGO_LOG_FILE'):
+    _log_handlers['file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'filename': os.environ['DJANGO_LOG_FILE'],
+        'maxBytes': 1024*1024*15,  # 15MB
+        'backupCount': 10,
+        'formatter': 'verbose',
+    }
+
+_handler_names = list(_log_handlers)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -89,26 +121,14 @@ LOGGING = {
             'style': '{',
         },
     },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-        },
-        'file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': '/home/LogFiles/application.log',
-            'maxBytes': 1024*1024*15,  # 15MB
-            'backupCount': 10,
-            'formatter': 'verbose',
-        },
-    },
+    'handlers': _log_handlers,
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': _handler_names,
         'level': 'INFO',
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': _handler_names,
             'level': os.environ.get('DJANGO_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },

@@ -1,0 +1,94 @@
+{
+  "family": "axim-grc",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::<account-id>:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::<account-id>:role/axim-grc-task-role",
+  "containerDefinitions": [
+    {
+      "name": "api",
+      "image": "ghcr.io/donolu/grc-platform:latest",
+      "essential": true,
+      "command": ["gunicorn", "app.wsgi:application", "-b", "0.0.0.0:8000"],
+      "workingDirectory": "/workspace/app",
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {"name": "DJANGO_SETTINGS_MODULE", "value": "app.settings.production"},
+        {"name": "STORAGE_BACKEND", "value": "s3"},
+        {"name": "OBJECT_STORAGE_REGION", "value": "eu-west-2"}
+      ],
+      "secrets": [
+        {"name": "SECRET_KEY", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/secret-key"},
+        {"name": "DATABASE_URL", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/database-url"},
+        {"name": "DIRECT_DATABASE_URL", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/direct-database-url"},
+        {"name": "REDIS_URL", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/redis-url"},
+        {"name": "CELERY_BROKER_URL", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/redis-url"},
+        {"name": "CELERY_RESULT_BACKEND", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/redis-url"},
+        {"name": "PUBLIC_HOSTNAME", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/public-hostname"},
+        {"name": "OBJECT_STORAGE_BUCKET", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/object-storage-bucket"},
+        {"name": "OBJECT_STORAGE_ENDPOINT_URL", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/object-storage-endpoint-url"},
+        {"name": "OBJECT_STORAGE_ACCESS_KEY_ID", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/object-storage-access-key-id"},
+        {"name": "OBJECT_STORAGE_SECRET_ACCESS_KEY", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/object-storage-secret-access-key"},
+        {"name": "EMAIL_HOST", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/email-host"},
+        {"name": "EMAIL_HOST_USER", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/email-host-user"},
+        {"name": "EMAIL_HOST_PASSWORD", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/email-host-password"},
+        {"name": "DEFAULT_FROM_EMAIL", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/default-from-email"},
+        {"name": "STRIPE_SECRET_KEY", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/stripe-secret-key"},
+        {"name": "STRIPE_WEBHOOK_SECRET", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/stripe-webhook-secret"}
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/health/ || exit 1"],
+        "interval": 30,
+        "timeout": 10,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/axim-grc",
+          "awslogs-region": "<region>",
+          "awslogs-stream-prefix": "api"
+        }
+      }
+    },
+    {
+      "name": "worker",
+      "image": "ghcr.io/donolu/grc-platform:latest",
+      "essential": true,
+      "command": ["celery", "-A", "app", "worker", "-l", "info", "--concurrency=4"],
+      "workingDirectory": "/workspace/app",
+      "environment": [
+        {"name": "DJANGO_SETTINGS_MODULE", "value": "app.settings.production"},
+        {"name": "STORAGE_BACKEND", "value": "s3"},
+        {"name": "OBJECT_STORAGE_REGION", "value": "eu-west-2"}
+      ],
+      "secrets": [
+        {"name": "SECRET_KEY", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/secret-key"},
+        {"name": "DATABASE_URL", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/database-url"},
+        {"name": "REDIS_URL", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/redis-url"},
+        {"name": "CELERY_BROKER_URL", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/redis-url"},
+        {"name": "CELERY_RESULT_BACKEND", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/redis-url"},
+        {"name": "OBJECT_STORAGE_BUCKET", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/object-storage-bucket"},
+        {"name": "OBJECT_STORAGE_ENDPOINT_URL", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/object-storage-endpoint-url"},
+        {"name": "OBJECT_STORAGE_ACCESS_KEY_ID", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/object-storage-access-key-id"},
+        {"name": "OBJECT_STORAGE_SECRET_ACCESS_KEY", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/object-storage-secret-access-key"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/axim-grc",
+          "awslogs-region": "<region>",
+          "awslogs-stream-prefix": "worker"
+        }
+      }
+    }
+  ]
+}

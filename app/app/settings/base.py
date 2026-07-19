@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlparse
+
 from dotenv import load_dotenv
 from celery.schedules import crontab
 
@@ -86,12 +88,76 @@ ASGI_APPLICATION = "app.asgi.application"
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "static"
-# File Storage Configuration
-# Using Azure Blob Storage with Azurite for development
-DEFAULT_FILE_STORAGE = 'core.storage.TenantAwareBlobStorage'
 
-# Azure Storage settings (configured but not used in development due to Azurite connectivity)
-AZURE_STORAGE_CONNECTION_STRING = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
+def _truthy_env(name, default="0"):
+    return os.environ.get(name, default).lower() in {"1", "true", "yes", "on"}
+
+
+def _database_config_from_url(url):
+    parsed = urlparse(url)
+    if parsed.scheme not in {"postgres", "postgresql"}:
+        raise ValueError(f"Unsupported DATABASE_URL scheme: {parsed.scheme}")
+
+    query = parse_qs(parsed.query)
+    options = {}
+    if "sslmode" in query and query["sslmode"]:
+        options["sslmode"] = query["sslmode"][0]
+
+    return {
+        "ENGINE": "django_tenants.postgresql_backend",
+        "NAME": unquote(parsed.path.lstrip("/")),
+        "USER": unquote(parsed.username or ""),
+        "PASSWORD": unquote(parsed.password or ""),
+        "HOST": parsed.hostname or "",
+        "PORT": str(parsed.port or 5432),
+        **({"OPTIONS": options} if options else {}),
+    }
+
+
+def _storage_backend_path():
+    backend = os.environ.get("STORAGE_BACKEND", "azure").strip().lower()
+    backend_paths = {
+        "azure": "core.storage.TenantAwareBlobStorage",
+        "s3": "core.storage.TenantAwareS3Storage",
+        "filesystem": "core.storage.TenantAwareFileSystemStorage",
+        "local": "core.storage.TenantAwareFileSystemStorage",
+    }
+    if backend not in backend_paths:
+        allowed = ", ".join(sorted(backend_paths))
+        raise ValueError(f"Unsupported STORAGE_BACKEND '{backend}'. Expected one of: {allowed}")
+    return backend_paths[backend]
+
+
+# File storage is selected by environment so the same image can run on Azure,
+# S3-compatible object stores, or self-hosted filesystem storage.
+STORAGE_BACKEND = os.environ.get("STORAGE_BACKEND", "azure").strip().lower()
+DEFAULT_STORAGE_BACKEND = _storage_backend_path()
+STORAGES = {
+    "default": {"BACKEND": DEFAULT_STORAGE_BACKEND},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+
+AZURE_STORAGE_CONNECTION_STRING = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
+OBJECT_STORAGE_BUCKET = os.environ.get("OBJECT_STORAGE_BUCKET") or os.environ.get(
+    "AWS_STORAGE_BUCKET_NAME",
+)
+OBJECT_STORAGE_ENDPOINT_URL = os.environ.get("OBJECT_STORAGE_ENDPOINT_URL") or os.environ.get(
+    "AWS_S3_ENDPOINT_URL",
+)
+OBJECT_STORAGE_REGION = os.environ.get("OBJECT_STORAGE_REGION") or os.environ.get(
+    "AWS_DEFAULT_REGION",
+    "eu-west-2",
+)
+OBJECT_STORAGE_PUBLIC_BASE_URL = os.environ.get("OBJECT_STORAGE_PUBLIC_BASE_URL", "")
+OBJECT_STORAGE_ACCESS_KEY_ID = os.environ.get("OBJECT_STORAGE_ACCESS_KEY_ID") or os.environ.get(
+    "AWS_ACCESS_KEY_ID",
+)
+OBJECT_STORAGE_SECRET_ACCESS_KEY = os.environ.get(
+    "OBJECT_STORAGE_SECRET_ACCESS_KEY",
+) or os.environ.get("AWS_SECRET_ACCESS_KEY")
+OBJECT_STORAGE_ADDRESSING_STYLE = os.environ.get("OBJECT_STORAGE_ADDRESSING_STYLE", "auto")
+OBJECT_STORAGE_CREATE_BUCKET = _truthy_env("OBJECT_STORAGE_CREATE_BUCKET")
+TENANT_STORAGE_PREFIX = os.environ.get("TENANT_STORAGE_PREFIX", "tenant")
 
 # Media files configuration
 MEDIA_URL = "/media/"
@@ -113,16 +179,21 @@ TEMPLATES = [
     },
 ]
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django_tenants.postgresql_backend",
-        "NAME": os.environ.get("POSTGRES_DB","grc"),
-        "USER": os.environ.get("POSTGRES_USER","grc"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", ""),
-        "HOST": os.environ.get("POSTGRES_HOST","postgres"),
-        "PORT": os.environ.get("POSTGRES_PORT","5432"),
+if os.environ.get("DATABASE_URL"):
+    DATABASES = {"default": _database_config_from_url(os.environ["DATABASE_URL"])}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django_tenants.postgresql_backend",
+            "NAME": os.environ.get("POSTGRES_DB", "grc"),
+            "USER": os.environ.get("POSTGRES_USER", "grc"),
+            "PASSWORD": os.environ.get("POSTGRES_PASSWORD", ""),
+            "HOST": os.environ.get("POSTGRES_HOST", "postgres"),
+            "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        }
     }
-}
+
+DIRECT_DATABASE_URL = os.environ.get("DIRECT_DATABASE_URL", os.environ.get("DATABASE_URL", ""))
 
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",

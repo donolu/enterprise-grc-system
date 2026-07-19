@@ -67,24 +67,15 @@ class HealthCheckView(View):
                 'message': f'Cache check failed: {str(e)}'
             }
         
-        # Storage check (Azure Blob Storage)
+        # Storage check
         try:
             from django.core.files.storage import default_storage
-            if hasattr(default_storage, '_is_azure_available'):
-                if default_storage._is_azure_available():
-                    health_data['checks']['storage'] = {
-                        'status': 'healthy',
-                        'message': 'Azure Blob Storage is available'
-                    }
-                else:
-                    health_data['checks']['storage'] = {
-                        'status': 'degraded',
-                        'message': 'Azure Blob Storage unavailable, using fallback'
-                    }
+            if hasattr(default_storage, 'storage_health'):
+                health_data['checks']['storage'] = default_storage.storage_health()
             else:
                 health_data['checks']['storage'] = {
                     'status': 'healthy',
-                    'message': 'Local storage backend'
+                    'message': f'{default_storage.__class__.__name__} configured'
                 }
         except Exception as e:
             health_data['checks']['storage'] = {
