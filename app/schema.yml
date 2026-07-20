@@ -2,20 +2,19 @@ openapi: 3.0.3
 info:
   title: GRC SaaS API
   version: 1.0.0
-  description: "\n    Comprehensive API for Governance, Risk, and Compliance (GRC)\
-    \ management.\n\n    This API provides complete functionality for compliance framework\
-    \ management,\n    control assessments, evidence collection, reporting, and automated\
-    \ reminders.\n\n    ## Features\n    - **Framework Management**: Import and manage\
-    \ compliance frameworks (ISO 27001, NIST CSF, SOC 2, etc.)\n    - **Assessment\
-    \ Workflow**: Complete control assessment lifecycle with status tracking\n   \
-    \ - **Evidence Management**: Upload, link, and organize evidence with bulk operations\n\
-    \    - **Automated Reporting**: Generate professional PDF reports for audits and\
-    \ compliance\n    - **Smart Reminders**: Configurable email notifications for\
-    \ due dates and overdue items\n    - **Multi-tenant Architecture**: Complete tenant\
-    \ isolation with secure data scoping\n\n    ## Authentication\n    This API uses\
-    \ session-based authentication. Users must be authenticated to access endpoints.\n\
-    \n    ## Tenant Scoping\n    All data is automatically scoped to the authenticated\
-    \ user's tenant. Cross-tenant access is prevented.\n    "
+  description: "\n    Comprehensive API for Governance, Risk, and Compliance (GRC)
+    management.\n\n    This API provides complete functionality for compliance framework
+    management,\n    control assessments, evidence collection, reporting, and automated
+    reminders.\n\n    ## Features\n    - **Framework Management**: Import and manage
+    compliance frameworks (ISO 27001, NIST CSF, SOC 2, etc.)\n    - **Assessment Workflow**:
+    Complete control assessment lifecycle with status tracking\n    - **Evidence Management**:
+    Upload, link, and organize evidence with bulk operations\n    - **Automated Reporting**:
+    Generate professional PDF reports for audits and compliance\n    - **Smart Reminders**:
+    Configurable email notifications for due dates and overdue items\n    - **Multi-tenant
+    Architecture**: Complete tenant isolation with secure data scoping\n\n    ## Authentication\n
+    \   This API uses session-based authentication. Users must be authenticated to
+    access endpoints.\n\n    ## Tenant Scoping\n    All data is automatically scoped
+    to the authenticated user's tenant. Cross-tenant access is prevented.\n    "
   contact:
     name: GRC SaaS Support
     email: support@grcsaas.com
@@ -523,6 +522,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssetDetail'
           description: ''
+    delete:
+      operationId: assets_assets_destroy
+      description: CRUD API for information assets.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this asset.
+        required: true
+      tags:
+      - assets
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: assets_assets_update
       description: CRUD API for information assets.
@@ -557,24 +574,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssetDetail'
           description: ''
-    delete:
-      operationId: assets_assets_destroy
-      description: CRUD API for information assets.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this asset.
-        required: true
-      tags:
-      - assets
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/assets/review-reminders/:
     get:
       operationId: assets_review_reminders_list
@@ -805,6 +804,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/CalendarEvent'
           description: ''
+    delete:
+      operationId: calendar_events_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this calendar event.
+        required: true
+      tags:
+      - calendar
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: calendar_events_update
       parameters:
@@ -839,24 +856,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/CalendarEvent'
           description: ''
-    delete:
-      operationId: calendar_events_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this calendar event.
-        required: true
-      tags:
-      - calendar
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/calendar/preferences/:
     get:
       operationId: calendar_preferences_retrieve
@@ -1162,6 +1161,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/FrameworkDetail'
           description: ''
+    delete:
+      operationId: catalogs_api_frameworks_destroy
+      description: Delete a compliance framework. This will also remove all associated
+        clauses and mappings.
+      summary: Delete framework
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this framework.
+        required: true
+      tags:
+      - Frameworks
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: catalogs_api_frameworks_update
       description: Update an existing compliance framework. Requires all fields.
@@ -1197,26 +1216,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/FrameworkDetail'
           description: ''
-    delete:
-      operationId: catalogs_api_frameworks_destroy
-      description: Delete a compliance framework. This will also remove all associated
-        clauses and mappings.
-      summary: Delete framework
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this framework.
-        required: true
-      tags:
-      - Frameworks
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/catalogs/api/frameworks/{id}/clauses/:
     get:
       operationId: catalogs_api_frameworks_clauses_list
@@ -1572,6 +1571,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/ClauseDetail'
           description: ''
+    delete:
+      operationId: catalogs_api_clauses_destroy
+      description: |-
+        ViewSet for managing framework clauses.
+        Provides CRUD operations and clause-specific endpoints.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this clause.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: catalogs_api_clauses_update
       description: |-
@@ -1608,26 +1627,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ClauseDetail'
           description: ''
-    delete:
-      operationId: catalogs_api_clauses_destroy
-      description: |-
-        ViewSet for managing framework clauses.
-        Provides CRUD operations and clause-specific endpoints.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this clause.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/catalogs/api/clauses/{id}/controls/:
     get:
       operationId: catalogs_api_clauses_controls_retrieve
@@ -1957,6 +1956,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/ControlCreateUpdate'
           description: ''
+    delete:
+      operationId: catalogs_api_controls_destroy
+      description: |-
+        ViewSet for managing controls.
+        Provides CRUD operations and control-specific endpoints.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this control.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: catalogs_api_controls_update
       description: |-
@@ -1993,26 +2012,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ControlCreateUpdate'
           description: ''
-    delete:
-      operationId: catalogs_api_controls_destroy
-      description: |-
-        ViewSet for managing controls.
-        Provides CRUD operations and control-specific endpoints.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this control.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/catalogs/api/controls/{id}/evidence/:
     get:
       operationId: catalogs_api_controls_evidence_retrieve
@@ -2244,6 +2243,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/ControlEvidence'
           description: ''
+    delete:
+      operationId: catalogs_api_evidence_destroy
+      description: ViewSet for managing control evidence.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this control evidence.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: catalogs_api_evidence_update
       description: ViewSet for managing control evidence.
@@ -2278,24 +2295,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ControlEvidence'
           description: ''
-    delete:
-      operationId: catalogs_api_evidence_destroy
-      description: ViewSet for managing control evidence.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this control evidence.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/catalogs/api/evidence/{id}/assessments/:
     get:
       operationId: catalogs_api_evidence_assessments_retrieve
@@ -2629,6 +2628,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/FrameworkMapping'
           description: ''
+    delete:
+      operationId: catalogs_api_mappings_destroy
+      description: ViewSet for managing framework mappings.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this framework mapping.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: catalogs_api_mappings_update
       description: ViewSet for managing framework mappings.
@@ -2663,24 +2680,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/FrameworkMapping'
           description: ''
-    delete:
-      operationId: catalogs_api_mappings_destroy
-      description: ViewSet for managing framework mappings.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this framework mapping.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/catalogs/api/assessments/:
     get:
       operationId: catalogs_api_assessments_list
@@ -2996,6 +2995,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/ControlAssessmentCreateUpdate'
           description: ''
+    delete:
+      operationId: catalogs_api_assessments_destroy
+      description: Delete a control assessment and all associated evidence links.
+      summary: Delete assessment
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this control assessment.
+        required: true
+      tags:
+      - Assessments
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: catalogs_api_assessments_update
       description: Update an existing control assessment. Requires all fields.
@@ -3031,25 +3049,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ControlAssessmentCreateUpdate'
           description: ''
-    delete:
-      operationId: catalogs_api_assessments_destroy
-      description: Delete a control assessment and all associated evidence links.
-      summary: Delete assessment
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this control assessment.
-        required: true
-      tags:
-      - Assessments
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/catalogs/api/assessments/{id}/bulk_upload_evidence/:
     post:
       operationId: catalogs_api_assessments_bulk_upload_evidence_create
@@ -3382,6 +3381,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssessmentEvidence'
           description: ''
+    delete:
+      operationId: catalogs_api_assessment_evidence_destroy
+      description: ViewSet for managing assessment evidence links.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this assessment evidence.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: catalogs_api_assessment_evidence_update
       description: ViewSet for managing assessment evidence links.
@@ -3416,24 +3433,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssessmentEvidence'
           description: ''
-    delete:
-      operationId: catalogs_api_assessment_evidence_destroy
-      description: ViewSet for managing assessment evidence links.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this assessment evidence.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/compliance/artefacts/:
     get:
       operationId: compliance_artefacts_list
@@ -3600,6 +3599,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/GovernanceArtefact'
           description: ''
+    delete:
+      operationId: compliance_artefacts_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this governance artefact.
+        required: true
+      tags:
+      - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: compliance_artefacts_update
       parameters:
@@ -3633,23 +3649,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/GovernanceArtefact'
           description: ''
-    delete:
-      operationId: compliance_artefacts_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this governance artefact.
-        required: true
-      tags:
-      - compliance
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/compliance/regulatory-requirements/:
     get:
       operationId: compliance_regulatory_requirements_list
@@ -3840,6 +3839,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegulatoryRequirement'
           description: ''
+    delete:
+      operationId: compliance_regulatory_requirements_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this regulatory requirement.
+        required: true
+      tags:
+      - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: compliance_regulatory_requirements_update
       parameters:
@@ -3873,23 +3889,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegulatoryRequirement'
           description: ''
-    delete:
-      operationId: compliance_regulatory_requirements_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this regulatory requirement.
-        required: true
-      tags:
-      - compliance
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/compliance/non-conformities/:
     get:
       operationId: compliance_non_conformities_list
@@ -4068,6 +4067,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/NonConformity'
           description: ''
+    delete:
+      operationId: compliance_non_conformities_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this non conformity.
+        required: true
+      tags:
+      - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: compliance_non_conformities_update
       parameters:
@@ -4101,23 +4117,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/NonConformity'
           description: ''
-    delete:
-      operationId: compliance_non_conformities_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this non conformity.
-        required: true
-      tags:
-      - compliance
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/compliance/management-reviews/:
     get:
       operationId: compliance_management_reviews_list
@@ -4274,6 +4273,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/ManagementReview'
           description: ''
+    delete:
+      operationId: compliance_management_reviews_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this management review.
+        required: true
+      tags:
+      - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: compliance_management_reviews_update
       parameters:
@@ -4307,23 +4323,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ManagementReview'
           description: ''
-    delete:
-      operationId: compliance_management_reviews_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this management review.
-        required: true
-      tags:
-      - compliance
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/exports/assessment-reports/:
     get:
       operationId: exports_assessment_reports_list
@@ -4533,6 +4532,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssessmentReport'
           description: ''
+    delete:
+      operationId: exports_assessment_reports_destroy
+      description: Delete an assessment report and its generated file if it exists.
+      summary: Delete report
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Reports
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: exports_assessment_reports_update
       description: Update an existing assessment report configuration. Cannot update
@@ -4568,24 +4585,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssessmentReport'
           description: ''
-    delete:
-      operationId: exports_assessment_reports_destroy
-      description: Delete an assessment report and its generated file if it exists.
-      summary: Delete report
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-        required: true
-      tags:
-      - Reports
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/exports/assessment-reports/{id}/download/:
     get:
       operationId: exports_assessment_reports_download_retrieve
@@ -5163,6 +5162,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskCreateUpdate'
           description: ''
+    delete:
+      operationId: risk_risks_destroy
+      description: Delete a risk entry and all associated notes.
+      summary: Delete risk
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk.
+        required: true
+      tags:
+      - Risk Management
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: risk_risks_update
       description: Update an existing risk entry. Risk level will be automatically
@@ -5199,25 +5217,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskCreateUpdate'
           description: ''
-    delete:
-      operationId: risk_risks_destroy
-      description: Delete a risk entry and all associated notes.
-      summary: Delete risk
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk.
-        required: true
-      tags:
-      - Risk Management
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/risk/risks/{id}/add_note/:
     post:
       operationId: risk_risks_add_note_create
@@ -5413,6 +5412,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskCategory'
           description: ''
+    delete:
+      operationId: risk_categories_destroy
+      description: Delete a risk category. Risks in this category will become uncategorized.
+      summary: Delete risk category
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk category.
+        required: true
+      tags:
+      - Risk Management
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: risk_categories_update
       description: Update an existing risk category.
@@ -5448,25 +5466,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskCategory'
           description: ''
-    delete:
-      operationId: risk_categories_destroy
-      description: Delete a risk category. Risks in this category will become uncategorized.
-      summary: Delete risk category
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk category.
-        required: true
-      tags:
-      - Risk Management
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/risk/matrices/:
     get:
       operationId: risk_matrices_list
@@ -5575,6 +5574,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskMatrix'
           description: ''
+    delete:
+      operationId: risk_matrices_destroy
+      description: Delete a risk matrix. Cannot delete if it's the default matrix
+        or in use by risks.
+      summary: Delete risk matrix
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk matrix.
+        required: true
+      tags:
+      - Risk Management
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: risk_matrices_update
       description: Update an existing risk matrix configuration.
@@ -5610,26 +5629,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskMatrix'
           description: ''
-    delete:
-      operationId: risk_matrices_destroy
-      description: Delete a risk matrix. Cannot delete if it's the default matrix
-        or in use by risks.
-      summary: Delete risk matrix
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk matrix.
-        required: true
-      tags:
-      - Risk Management
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/risk/actions/:
     get:
       operationId: risk_actions_list
@@ -5955,6 +5954,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskActionCreateUpdate'
           description: ''
+    delete:
+      operationId: risk_actions_destroy
+      description: Delete a risk action and all associated notes and evidence.
+      summary: Delete risk action
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk action.
+        required: true
+      tags:
+      - Risk Actions
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: risk_actions_update
       description: Update an existing risk action. Progress and status will be validated.
@@ -5990,25 +6008,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskActionCreateUpdate'
           description: ''
-    delete:
-      operationId: risk_actions_destroy
-      description: Delete a risk action and all associated notes and evidence.
-      summary: Delete risk action
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk action.
-        required: true
-      tags:
-      - Risk Actions
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/risk/actions/{id}/add_note/:
     post:
       operationId: risk_actions_add_note_create
@@ -6258,6 +6257,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskActionReminderConfiguration'
           description: ''
+    delete:
+      operationId: risk_reminder_config_destroy
+      description: |-
+        **Risk Action Reminder Configuration Management**
+
+        Manage automated reminder settings for risk actions including:
+        - Email notification preferences
+        - Reminder timing and frequency
+        - Weekly digest settings
+        - Auto-silence options
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Risk Action Reminder
+          Configuration.
+        required: true
+      tags:
+      - risk
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: risk_reminder_config_update
       description: Update risk action reminder configuration settings.
@@ -6293,32 +6318,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskActionReminderConfiguration'
           description: ''
-    delete:
-      operationId: risk_reminder_config_destroy
-      description: |-
-        **Risk Action Reminder Configuration Management**
-
-        Manage automated reminder settings for risk actions including:
-        - Email notification preferences
-        - Reminder timing and frequency
-        - Weekly digest settings
-        - Auto-silence options
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this Risk Action Reminder
-          Configuration.
-        required: true
-      tags:
-      - risk
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/risk/analytics/action_overview/:
     get:
       operationId: risk_analytics_action_overview_retrieve
@@ -6606,6 +6605,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/PolicyCategory'
           description: ''
+    delete:
+      operationId: policies_categories_destroy
+      description: ViewSet for managing policy categories.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Policy Category.
+        required: true
+      tags:
+      - policies
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: policies_categories_update
       description: ViewSet for managing policy categories.
@@ -6641,25 +6659,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/PolicyCategory'
           description: ''
-    delete:
-      operationId: policies_categories_destroy
-      description: ViewSet for managing policy categories.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this Policy Category.
-        required: true
-      tags:
-      - policies
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/policies/categories/{id}/policies/:
     get:
       operationId: policies_categories_policies_retrieve
@@ -6923,6 +6922,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/PolicyCreateUpdate'
           description: ''
+    delete:
+      operationId: policies_policies_destroy
+      description: ViewSet for managing policies with versioning support.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Policy.
+        required: true
+      tags:
+      - policies
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: policies_policies_update
       description: ViewSet for managing policies with versioning support.
@@ -6958,25 +6976,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/PolicyCreateUpdate'
           description: ''
-    delete:
-      operationId: policies_policies_destroy
-      description: ViewSet for managing policies with versioning support.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this Policy.
-        required: true
-      tags:
-      - policies
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/policies/policies/{id}/acknowledge/:
     post:
       operationId: policies_policies_acknowledge_create
@@ -7264,6 +7263,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/PolicyVersionDetail'
           description: ''
+    delete:
+      operationId: policies_versions_destroy
+      description: ViewSet for managing policy versions.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Policy Version.
+        required: true
+      tags:
+      - policies
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: policies_versions_update
       description: ViewSet for managing policy versions.
@@ -7299,25 +7317,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/PolicyVersionDetail'
           description: ''
-    delete:
-      operationId: policies_versions_destroy
-      description: ViewSet for managing policy versions.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this Policy Version.
-        required: true
-      tags:
-      - policies
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/policies/versions/{id}/activate/:
     post:
       operationId: policies_versions_activate_create
@@ -7824,6 +7823,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/TrainingCategory'
           description: ''
+    delete:
+      operationId: training_categories_destroy
+      description: ViewSet for managing training categories.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this training category.
+        required: true
+      tags:
+      - training
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: training_categories_update
       description: ViewSet for managing training categories.
@@ -7859,25 +7877,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/TrainingCategory'
           description: ''
-    delete:
-      operationId: training_categories_destroy
-      description: ViewSet for managing training categories.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this training category.
-        required: true
-      tags:
-      - training
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/training/videos/:
     get:
       operationId: training_videos_list
@@ -8097,6 +8096,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/TrainingVideoDetail'
           description: ''
+    delete:
+      operationId: training_videos_destroy
+      description: ViewSet for managing training videos.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this training video.
+        required: true
+      tags:
+      - training
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: training_videos_update
       description: ViewSet for managing training videos.
@@ -8132,25 +8150,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/TrainingVideoDetail'
           description: ''
-    delete:
-      operationId: training_videos_destroy
-      description: ViewSet for managing training videos.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this training video.
-        required: true
-      tags:
-      - training
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/training/videos/{id}/track_view/:
     post:
       operationId: training_videos_track_view_create
@@ -8426,6 +8425,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/SecurityAwarenessCampaignDetail'
           description: ''
+    delete:
+      operationId: training_campaigns_destroy
+      description: ViewSet for managing security awareness campaigns.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this security awareness campaign.
+        required: true
+      tags:
+      - training
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: training_campaigns_update
       description: ViewSet for managing security awareness campaigns.
@@ -8461,25 +8479,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/SecurityAwarenessCampaignDetail'
           description: ''
-    delete:
-      operationId: training_campaigns_destroy
-      description: ViewSet for managing security awareness campaigns.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this security awareness campaign.
-        required: true
-      tags:
-      - training
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/training/campaigns/{id}/send_now/:
     post:
       operationId: training_campaigns_send_now_create
@@ -8896,6 +8895,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/KnowledgeCategory'
           description: ''
+    delete:
+      operationId: knowledge_categories_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this knowledge category.
+        required: true
+      tags:
+      - knowledge
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: knowledge_categories_update
       parameters:
@@ -8929,23 +8945,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/KnowledgeCategory'
           description: ''
-    delete:
-      operationId: knowledge_categories_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this knowledge category.
-        required: true
-      tags:
-      - knowledge
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/knowledge/articles/:
     get:
       operationId: knowledge_articles_list
@@ -9138,6 +9137,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/KnowledgeArticleDetail'
           description: ''
+    delete:
+      operationId: knowledge_articles_destroy
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - knowledge
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: knowledge_articles_update
       parameters:
@@ -9170,22 +9185,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/KnowledgeArticleDetail'
           description: ''
-    delete:
-      operationId: knowledge_articles_destroy
-      parameters:
-      - in: path
-        name: slug
-        schema:
-          type: string
-        required: true
-      tags:
-      - knowledge
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/knowledge/articles/{slug}/revisions/:
     get:
       operationId: knowledge_articles_revisions_retrieve
@@ -9909,6 +9908,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorCreateUpdate'
           description: ''
+    delete:
+      operationId: vendors_vendors_destroy
+      description: Delete a vendor profile and all associated data.
+      summary: Delete vendor
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor.
+        required: true
+      tags:
+      - Vendors
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: vendors_vendors_update
       description: Update an existing vendor profile with new information.
@@ -9944,25 +9962,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorCreateUpdate'
           description: ''
-    delete:
-      operationId: vendors_vendors_destroy
-      description: Delete a vendor profile and all associated data.
-      summary: Delete vendor
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor.
-        required: true
-      tags:
-      - Vendors
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vendors/vendors/{id}/add_note/:
     post:
       operationId: vendors_vendors_add_note_create
@@ -10173,6 +10172,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorCategory'
           description: ''
+    delete:
+      operationId: vendors_categories_destroy
+      description: |-
+        **Vendor Category Management**
+
+        Manage vendor categories for classification and organization.
+        Categories help organize vendors by business type, risk level, and compliance requirements.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor category.
+        required: true
+      tags:
+      - Vendor Categories
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: vendors_categories_update
       description: |-
@@ -10211,28 +10232,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorCategory'
           description: ''
-    delete:
-      operationId: vendors_categories_destroy
-      description: |-
-        **Vendor Category Management**
-
-        Manage vendor categories for classification and organization.
-        Categories help organize vendors by business type, risk level, and compliance requirements.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor category.
-        required: true
-      tags:
-      - Vendor Categories
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vendors/contacts/:
     get:
       operationId: vendors_contacts_list
@@ -10437,6 +10436,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorContact'
           description: ''
+    delete:
+      operationId: vendors_contacts_destroy
+      description: |-
+        **Vendor Contact Management**
+
+        Manage contact persons for vendors with different roles and responsibilities.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor contact.
+        required: true
+      tags:
+      - Vendor Contacts
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: vendors_contacts_update
       description: |-
@@ -10474,27 +10494,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorContact'
           description: ''
-    delete:
-      operationId: vendors_contacts_destroy
-      description: |-
-        **Vendor Contact Management**
-
-        Manage contact persons for vendors with different roles and responsibilities.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor contact.
-        required: true
-      tags:
-      - Vendor Contacts
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vendors/services/:
     get:
       operationId: vendors_services_list
@@ -10763,6 +10762,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorService'
           description: ''
+    delete:
+      operationId: vendors_services_destroy
+      description: |-
+        **Vendor Service Management**
+
+        Manage services provided by vendors including categorization and risk assessment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor service.
+        required: true
+      tags:
+      - Vendor Services
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: vendors_services_update
       description: |-
@@ -10800,27 +10820,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorService'
           description: ''
-    delete:
-      operationId: vendors_services_destroy
-      description: |-
-        **Vendor Service Management**
-
-        Manage services provided by vendors including categorization and risk assessment.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor service.
-        required: true
-      tags:
-      - Vendor Services
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vendors/notes/:
     get:
       operationId: vendors_notes_list
@@ -10947,6 +10946,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorNote'
           description: ''
+    delete:
+      operationId: vendors_notes_destroy
+      description: |-
+        **Vendor Note Management**
+
+        Manage notes and comments about vendors for tracking interactions and decisions.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor note.
+        required: true
+      tags:
+      - Vendor Notes
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: vendors_notes_update
       description: |-
@@ -10984,27 +11004,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorNote'
           description: ''
-    delete:
-      operationId: vendors_notes_destroy
-      description: |-
-        **Vendor Note Management**
-
-        Manage notes and comments about vendors for tracking interactions and decisions.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor note.
-        required: true
-      tags:
-      - Vendor Notes
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vendors/tasks/:
     get:
       operationId: vendors_tasks_list
@@ -11568,6 +11567,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorTaskCreateUpdate'
           description: ''
+    delete:
+      operationId: vendors_tasks_destroy
+      description: |-
+        **Vendor Task Management**
+
+        Comprehensive task management for vendor-related activities including contract renewals,
+        security reviews, compliance assessments, and automated task generation.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Vendor Task.
+        required: true
+      tags:
+      - Vendor Tasks
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: vendors_tasks_update
       description: |-
@@ -11606,28 +11627,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorTaskCreateUpdate'
           description: ''
-    delete:
-      operationId: vendors_tasks_destroy
-      description: |-
-        **Vendor Task Management**
-
-        Comprehensive task management for vendor-related activities including contract renewals,
-        security reviews, compliance assessments, and automated task generation.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this Vendor Task.
-        required: true
-      tags:
-      - Vendor Tasks
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vendors/tasks/{id}/update_status/:
     post:
       operationId: vendors_tasks_update_status_create
@@ -11804,6 +11803,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScanTarget'
           description: ''
+    delete:
+      operationId: vuln_targets_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this scan target.
+        required: true
+      tags:
+      - vuln
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: vuln_targets_update
       parameters:
@@ -11838,24 +11855,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScanTarget'
           description: ''
-    delete:
-      operationId: vuln_targets_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this scan target.
-        required: true
-      tags:
-      - vuln
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vuln/targets/{id}/start-scan/:
     post:
       operationId: vuln_targets_start_scan_create
@@ -12047,6 +12046,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScanSchedule'
           description: ''
+    delete:
+      operationId: vuln_schedules_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this scan schedule.
+        required: true
+      tags:
+      - vuln
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: vuln_schedules_update
       parameters:
@@ -12081,24 +12098,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScanSchedule'
           description: ''
-    delete:
-      operationId: vuln_schedules_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this scan schedule.
-        required: true
-      tags:
-      - vuln
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vuln/jobs/:
     get:
       operationId: vuln_jobs_list
@@ -12702,6 +12701,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/LimitOverrideRequest'
           description: ''
+    delete:
+      operationId: limit_overrides_destroy
+      description: ViewSet for managing limit override requests with approval workflow.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this limit override request.
+        required: true
+      tags:
+      - limit-overrides
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: limit_overrides_update
       description: ViewSet for managing limit override requests with approval workflow.
@@ -12736,24 +12753,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/LimitOverrideRequest'
           description: ''
-    delete:
-      operationId: limit_overrides_destroy
-      description: ViewSet for managing limit override requests with approval workflow.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this limit override request.
-        required: true
-      tags:
-      - limit-overrides
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/limit-overrides/{id}/apply_override/:
     post:
       operationId: limit_overrides_apply_override_create
@@ -13066,6 +13065,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/Document'
           description: ''
+    delete:
+      operationId: documents_destroy
+      description: Delete a document and its file from storage. Only the uploader
+        can delete documents.
+      summary: Delete document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document.
+        required: true
+      tags:
+      - Documents
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     put:
       operationId: documents_update
       description: Update document metadata. File cannot be changed after upload.
@@ -13098,26 +13117,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Document'
           description: ''
-    delete:
-      operationId: documents_destroy
-      description: Delete a document and its file from storage. Only the uploader
-        can delete documents.
-      summary: Delete document
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this document.
-        required: true
-      tags:
-      - Documents
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/documents/{id}/access_logs/:
     get:
       operationId: documents_access_logs_retrieve
@@ -13433,7 +13432,7 @@ components:
           readOnly: true
         status:
           allOf:
-          - $ref: '#/components/schemas/StatusA39Enum'
+          - $ref: '#/components/schemas/Status62aEnum'
           readOnly: true
         generated_file:
           type: integer
@@ -15380,7 +15379,7 @@ components:
         automation_level:
           $ref: '#/components/schemas/AutomationLevelEnum'
         status:
-          $ref: '#/components/schemas/Status98bEnum'
+          $ref: '#/components/schemas/Status949Enum'
         control_owner:
           type: integer
           nullable: true
@@ -15473,7 +15472,7 @@ components:
         automation_level:
           $ref: '#/components/schemas/AutomationLevelEnum'
         status:
-          $ref: '#/components/schemas/Status98bEnum'
+          $ref: '#/components/schemas/Status949Enum'
         control_owner:
           type: integer
           nullable: true
@@ -15572,7 +15571,7 @@ components:
         automation_level:
           $ref: '#/components/schemas/AutomationLevelEnum'
         status:
-          $ref: '#/components/schemas/Status98bEnum'
+          $ref: '#/components/schemas/Status949Enum'
         control_owner:
           type: integer
           nullable: true
@@ -15711,7 +15710,7 @@ components:
         automation_level:
           $ref: '#/components/schemas/AutomationLevelEnum'
         status:
-          $ref: '#/components/schemas/Status98bEnum'
+          $ref: '#/components/schemas/Status949Enum'
         control_owner:
           type: integer
           nullable: true
@@ -15805,11 +15804,14 @@ components:
           type: string
           readOnly: true
         external_url:
-          type: string
-          format: uri
           nullable: true
           description: External URL for evidence (e.g., system screenshot)
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         evidence_date:
           type: string
           format: date
@@ -15876,11 +15878,14 @@ components:
           nullable: true
           description: Associated document file
         external_url:
-          type: string
-          format: uri
           nullable: true
           description: External URL for evidence (e.g., system screenshot)
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         evidence_date:
           type: string
           format: date
@@ -15922,7 +15927,7 @@ components:
         automation_level:
           $ref: '#/components/schemas/AutomationLevelEnum'
         status:
-          $ref: '#/components/schemas/Status98bEnum'
+          $ref: '#/components/schemas/Status949Enum'
         control_owner_name:
           type: string
           readOnly: true
@@ -15997,7 +16002,7 @@ components:
         automation_level:
           $ref: '#/components/schemas/AutomationLevelEnum'
         status:
-          $ref: '#/components/schemas/Status98bEnum'
+          $ref: '#/components/schemas/Status949Enum'
         effectiveness_rating:
           description: |-
             Current effectiveness assessment
@@ -16292,7 +16297,7 @@ components:
         * `meeting` - Meeting
         * `training` - Training
         * `custom` - Custom
-    EvidenceTypeAe0Enum:
+    EvidenceTypeA14Enum:
       enum:
       - document
       - screenshot
@@ -16377,11 +16382,14 @@ components:
           description: Organization that issued/maintains this framework
           maxLength: 200
         official_url:
-          type: string
-          format: uri
           nullable: true
           description: Official framework documentation URL
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         effective_date:
           type: string
           format: date
@@ -16392,7 +16400,7 @@ components:
           nullable: true
           description: Date when this version expires
         status:
-          $ref: '#/components/schemas/Status4daEnum'
+          $ref: '#/components/schemas/StatusFa2Enum'
         is_mandatory:
           type: boolean
           description: Whether compliance with this framework is mandatory for the
@@ -16477,11 +16485,14 @@ components:
           description: Organization that issued/maintains this framework
           maxLength: 200
         official_url:
-          type: string
-          format: uri
           nullable: true
           description: Official framework documentation URL
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         effective_date:
           type: string
           format: date
@@ -16492,7 +16503,7 @@ components:
           nullable: true
           description: Date when this version expires
         status:
-          $ref: '#/components/schemas/Status4daEnum'
+          $ref: '#/components/schemas/StatusFa2Enum'
         is_mandatory:
           type: boolean
           description: Whether compliance with this framework is mandatory for the
@@ -16526,7 +16537,7 @@ components:
         framework_type:
           $ref: '#/components/schemas/FrameworkTypeEnum'
         status:
-          $ref: '#/components/schemas/Status4daEnum'
+          $ref: '#/components/schemas/StatusFa2Enum'
         is_mandatory:
           type: boolean
           description: Whether compliance with this framework is mandatory for the
@@ -16834,7 +16845,7 @@ components:
           maxLength: 80
         tags: {}
         status:
-          $ref: '#/components/schemas/Status399Enum'
+          $ref: '#/components/schemas/StatusDaeEnum'
         content_scope:
           $ref: '#/components/schemas/ContentScopeEnum'
         sort_order:
@@ -16900,7 +16911,7 @@ components:
           maxLength: 80
         tags: {}
         status:
-          $ref: '#/components/schemas/Status399Enum'
+          $ref: '#/components/schemas/StatusDaeEnum'
         content_scope:
           $ref: '#/components/schemas/ContentScopeEnum'
         sort_order:
@@ -16941,7 +16952,7 @@ components:
           maxLength: 80
         tags: {}
         status:
-          $ref: '#/components/schemas/Status399Enum'
+          $ref: '#/components/schemas/StatusDaeEnum'
         content_scope:
           $ref: '#/components/schemas/ContentScopeEnum'
         sort_order:
@@ -17172,7 +17183,7 @@ components:
           nullable: true
           description: When should temporary limits expire?
         status:
-          $ref: '#/components/schemas/Status1bdEnum'
+          $ref: '#/components/schemas/Status8f5Enum'
         status_display:
           type: string
           readOnly: true
@@ -17302,7 +17313,7 @@ components:
           nullable: true
           description: When should temporary limits expire?
         status:
-          $ref: '#/components/schemas/Status1bdEnum'
+          $ref: '#/components/schemas/Status8f5Enum'
         first_approval_notes:
           type: string
         second_approval_notes:
@@ -17753,7 +17764,7 @@ components:
         * `verification` - Verification
         * `closed` - Closed
         * `accepted` - Accepted
-    NoteTypeE6aEnum:
+    NoteType679Enum:
       enum:
       - progress
       - issue
@@ -18271,7 +18282,7 @@ components:
         automation_level:
           $ref: '#/components/schemas/AutomationLevelEnum'
         status:
-          $ref: '#/components/schemas/Status98bEnum'
+          $ref: '#/components/schemas/Status949Enum'
         control_owner:
           type: integer
           nullable: true
@@ -18349,11 +18360,14 @@ components:
           nullable: true
           description: Associated document file
         external_url:
-          type: string
-          format: uri
           nullable: true
           description: External URL for evidence (e.g., system screenshot)
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         evidence_date:
           type: string
           format: date
@@ -18428,11 +18442,14 @@ components:
           description: Organization that issued/maintains this framework
           maxLength: 200
         official_url:
-          type: string
-          format: uri
           nullable: true
           description: Official framework documentation URL
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         effective_date:
           type: string
           format: date
@@ -18443,7 +18460,7 @@ components:
           nullable: true
           description: Date when this version expires
         status:
-          $ref: '#/components/schemas/Status4daEnum'
+          $ref: '#/components/schemas/StatusFa2Enum'
         is_mandatory:
           type: boolean
           description: Whether compliance with this framework is mandatory for the
@@ -18539,7 +18556,7 @@ components:
           maxLength: 80
         tags: {}
         status:
-          $ref: '#/components/schemas/Status399Enum'
+          $ref: '#/components/schemas/StatusDaeEnum'
         content_scope:
           $ref: '#/components/schemas/ContentScopeEnum'
         sort_order:
@@ -18599,7 +18616,7 @@ components:
           nullable: true
           description: When should temporary limits expire?
         status:
-          $ref: '#/components/schemas/Status1bdEnum'
+          $ref: '#/components/schemas/Status8f5Enum'
         first_approval_notes:
           type: string
         second_approval_notes:
@@ -19015,7 +19032,7 @@ components:
           minimum: 1
           description: Likelihood level (1=Very Low, 5=Very High)
         status:
-          $ref: '#/components/schemas/Status7b5Enum'
+          $ref: '#/components/schemas/StatusDb9Enum'
         treatment_strategy:
           oneOf:
           - $ref: '#/components/schemas/TreatmentStrategyEnum'
@@ -19282,9 +19299,12 @@ components:
           type: string
           description: Description of vendor's business and services provided
         website:
-          type: string
-          format: uri
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         tax_id:
           type: string
           description: Tax ID, EIN, or equivalent business identifier
@@ -19312,7 +19332,7 @@ components:
           type: string
           maxLength: 100
         status:
-          $ref: '#/components/schemas/Status114Enum'
+          $ref: '#/components/schemas/StatusAb0Enum'
         vendor_type:
           $ref: '#/components/schemas/VendorTypeEnum'
         risk_level:
@@ -19507,9 +19527,9 @@ components:
           nullable: true
           description: Optional start date for the task
         priority:
-          $ref: '#/components/schemas/PriorityBd6Enum'
+          $ref: '#/components/schemas/Priority0aeEnum'
         status:
-          $ref: '#/components/schemas/StatusA06Enum'
+          $ref: '#/components/schemas/Status8b3Enum'
         assigned_to:
           type: integer
           nullable: true
@@ -19823,7 +19843,7 @@ components:
         policy_type:
           $ref: '#/components/schemas/PolicyTypeEnum'
         status:
-          $ref: '#/components/schemas/Status019Enum'
+          $ref: '#/components/schemas/StatusD38Enum'
         owner:
           type: integer
           description: Policy owner/manager responsible for this policy
@@ -19920,7 +19940,7 @@ components:
         policy_type:
           $ref: '#/components/schemas/PolicyTypeEnum'
         status:
-          $ref: '#/components/schemas/Status019Enum'
+          $ref: '#/components/schemas/StatusD38Enum'
         owner:
           type: integer
           description: Policy owner/manager responsible for this policy
@@ -20047,7 +20067,7 @@ components:
         policy_type:
           $ref: '#/components/schemas/PolicyTypeEnum'
         status:
-          $ref: '#/components/schemas/Status019Enum'
+          $ref: '#/components/schemas/StatusD38Enum'
         category_name:
           type: string
           readOnly: true
@@ -20122,7 +20142,7 @@ components:
         policy_type:
           $ref: '#/components/schemas/PolicyTypeEnum'
         status:
-          $ref: '#/components/schemas/Status019Enum'
+          $ref: '#/components/schemas/StatusD38Enum'
         review_frequency_months:
           type: integer
           maximum: 2147483647
@@ -20189,8 +20209,8 @@ components:
         final_pdf:
           type: string
           format: uri
-          readOnly: true
           nullable: true
+          readOnly: true
           description: Final PDF generated from the approved editable source
         final_pdf_size:
           type: integer
@@ -20495,7 +20515,7 @@ components:
         * `email` - Email
         * `phone` - Phone
         * `mobile` - Mobile
-    PriorityBd6Enum:
+    Priority0aeEnum:
       enum:
       - low
       - medium
@@ -20520,10 +20540,13 @@ components:
           pattern: ^[\w.@+-]+$
           maxLength: 150
         email:
-          type: string
-          format: email
           title: Email address
-          maxLength: 254
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
         first_name:
           type: string
           maxLength: 150
@@ -20915,7 +20938,7 @@ components:
           type: string
           readOnly: true
         status:
-          $ref: '#/components/schemas/Status833Enum'
+          $ref: '#/components/schemas/StatusF58Enum'
         priority:
           $ref: '#/components/schemas/DefaultPriorityEnum'
         priority_color:
@@ -21039,7 +21062,7 @@ components:
         description:
           type: string
         evidence_type:
-          $ref: '#/components/schemas/EvidenceTypeAe0Enum'
+          $ref: '#/components/schemas/EvidenceTypeA14Enum'
         file:
           type: string
           format: uri
@@ -21048,10 +21071,13 @@ components:
           type: string
           readOnly: true
         external_link:
-          type: string
-          format: uri
           description: Link to external evidence or system
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         is_validated:
           type: boolean
           readOnly: true
@@ -21107,16 +21133,19 @@ components:
         description:
           type: string
         evidence_type:
-          $ref: '#/components/schemas/EvidenceTypeAe0Enum'
+          $ref: '#/components/schemas/EvidenceTypeA14Enum'
         file:
           type: string
           format: binary
           nullable: true
         external_link:
-          type: string
-          format: uri
           description: Link to external evidence or system
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         evidence_date:
           type: string
           format: date
@@ -21162,7 +21191,7 @@ components:
           type: string
           readOnly: true
         status:
-          $ref: '#/components/schemas/Status833Enum'
+          $ref: '#/components/schemas/StatusF58Enum'
         priority:
           $ref: '#/components/schemas/DefaultPriorityEnum'
         priority_color:
@@ -21236,7 +21265,7 @@ components:
         note:
           type: string
         note_type:
-          $ref: '#/components/schemas/NoteTypeE6aEnum'
+          $ref: '#/components/schemas/NoteType679Enum'
         progress_percentage:
           type: integer
           maximum: 100
@@ -21268,7 +21297,7 @@ components:
           type: string
           minLength: 1
         note_type:
-          $ref: '#/components/schemas/NoteTypeE6aEnum'
+          $ref: '#/components/schemas/NoteType679Enum'
         progress_percentage:
           type: integer
           maximum: 100
@@ -21394,7 +21423,7 @@ components:
       description: Serializer for updating risk action status with optional note.
       properties:
         status:
-          $ref: '#/components/schemas/Status833Enum'
+          $ref: '#/components/schemas/StatusF58Enum'
         progress_percentage:
           type: integer
           maximum: 100
@@ -21524,7 +21553,7 @@ components:
           minimum: 1
           description: Likelihood level (1=Very Low, 5=Very High)
         status:
-          $ref: '#/components/schemas/Status7b5Enum'
+          $ref: '#/components/schemas/StatusDb9Enum'
         treatment_strategy:
           oneOf:
           - $ref: '#/components/schemas/TreatmentStrategyEnum'
@@ -21582,7 +21611,7 @@ components:
           minimum: 1
           description: Likelihood level (1=Very Low, 5=Very High)
         status:
-          $ref: '#/components/schemas/Status7b5Enum'
+          $ref: '#/components/schemas/StatusDb9Enum'
         treatment_strategy:
           oneOf:
           - $ref: '#/components/schemas/TreatmentStrategyEnum'
@@ -21659,7 +21688,7 @@ components:
           type: string
           readOnly: true
         status:
-          $ref: '#/components/schemas/Status7b5Enum'
+          $ref: '#/components/schemas/StatusDb9Enum'
         status_display:
           type: string
           readOnly: true
@@ -21824,7 +21853,7 @@ components:
           type: string
           readOnly: true
         status:
-          $ref: '#/components/schemas/Status7b5Enum'
+          $ref: '#/components/schemas/StatusDb9Enum'
         status_display:
           type: string
           readOnly: true
@@ -22012,7 +22041,7 @@ components:
       description: Serializer for updating risk status with optional notes.
       properties:
         status:
-          $ref: '#/components/schemas/Status7b5Enum'
+          $ref: '#/components/schemas/StatusDb9Enum'
         treatment_strategy:
           $ref: '#/components/schemas/TreatmentStrategyEnum'
         treatment_description:
@@ -22578,35 +22607,35 @@ components:
         * `biweekly` - Bi-weekly
         * `monthly` - Monthly
         * `quarterly` - Quarterly
-    Status019Enum:
+    Status62aEnum:
       enum:
-      - draft
-      - under_review
-      - approved
-      - archived
+      - pending
+      - processing
+      - completed
+      - failed
       type: string
       description: |-
-        * `draft` - Draft
-        * `under_review` - Under Review
-        * `approved` - Approved
-        * `archived` - Archived
-    Status114Enum:
+        * `pending` - Pending Generation
+        * `processing` - Processing
+        * `completed` - Completed
+        * `failed` - Failed
+    Status8b3Enum:
       enum:
-      - active
-      - inactive
-      - under_review
-      - approved
-      - suspended
-      - terminated
+      - pending
+      - in_progress
+      - completed
+      - overdue
+      - cancelled
+      - on_hold
       type: string
       description: |-
-        * `active` - Active
-        * `inactive` - Inactive
-        * `under_review` - Under Review
-        * `approved` - Approved
-        * `suspended` - Suspended
-        * `terminated` - Terminated
-    Status1bdEnum:
+        * `pending` - Pending
+        * `in_progress` - In Progress
+        * `completed` - Completed
+        * `overdue` - Overdue
+        * `cancelled` - Cancelled
+        * `on_hold` - On Hold
+    Status8f5Enum:
       enum:
       - pending
       - approved
@@ -22620,63 +22649,7 @@ components:
         * `rejected` - Rejected
         * `applied` - Applied
         * `expired` - Expired
-    Status399Enum:
-      enum:
-      - draft
-      - published
-      - archived
-      type: string
-      description: |-
-        * `draft` - Draft
-        * `published` - Published
-        * `archived` - Archived
-    Status4daEnum:
-      enum:
-      - draft
-      - active
-      - deprecated
-      - archived
-      type: string
-      description: |-
-        * `draft` - Draft
-        * `active` - Active
-        * `deprecated` - Deprecated
-        * `archived` - Archived
-    Status7b5Enum:
-      enum:
-      - identified
-      - assessed
-      - treatment_planned
-      - treatment_in_progress
-      - mitigated
-      - accepted
-      - transferred
-      - closed
-      type: string
-      description: |-
-        * `identified` - Identified
-        * `assessed` - Assessed
-        * `treatment_planned` - Treatment Planned
-        * `treatment_in_progress` - Treatment in Progress
-        * `mitigated` - Mitigated
-        * `accepted` - Accepted
-        * `transferred` - Transferred
-        * `closed` - Closed
-    Status833Enum:
-      enum:
-      - pending
-      - in_progress
-      - completed
-      - cancelled
-      - deferred
-      type: string
-      description: |-
-        * `pending` - Pending
-        * `in_progress` - In Progress
-        * `completed` - Completed
-        * `cancelled` - Cancelled
-        * `deferred` - Deferred
-    Status98bEnum:
+    Status949Enum:
       enum:
       - planned
       - in_progress
@@ -22696,34 +22669,64 @@ components:
         * `remediation` - Needs Remediation
         * `disabled` - Disabled
         * `retired` - Retired
-    StatusA06Enum:
+    StatusAb0Enum:
       enum:
-      - pending
-      - in_progress
-      - completed
-      - overdue
-      - cancelled
-      - on_hold
+      - active
+      - inactive
+      - under_review
+      - approved
+      - suspended
+      - terminated
       type: string
       description: |-
-        * `pending` - Pending
-        * `in_progress` - In Progress
-        * `completed` - Completed
-        * `overdue` - Overdue
-        * `cancelled` - Cancelled
-        * `on_hold` - On Hold
-    StatusA39Enum:
+        * `active` - Active
+        * `inactive` - Inactive
+        * `under_review` - Under Review
+        * `approved` - Approved
+        * `suspended` - Suspended
+        * `terminated` - Terminated
+    StatusD38Enum:
       enum:
-      - pending
-      - processing
-      - completed
-      - failed
+      - draft
+      - under_review
+      - approved
+      - archived
       type: string
       description: |-
-        * `pending` - Pending Generation
-        * `processing` - Processing
-        * `completed` - Completed
-        * `failed` - Failed
+        * `draft` - Draft
+        * `under_review` - Under Review
+        * `approved` - Approved
+        * `archived` - Archived
+    StatusDaeEnum:
+      enum:
+      - draft
+      - published
+      - archived
+      type: string
+      description: |-
+        * `draft` - Draft
+        * `published` - Published
+        * `archived` - Archived
+    StatusDb9Enum:
+      enum:
+      - identified
+      - assessed
+      - treatment_planned
+      - treatment_in_progress
+      - mitigated
+      - accepted
+      - transferred
+      - closed
+      type: string
+      description: |-
+        * `identified` - Identified
+        * `assessed` - Assessed
+        * `treatment_planned` - Treatment Planned
+        * `treatment_in_progress` - Treatment in Progress
+        * `mitigated` - Mitigated
+        * `accepted` - Accepted
+        * `transferred` - Transferred
+        * `closed` - Closed
     StatusEnum:
       enum:
       - not_started
@@ -22742,6 +22745,32 @@ components:
         * `complete` - Complete
         * `not_applicable` - Not Applicable
         * `deferred` - Deferred
+    StatusF58Enum:
+      enum:
+      - pending
+      - in_progress
+      - completed
+      - cancelled
+      - deferred
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `in_progress` - In Progress
+        * `completed` - Completed
+        * `cancelled` - Cancelled
+        * `deferred` - Deferred
+    StatusFa2Enum:
+      enum:
+      - draft
+      - active
+      - deprecated
+      - archived
+      type: string
+      description: |-
+        * `draft` - Draft
+        * `active` - Active
+        * `deprecated` - Deprecated
+        * `archived` - Archived
     Subscription:
       type: object
       description: Serializer for subscriptions.
@@ -23116,7 +23145,7 @@ components:
           readOnly: true
         status:
           allOf:
-          - $ref: '#/components/schemas/StatusA39Enum'
+          - $ref: '#/components/schemas/Status62aEnum'
           readOnly: true
         generated_file:
           type: integer
@@ -23493,10 +23522,13 @@ components:
           description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
             only.
         email:
-          type: string
-          format: email
           title: Email address
-          maxLength: 254
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
         first_name:
           type: string
           maxLength: 150
@@ -23710,9 +23742,12 @@ components:
           type: string
           description: Description of vendor's business and services provided
         website:
-          type: string
-          format: uri
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         tax_id:
           type: string
           description: Tax ID, EIN, or equivalent business identifier
@@ -23740,7 +23775,7 @@ components:
           type: string
           maxLength: 100
         status:
-          $ref: '#/components/schemas/Status114Enum'
+          $ref: '#/components/schemas/StatusAb0Enum'
         vendor_type:
           $ref: '#/components/schemas/VendorTypeEnum'
         risk_level:
@@ -23843,9 +23878,12 @@ components:
           type: string
           description: Description of vendor's business and services provided
         website:
-          type: string
-          format: uri
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         tax_id:
           type: string
           description: Tax ID, EIN, or equivalent business identifier
@@ -23873,7 +23911,7 @@ components:
           type: string
           maxLength: 100
         status:
-          $ref: '#/components/schemas/Status114Enum'
+          $ref: '#/components/schemas/StatusAb0Enum'
         vendor_type:
           $ref: '#/components/schemas/VendorTypeEnum'
         risk_level:
@@ -23985,9 +24023,12 @@ components:
           type: string
           description: Description of vendor's business and services provided
         website:
-          type: string
-          format: uri
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         tax_id:
           type: string
           description: Tax ID, EIN, or equivalent business identifier
@@ -24018,7 +24059,7 @@ components:
           type: string
           readOnly: true
         status:
-          $ref: '#/components/schemas/Status114Enum'
+          $ref: '#/components/schemas/StatusAb0Enum'
         status_display:
           type: string
           readOnly: true
@@ -24207,7 +24248,7 @@ components:
           type: string
           readOnly: true
         status:
-          $ref: '#/components/schemas/Status114Enum'
+          $ref: '#/components/schemas/StatusAb0Enum'
         status_display:
           type: string
           readOnly: true
@@ -24303,7 +24344,7 @@ components:
           nullable: true
           description: Primary vendor category for classification
         status:
-          $ref: '#/components/schemas/Status114Enum'
+          $ref: '#/components/schemas/StatusAb0Enum'
         vendor_type:
           $ref: '#/components/schemas/VendorTypeEnum'
         risk_level:
@@ -24640,11 +24681,11 @@ components:
         action:
           $ref: '#/components/schemas/VendorTaskBulkActionActionEnum'
         status:
-          $ref: '#/components/schemas/StatusA06Enum'
+          $ref: '#/components/schemas/Status8b3Enum'
         assigned_to:
           type: integer
         priority:
-          $ref: '#/components/schemas/PriorityBd6Enum'
+          $ref: '#/components/schemas/Priority0aeEnum'
         notes:
           type: string
       required:
@@ -24695,9 +24736,9 @@ components:
           nullable: true
           description: Optional start date for the task
         priority:
-          $ref: '#/components/schemas/PriorityBd6Enum'
+          $ref: '#/components/schemas/Priority0aeEnum'
         status:
-          $ref: '#/components/schemas/StatusA06Enum'
+          $ref: '#/components/schemas/Status8b3Enum'
         assigned_to:
           type: integer
           nullable: true
@@ -24776,9 +24817,9 @@ components:
           nullable: true
           description: Optional start date for the task
         priority:
-          $ref: '#/components/schemas/PriorityBd6Enum'
+          $ref: '#/components/schemas/Priority0aeEnum'
         status:
-          $ref: '#/components/schemas/StatusA06Enum'
+          $ref: '#/components/schemas/Status8b3Enum'
         assigned_to:
           type: integer
           nullable: true
@@ -24875,12 +24916,12 @@ components:
           nullable: true
           description: Actual completion timestamp
         priority:
-          $ref: '#/components/schemas/PriorityBd6Enum'
+          $ref: '#/components/schemas/Priority0aeEnum'
         priority_display:
           type: string
           readOnly: true
         status:
-          $ref: '#/components/schemas/StatusA06Enum'
+          $ref: '#/components/schemas/Status8b3Enum'
         status_display:
           type: string
           readOnly: true
@@ -25044,9 +25085,9 @@ components:
           nullable: true
           description: Actual completion timestamp
         priority:
-          $ref: '#/components/schemas/PriorityBd6Enum'
+          $ref: '#/components/schemas/Priority0aeEnum'
         status:
-          $ref: '#/components/schemas/StatusA06Enum'
+          $ref: '#/components/schemas/Status8b3Enum'
         assigned_to:
           type: integer
           nullable: true
@@ -25145,12 +25186,12 @@ components:
           format: date
           description: Date when the task is due for completion
         priority:
-          $ref: '#/components/schemas/PriorityBd6Enum'
+          $ref: '#/components/schemas/Priority0aeEnum'
         priority_display:
           type: string
           readOnly: true
         status:
-          $ref: '#/components/schemas/StatusA06Enum'
+          $ref: '#/components/schemas/Status8b3Enum'
         status_display:
           type: string
           readOnly: true
@@ -25224,7 +25265,7 @@ components:
       description: Serializer for updating task status.
       properties:
         status:
-          $ref: '#/components/schemas/StatusA06Enum'
+          $ref: '#/components/schemas/Status8b3Enum'
         completion_notes:
           type: string
       required:
