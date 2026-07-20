@@ -37,7 +37,7 @@ faker==40.31.0
 # Code quality
 ruff==0.9.9
 mypy==2.3.0
-pre-commit>=3.7
+pre-commit>=4.6.0
 
 # Security
 bandit==1.7.10
