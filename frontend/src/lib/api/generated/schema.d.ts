@@ -5227,7 +5227,7 @@ export interface components {
             readonly requested_by_name: string;
             /** Format: date-time */
             readonly requested_at: string;
-            readonly status: components["schemas"]["StatusA39Enum"];
+            readonly status: components["schemas"]["Status62aEnum"];
             /** @description Generated PDF report file */
             readonly generated_file: number | null;
             readonly generated_file_details: components["schemas"]["Document"];
@@ -6212,7 +6212,7 @@ export interface components {
             clauses: number[];
             control_type: components["schemas"]["ControlTypeEnum"];
             automation_level?: components["schemas"]["AutomationLevelEnum"];
-            status?: components["schemas"]["Status98bEnum"];
+            status?: components["schemas"]["Status949Enum"];
             /** @description Person responsible for this control */
             control_owner?: number | null;
             /** @description Business unit or department responsible */
@@ -6262,7 +6262,7 @@ export interface components {
             clauses: number[];
             control_type: components["schemas"]["ControlTypeEnum"];
             automation_level?: components["schemas"]["AutomationLevelEnum"];
-            status?: components["schemas"]["Status98bEnum"];
+            status?: components["schemas"]["Status949Enum"];
             /** @description Person responsible for this control */
             control_owner?: number | null;
             /** @description Business unit or department responsible */
@@ -6314,7 +6314,7 @@ export interface components {
             readonly clauses_detail: components["schemas"]["ClauseList"][];
             control_type: components["schemas"]["ControlTypeEnum"];
             automation_level?: components["schemas"]["AutomationLevelEnum"];
-            status?: components["schemas"]["Status98bEnum"];
+            status?: components["schemas"]["Status949Enum"];
             /** @description Person responsible for this control */
             control_owner?: number | null;
             readonly control_owner_name: string;
@@ -6377,7 +6377,7 @@ export interface components {
             clauses: number[];
             control_type: components["schemas"]["ControlTypeEnum"];
             automation_level?: components["schemas"]["AutomationLevelEnum"];
-            status?: components["schemas"]["Status98bEnum"];
+            status?: components["schemas"]["Status949Enum"];
             /** @description Person responsible for this control */
             control_owner?: number | null;
             /** @description Business unit or department responsible */
@@ -6429,11 +6429,8 @@ export interface components {
             document?: number | null;
             readonly document_url: string;
             readonly document_name: string;
-            /**
-             * Format: uri
-             * @description External URL for evidence (e.g., system screenshot)
-             */
-            external_url?: string | null;
+            /** @description External URL for evidence (e.g., system screenshot) */
+            external_url?: (string) | null;
             /**
              * Format: date
              * @description Date when evidence was created or collected
@@ -6464,11 +6461,8 @@ export interface components {
             description?: string;
             /** @description Associated document file */
             document?: number | null;
-            /**
-             * Format: uri
-             * @description External URL for evidence (e.g., system screenshot)
-             */
-            external_url?: string | null;
+            /** @description External URL for evidence (e.g., system screenshot) */
+            external_url?: (string) | null;
             /**
              * Format: date
              * @description Date when evidence was created or collected
@@ -6491,7 +6485,7 @@ export interface components {
             name: string;
             control_type: components["schemas"]["ControlTypeEnum"];
             automation_level?: components["schemas"]["AutomationLevelEnum"];
-            status?: components["schemas"]["Status98bEnum"];
+            status?: components["schemas"]["Status949Enum"];
             readonly control_owner_name: string;
             /**
              * @description Current effectiveness assessment
@@ -6527,7 +6521,7 @@ export interface components {
             name: string;
             control_type: components["schemas"]["ControlTypeEnum"];
             automation_level?: components["schemas"]["AutomationLevelEnum"];
-            status?: components["schemas"]["Status98bEnum"];
+            status?: components["schemas"]["Status949Enum"];
             /**
              * @description Current effectiveness assessment
              *
@@ -6704,7 +6698,7 @@ export interface components {
          *     * `other` - Other
          * @enum {string}
          */
-        EvidenceTypeAe0Enum: "document" | "screenshot" | "report" | "certificate" | "configuration" | "training_record" | "audit_log" | "other";
+        EvidenceTypeA14Enum: "document" | "screenshot" | "report" | "certificate" | "configuration" | "training_record" | "audit_log" | "other";
         /**
          * @description * `document` - Document/Policy
          *     * `screenshot` - Screenshot
@@ -6743,11 +6737,8 @@ export interface components {
             external_id?: string | null;
             /** @description Organization that issued/maintains this framework */
             issuing_organization: string;
-            /**
-             * Format: uri
-             * @description Official framework documentation URL
-             */
-            official_url?: string | null;
+            /** @description Official framework documentation URL */
+            official_url?: (string) | null;
             /**
              * Format: date
              * @description Date when this version became effective
@@ -6758,7 +6749,7 @@ export interface components {
              * @description Date when this version expires
              */
             expiry_date?: string | null;
-            status?: components["schemas"]["Status4daEnum"];
+            status?: components["schemas"]["StatusFa2Enum"];
             /** @description Whether compliance with this framework is mandatory for the organization */
             is_mandatory?: boolean;
             readonly clause_count: string;
@@ -6792,11 +6783,8 @@ export interface components {
             external_id?: string | null;
             /** @description Organization that issued/maintains this framework */
             issuing_organization: string;
-            /**
-             * Format: uri
-             * @description Official framework documentation URL
-             */
-            official_url?: string | null;
+            /** @description Official framework documentation URL */
+            official_url?: (string) | null;
             /**
              * Format: date
              * @description Date when this version became effective
@@ -6807,7 +6795,7 @@ export interface components {
              * @description Date when this version expires
              */
             expiry_date?: string | null;
-            status?: components["schemas"]["Status4daEnum"];
+            status?: components["schemas"]["StatusFa2Enum"];
             /** @description Whether compliance with this framework is mandatory for the organization */
             is_mandatory?: boolean;
         };
@@ -6824,7 +6812,7 @@ export interface components {
              */
             version: string;
             framework_type?: components["schemas"]["FrameworkTypeEnum"];
-            status?: components["schemas"]["Status4daEnum"];
+            status?: components["schemas"]["StatusFa2Enum"];
             /** @description Whether compliance with this framework is mandatory for the organization */
             is_mandatory?: boolean;
             /**
@@ -6954,7 +6942,7 @@ export interface components {
             module_key?: components["schemas"]["ModuleKeyEnum"] | components["schemas"]["BlankEnum"];
             workflow_key?: string;
             tags?: unknown;
-            status?: components["schemas"]["Status399Enum"];
+            status?: components["schemas"]["StatusDaeEnum"];
             content_scope?: components["schemas"]["ContentScopeEnum"];
             sort_order?: number;
             /** Format: date-time */
@@ -6975,7 +6963,7 @@ export interface components {
             module_key?: components["schemas"]["ModuleKeyEnum"] | components["schemas"]["BlankEnum"];
             workflow_key?: string;
             tags?: unknown;
-            status?: components["schemas"]["Status399Enum"];
+            status?: components["schemas"]["StatusDaeEnum"];
             content_scope?: components["schemas"]["ContentScopeEnum"];
             sort_order?: number;
         };
@@ -6989,7 +6977,7 @@ export interface components {
             module_key?: components["schemas"]["ModuleKeyEnum"] | components["schemas"]["BlankEnum"];
             workflow_key?: string;
             tags?: unknown;
-            status?: components["schemas"]["Status399Enum"];
+            status?: components["schemas"]["StatusDaeEnum"];
             content_scope?: components["schemas"]["ContentScopeEnum"];
             sort_order?: number;
             /** Format: date-time */
@@ -7095,7 +7083,7 @@ export interface components {
              * @description When should temporary limits expire?
              */
             expires_at?: string | null;
-            status?: components["schemas"]["Status1bdEnum"];
+            status?: components["schemas"]["Status8f5Enum"];
             readonly status_display: string;
             /** @description User who requested the override */
             readonly requested_by: string;
@@ -7140,7 +7128,7 @@ export interface components {
              * @description When should temporary limits expire?
              */
             expires_at?: string | null;
-            status?: components["schemas"]["Status1bdEnum"];
+            status?: components["schemas"]["Status8f5Enum"];
             first_approval_notes?: string;
             second_approval_notes?: string;
             rejection_reason?: string;
@@ -7353,7 +7341,7 @@ export interface components {
          *     * `general` - General
          * @enum {string}
          */
-        NoteTypeE6aEnum: "progress" | "issue" | "completion" | "status_change" | "general";
+        NoteType679Enum: "progress" | "issue" | "completion" | "status_change" | "general";
         PaginatedAssetListList: {
             /** @example 123 */
             count: number;
@@ -7650,7 +7638,7 @@ export interface components {
             clauses?: number[];
             control_type?: components["schemas"]["ControlTypeEnum"];
             automation_level?: components["schemas"]["AutomationLevelEnum"];
-            status?: components["schemas"]["Status98bEnum"];
+            status?: components["schemas"]["Status949Enum"];
             /** @description Person responsible for this control */
             control_owner?: number | null;
             /** @description Business unit or department responsible */
@@ -7697,11 +7685,8 @@ export interface components {
             description?: string;
             /** @description Associated document file */
             document?: number | null;
-            /**
-             * Format: uri
-             * @description External URL for evidence (e.g., system screenshot)
-             */
-            external_url?: string | null;
+            /** @description External URL for evidence (e.g., system screenshot) */
+            external_url?: (string) | null;
             /**
              * Format: date
              * @description Date when evidence was created or collected
@@ -7746,11 +7731,8 @@ export interface components {
             external_id?: string | null;
             /** @description Organization that issued/maintains this framework */
             issuing_organization?: string;
-            /**
-             * Format: uri
-             * @description Official framework documentation URL
-             */
-            official_url?: string | null;
+            /** @description Official framework documentation URL */
+            official_url?: (string) | null;
             /**
              * Format: date
              * @description Date when this version became effective
@@ -7761,7 +7743,7 @@ export interface components {
              * @description Date when this version expires
              */
             expiry_date?: string | null;
-            status?: components["schemas"]["Status4daEnum"];
+            status?: components["schemas"]["StatusFa2Enum"];
             /** @description Whether compliance with this framework is mandatory for the organization */
             is_mandatory?: boolean;
         };
@@ -7801,7 +7783,7 @@ export interface components {
             module_key?: components["schemas"]["ModuleKeyEnum"] | components["schemas"]["BlankEnum"];
             workflow_key?: string;
             tags?: unknown;
-            status?: components["schemas"]["Status399Enum"];
+            status?: components["schemas"]["StatusDaeEnum"];
             content_scope?: components["schemas"]["ContentScopeEnum"];
             sort_order?: number;
         };
@@ -7828,7 +7810,7 @@ export interface components {
              * @description When should temporary limits expire?
              */
             expires_at?: string | null;
-            status?: components["schemas"]["Status1bdEnum"];
+            status?: components["schemas"]["Status8f5Enum"];
             first_approval_notes?: string;
             second_approval_notes?: string;
             rejection_reason?: string;
@@ -8049,7 +8031,7 @@ export interface components {
             impact?: number;
             /** @description Likelihood level (1=Very Low, 5=Very High) */
             likelihood?: number;
-            status?: components["schemas"]["Status7b5Enum"];
+            status?: components["schemas"]["StatusDb9Enum"];
             treatment_strategy?: components["schemas"]["TreatmentStrategyEnum"] | components["schemas"]["BlankEnum"];
             /** @description Description of the treatment approach */
             treatment_description?: string;
@@ -8184,7 +8166,6 @@ export interface components {
             category?: number | null;
             /** @description Description of vendor's business and services provided */
             business_description?: string;
-            /** Format: uri */
             website?: string;
             /** @description Tax ID, EIN, or equivalent business identifier */
             tax_id?: string;
@@ -8196,7 +8177,7 @@ export interface components {
             state_province?: string;
             postal_code?: string;
             country?: string;
-            status?: components["schemas"]["Status114Enum"];
+            status?: components["schemas"]["StatusAb0Enum"];
             vendor_type?: components["schemas"]["VendorTypeEnum"];
             risk_level?: components["schemas"]["DefaultPriorityEnum"];
             /**
@@ -8326,8 +8307,8 @@ export interface components {
              * @description Optional start date for the task
              */
             start_date?: string | null;
-            priority?: components["schemas"]["PriorityBd6Enum"];
-            status?: components["schemas"]["StatusA06Enum"];
+            priority?: components["schemas"]["Priority0aeEnum"];
+            status?: components["schemas"]["Status8b3Enum"];
             /** @description User responsible for completing this task */
             assigned_to?: number | null;
             /** @description Days before due date to send reminders (e.g., [30, 14, 7, 1]) */
@@ -8479,7 +8460,7 @@ export interface components {
             category: string;
             readonly category_details: components["schemas"]["PolicyCategory"];
             policy_type?: components["schemas"]["PolicyTypeEnum"];
-            status?: components["schemas"]["Status019Enum"];
+            status?: components["schemas"]["StatusD38Enum"];
             /** @description Policy owner/manager responsible for this policy */
             owner: number;
             readonly owner_details: components["schemas"]["UserBasic"];
@@ -8515,7 +8496,7 @@ export interface components {
             /** Format: uuid */
             category: string;
             policy_type?: components["schemas"]["PolicyTypeEnum"];
-            status?: components["schemas"]["Status019Enum"];
+            status?: components["schemas"]["StatusD38Enum"];
             /** @description Policy owner/manager responsible for this policy */
             owner: number;
             /** @description User who approved this policy */
@@ -8567,7 +8548,7 @@ export interface components {
             /** @description Policy title */
             title: string;
             policy_type?: components["schemas"]["PolicyTypeEnum"];
-            status?: components["schemas"]["Status019Enum"];
+            status?: components["schemas"]["StatusD38Enum"];
             readonly category_name: string;
             readonly category_color: string;
             readonly owner_details: components["schemas"]["UserBasic"];
@@ -8596,7 +8577,7 @@ export interface components {
             /** @description Policy title */
             title: string;
             policy_type?: components["schemas"]["PolicyTypeEnum"];
-            status?: components["schemas"]["Status019Enum"];
+            status?: components["schemas"]["StatusD38Enum"];
             /** @description How often this policy should be reviewed (in months) */
             review_frequency_months?: number;
             /**
@@ -8820,14 +8801,11 @@ export interface components {
          *     * `critical` - Critical
          * @enum {string}
          */
-        PriorityBd6Enum: "low" | "medium" | "high" | "urgent" | "critical";
+        Priority0aeEnum: "low" | "medium" | "high" | "urgent" | "critical";
         RegisterRequest: {
             /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
             username: string;
-            /**
-             * Email address
-             * Format: email
-             */
+            /** Email address */
             email?: string;
             first_name?: string;
             last_name?: string;
@@ -9006,7 +8984,7 @@ export interface components {
             readonly risk_summary: string;
             readonly assigned_to: components["schemas"]["UserBasic"];
             readonly assigned_to_name: string;
-            status?: components["schemas"]["Status833Enum"];
+            status?: components["schemas"]["StatusF58Enum"];
             priority?: components["schemas"]["DefaultPriorityEnum"];
             readonly priority_color: string;
             readonly status_color: string;
@@ -9054,14 +9032,11 @@ export interface components {
             readonly id: number;
             title: string;
             description?: string;
-            evidence_type?: components["schemas"]["EvidenceTypeAe0Enum"];
+            evidence_type?: components["schemas"]["EvidenceTypeA14Enum"];
             /** Format: uri */
             file?: string | null;
             readonly file_url: string;
-            /**
-             * Format: uri
-             * @description Link to external evidence or system
-             */
+            /** @description Link to external evidence or system */
             external_link?: string;
             readonly is_validated: boolean;
             readonly validated_by: number | null;
@@ -9080,13 +9055,10 @@ export interface components {
         RiskActionEvidenceCreateUpdateRequest: {
             title: string;
             description?: string;
-            evidence_type?: components["schemas"]["EvidenceTypeAe0Enum"];
+            evidence_type?: components["schemas"]["EvidenceTypeA14Enum"];
             /** Format: binary */
             file?: string | null;
-            /**
-             * Format: uri
-             * @description Link to external evidence or system
-             */
+            /** @description Link to external evidence or system */
             external_link?: string;
             /** Format: date */
             evidence_date?: string;
@@ -9107,7 +9079,7 @@ export interface components {
             /** @description Person responsible for completing this action */
             assigned_to?: number | null;
             readonly assigned_to_name: string;
-            status?: components["schemas"]["Status833Enum"];
+            status?: components["schemas"]["StatusF58Enum"];
             priority?: components["schemas"]["DefaultPriorityEnum"];
             readonly priority_color: string;
             readonly status_color: string;
@@ -9134,7 +9106,7 @@ export interface components {
         RiskActionNote: {
             readonly id: number;
             note: string;
-            note_type?: components["schemas"]["NoteTypeE6aEnum"];
+            note_type?: components["schemas"]["NoteType679Enum"];
             /** @description Progress percentage at time of note */
             progress_percentage?: number | null;
             /** Format: date-time */
@@ -9145,7 +9117,7 @@ export interface components {
         /** @description Serializer for creating risk action notes. */
         RiskActionNoteCreateRequest: {
             note: string;
-            note_type?: components["schemas"]["NoteTypeE6aEnum"];
+            note_type?: components["schemas"]["NoteType679Enum"];
             /** @description Progress percentage at time of note */
             progress_percentage?: number | null;
         };
@@ -9217,7 +9189,7 @@ export interface components {
         };
         /** @description Serializer for updating risk action status with optional note. */
         RiskActionStatusUpdateRequest: {
-            status: components["schemas"]["Status833Enum"];
+            status: components["schemas"]["StatusF58Enum"];
             progress_percentage?: number;
             note?: string;
         };
@@ -9268,7 +9240,7 @@ export interface components {
             impact: number;
             /** @description Likelihood level (1=Very Low, 5=Very High) */
             likelihood: number;
-            status?: components["schemas"]["Status7b5Enum"];
+            status?: components["schemas"]["StatusDb9Enum"];
             treatment_strategy?: components["schemas"]["TreatmentStrategyEnum"] | components["schemas"]["BlankEnum"];
             /** @description Description of the treatment approach */
             treatment_description?: string;
@@ -9293,7 +9265,7 @@ export interface components {
             impact: number;
             /** @description Likelihood level (1=Very Low, 5=Very High) */
             likelihood: number;
-            status?: components["schemas"]["Status7b5Enum"];
+            status?: components["schemas"]["StatusDb9Enum"];
             treatment_strategy?: components["schemas"]["TreatmentStrategyEnum"] | components["schemas"]["BlankEnum"];
             /** @description Description of the treatment approach */
             treatment_description?: string;
@@ -9331,7 +9303,7 @@ export interface components {
             readonly risk_level: components["schemas"]["DefaultPriorityEnum"];
             readonly risk_level_display: string;
             readonly risk_level_color: string;
-            status?: components["schemas"]["Status7b5Enum"];
+            status?: components["schemas"]["StatusDb9Enum"];
             readonly status_display: string;
             readonly status_display_color: string;
             treatment_strategy?: components["schemas"]["TreatmentStrategyEnum"] | components["schemas"]["BlankEnum"];
@@ -9390,7 +9362,7 @@ export interface components {
             readonly risk_level: components["schemas"]["DefaultPriorityEnum"];
             readonly risk_level_display: string;
             readonly risk_level_color: string;
-            status?: components["schemas"]["Status7b5Enum"];
+            status?: components["schemas"]["StatusDb9Enum"];
             readonly status_display: string;
             readonly status_display_color: string;
             category?: number | null;
@@ -9461,7 +9433,7 @@ export interface components {
         RiskNoteNoteTypeEnum: "general" | "assessment" | "treatment" | "review" | "status_change";
         /** @description Serializer for updating risk status with optional notes. */
         RiskStatusUpdateRequest: {
-            status: components["schemas"]["Status7b5Enum"];
+            status: components["schemas"]["StatusDb9Enum"];
             treatment_strategy?: components["schemas"]["TreatmentStrategyEnum"];
             treatment_description?: string;
             note?: string;
@@ -9702,23 +9674,23 @@ export interface components {
          */
         SendFrequencyEnum: "weekly" | "biweekly" | "monthly" | "quarterly";
         /**
-         * @description * `draft` - Draft
-         *     * `under_review` - Under Review
-         *     * `approved` - Approved
-         *     * `archived` - Archived
+         * @description * `pending` - Pending Generation
+         *     * `processing` - Processing
+         *     * `completed` - Completed
+         *     * `failed` - Failed
          * @enum {string}
          */
-        Status019Enum: "draft" | "under_review" | "approved" | "archived";
+        Status62aEnum: "pending" | "processing" | "completed" | "failed";
         /**
-         * @description * `active` - Active
-         *     * `inactive` - Inactive
-         *     * `under_review` - Under Review
-         *     * `approved` - Approved
-         *     * `suspended` - Suspended
-         *     * `terminated` - Terminated
+         * @description * `pending` - Pending
+         *     * `in_progress` - In Progress
+         *     * `completed` - Completed
+         *     * `overdue` - Overdue
+         *     * `cancelled` - Cancelled
+         *     * `on_hold` - On Hold
          * @enum {string}
          */
-        Status114Enum: "active" | "inactive" | "under_review" | "approved" | "suspended" | "terminated";
+        Status8b3Enum: "pending" | "in_progress" | "completed" | "overdue" | "cancelled" | "on_hold";
         /**
          * @description * `pending` - Pending Review
          *     * `approved` - Approved
@@ -9727,43 +9699,7 @@ export interface components {
          *     * `expired` - Expired
          * @enum {string}
          */
-        Status1bdEnum: "pending" | "approved" | "rejected" | "applied" | "expired";
-        /**
-         * @description * `draft` - Draft
-         *     * `published` - Published
-         *     * `archived` - Archived
-         * @enum {string}
-         */
-        Status399Enum: "draft" | "published" | "archived";
-        /**
-         * @description * `draft` - Draft
-         *     * `active` - Active
-         *     * `deprecated` - Deprecated
-         *     * `archived` - Archived
-         * @enum {string}
-         */
-        Status4daEnum: "draft" | "active" | "deprecated" | "archived";
-        /**
-         * @description * `identified` - Identified
-         *     * `assessed` - Assessed
-         *     * `treatment_planned` - Treatment Planned
-         *     * `treatment_in_progress` - Treatment in Progress
-         *     * `mitigated` - Mitigated
-         *     * `accepted` - Accepted
-         *     * `transferred` - Transferred
-         *     * `closed` - Closed
-         * @enum {string}
-         */
-        Status7b5Enum: "identified" | "assessed" | "treatment_planned" | "treatment_in_progress" | "mitigated" | "accepted" | "transferred" | "closed";
-        /**
-         * @description * `pending` - Pending
-         *     * `in_progress` - In Progress
-         *     * `completed` - Completed
-         *     * `cancelled` - Cancelled
-         *     * `deferred` - Deferred
-         * @enum {string}
-         */
-        Status833Enum: "pending" | "in_progress" | "completed" | "cancelled" | "deferred";
+        Status8f5Enum: "pending" | "approved" | "rejected" | "applied" | "expired";
         /**
          * @description * `planned` - Planned
          *     * `in_progress` - In Progress
@@ -9775,25 +9711,44 @@ export interface components {
          *     * `retired` - Retired
          * @enum {string}
          */
-        Status98bEnum: "planned" | "in_progress" | "implemented" | "testing" | "active" | "remediation" | "disabled" | "retired";
+        Status949Enum: "planned" | "in_progress" | "implemented" | "testing" | "active" | "remediation" | "disabled" | "retired";
         /**
-         * @description * `pending` - Pending
-         *     * `in_progress` - In Progress
-         *     * `completed` - Completed
-         *     * `overdue` - Overdue
-         *     * `cancelled` - Cancelled
-         *     * `on_hold` - On Hold
+         * @description * `active` - Active
+         *     * `inactive` - Inactive
+         *     * `under_review` - Under Review
+         *     * `approved` - Approved
+         *     * `suspended` - Suspended
+         *     * `terminated` - Terminated
          * @enum {string}
          */
-        StatusA06Enum: "pending" | "in_progress" | "completed" | "overdue" | "cancelled" | "on_hold";
+        StatusAb0Enum: "active" | "inactive" | "under_review" | "approved" | "suspended" | "terminated";
         /**
-         * @description * `pending` - Pending Generation
-         *     * `processing` - Processing
-         *     * `completed` - Completed
-         *     * `failed` - Failed
+         * @description * `draft` - Draft
+         *     * `under_review` - Under Review
+         *     * `approved` - Approved
+         *     * `archived` - Archived
          * @enum {string}
          */
-        StatusA39Enum: "pending" | "processing" | "completed" | "failed";
+        StatusD38Enum: "draft" | "under_review" | "approved" | "archived";
+        /**
+         * @description * `draft` - Draft
+         *     * `published` - Published
+         *     * `archived` - Archived
+         * @enum {string}
+         */
+        StatusDaeEnum: "draft" | "published" | "archived";
+        /**
+         * @description * `identified` - Identified
+         *     * `assessed` - Assessed
+         *     * `treatment_planned` - Treatment Planned
+         *     * `treatment_in_progress` - Treatment in Progress
+         *     * `mitigated` - Mitigated
+         *     * `accepted` - Accepted
+         *     * `transferred` - Transferred
+         *     * `closed` - Closed
+         * @enum {string}
+         */
+        StatusDb9Enum: "identified" | "assessed" | "treatment_planned" | "treatment_in_progress" | "mitigated" | "accepted" | "transferred" | "closed";
         /**
          * @description * `not_started` - Not Started
          *     * `pending` - Pending
@@ -9805,6 +9760,23 @@ export interface components {
          * @enum {string}
          */
         StatusEnum: "not_started" | "pending" | "in_progress" | "under_review" | "complete" | "not_applicable" | "deferred";
+        /**
+         * @description * `pending` - Pending
+         *     * `in_progress` - In Progress
+         *     * `completed` - Completed
+         *     * `cancelled` - Cancelled
+         *     * `deferred` - Deferred
+         * @enum {string}
+         */
+        StatusF58Enum: "pending" | "in_progress" | "completed" | "cancelled" | "deferred";
+        /**
+         * @description * `draft` - Draft
+         *     * `active` - Active
+         *     * `deprecated` - Deprecated
+         *     * `archived` - Archived
+         * @enum {string}
+         */
+        StatusFa2Enum: "draft" | "active" | "deprecated" | "archived";
         /** @description Serializer for subscriptions. */
         Subscription: {
             readonly id: number;
@@ -9951,7 +9923,7 @@ export interface components {
             readonly requested_by_name: string;
             /** Format: date-time */
             readonly requested_at: string;
-            readonly status: components["schemas"]["StatusA39Enum"];
+            readonly status: components["schemas"]["Status62aEnum"];
             /** @description Generated spreadsheet or CSV archive */
             readonly generated_file: number | null;
             readonly generated_file_details: components["schemas"]["Document"];
@@ -10112,10 +10084,7 @@ export interface components {
             readonly id: number;
             /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
             readonly username: string;
-            /**
-             * Email address
-             * Format: email
-             */
+            /** Email address */
             email?: string;
             first_name?: string;
             last_name?: string;
@@ -10215,7 +10184,6 @@ export interface components {
             category?: number | null;
             /** @description Description of vendor's business and services provided */
             business_description?: string;
-            /** Format: uri */
             website?: string;
             /** @description Tax ID, EIN, or equivalent business identifier */
             tax_id?: string;
@@ -10227,7 +10195,7 @@ export interface components {
             state_province?: string;
             postal_code?: string;
             country?: string;
-            status?: components["schemas"]["Status114Enum"];
+            status?: components["schemas"]["StatusAb0Enum"];
             vendor_type?: components["schemas"]["VendorTypeEnum"];
             risk_level?: components["schemas"]["DefaultPriorityEnum"];
             /**
@@ -10290,7 +10258,6 @@ export interface components {
             category?: number | null;
             /** @description Description of vendor's business and services provided */
             business_description?: string;
-            /** Format: uri */
             website?: string;
             /** @description Tax ID, EIN, or equivalent business identifier */
             tax_id?: string;
@@ -10302,7 +10269,7 @@ export interface components {
             state_province?: string;
             postal_code?: string;
             country?: string;
-            status?: components["schemas"]["Status114Enum"];
+            status?: components["schemas"]["StatusAb0Enum"];
             vendor_type?: components["schemas"]["VendorTypeEnum"];
             risk_level?: components["schemas"]["DefaultPriorityEnum"];
             /**
@@ -10369,7 +10336,6 @@ export interface components {
             readonly category_name: string;
             /** @description Description of vendor's business and services provided */
             business_description?: string;
-            /** Format: uri */
             website?: string;
             /** @description Tax ID, EIN, or equivalent business identifier */
             tax_id?: string;
@@ -10382,7 +10348,7 @@ export interface components {
             postal_code?: string;
             country?: string;
             readonly full_address: string;
-            status?: components["schemas"]["Status114Enum"];
+            status?: components["schemas"]["StatusAb0Enum"];
             readonly status_display: string;
             vendor_type?: components["schemas"]["VendorTypeEnum"];
             readonly vendor_type_display: string;
@@ -10469,7 +10435,7 @@ export interface components {
             /** @description Primary vendor category for classification */
             category?: number | null;
             readonly category_name: string;
-            status?: components["schemas"]["Status114Enum"];
+            status?: components["schemas"]["StatusAb0Enum"];
             readonly status_display: string;
             vendor_type?: components["schemas"]["VendorTypeEnum"];
             readonly vendor_type_display: string;
@@ -10512,7 +10478,7 @@ export interface components {
             name: string;
             /** @description Primary vendor category for classification */
             category?: number | null;
-            status?: components["schemas"]["Status114Enum"];
+            status?: components["schemas"]["StatusAb0Enum"];
             vendor_type?: components["schemas"]["VendorTypeEnum"];
             risk_level?: components["schemas"]["DefaultPriorityEnum"];
             /**
@@ -10675,9 +10641,9 @@ export interface components {
         VendorTaskBulkActionRequest: {
             task_ids: number[];
             action: components["schemas"]["VendorTaskBulkActionActionEnum"];
-            status?: components["schemas"]["StatusA06Enum"];
+            status?: components["schemas"]["Status8b3Enum"];
             assigned_to?: number;
-            priority?: components["schemas"]["PriorityBd6Enum"];
+            priority?: components["schemas"]["Priority0aeEnum"];
             notes?: string;
         };
         /** @description Serializer for creating and updating vendor tasks. */
@@ -10718,8 +10684,8 @@ export interface components {
              * @description Optional start date for the task
              */
             start_date?: string | null;
-            priority?: components["schemas"]["PriorityBd6Enum"];
-            status?: components["schemas"]["StatusA06Enum"];
+            priority?: components["schemas"]["Priority0aeEnum"];
+            status?: components["schemas"]["Status8b3Enum"];
             /** @description User responsible for completing this task */
             assigned_to?: number | null;
             /** @description Days before due date to send reminders (e.g., [30, 14, 7, 1]) */
@@ -10777,8 +10743,8 @@ export interface components {
              * @description Optional start date for the task
              */
             start_date?: string | null;
-            priority?: components["schemas"]["PriorityBd6Enum"];
-            status?: components["schemas"]["StatusA06Enum"];
+            priority?: components["schemas"]["Priority0aeEnum"];
+            status?: components["schemas"]["Status8b3Enum"];
             /** @description User responsible for completing this task */
             assigned_to?: number | null;
             /** @description Days before due date to send reminders (e.g., [30, 14, 7, 1]) */
@@ -10846,9 +10812,9 @@ export interface components {
              * @description Actual completion timestamp
              */
             completed_date?: string | null;
-            priority?: components["schemas"]["PriorityBd6Enum"];
+            priority?: components["schemas"]["Priority0aeEnum"];
             readonly priority_display: string;
-            status?: components["schemas"]["StatusA06Enum"];
+            status?: components["schemas"]["Status8b3Enum"];
             readonly status_display: string;
             /** @description User responsible for completing this task */
             assigned_to?: number | null;
@@ -10946,8 +10912,8 @@ export interface components {
              * @description Actual completion timestamp
              */
             completed_date?: string | null;
-            priority?: components["schemas"]["PriorityBd6Enum"];
-            status?: components["schemas"]["StatusA06Enum"];
+            priority?: components["schemas"]["Priority0aeEnum"];
+            status?: components["schemas"]["Status8b3Enum"];
             /** @description User responsible for completing this task */
             assigned_to?: number | null;
             /** @description User who created this task */
@@ -11013,9 +10979,9 @@ export interface components {
              * @description Date when the task is due for completion
              */
             due_date: string;
-            priority?: components["schemas"]["PriorityBd6Enum"];
+            priority?: components["schemas"]["Priority0aeEnum"];
             readonly priority_display: string;
-            status?: components["schemas"]["StatusA06Enum"];
+            status?: components["schemas"]["Status8b3Enum"];
             readonly status_display: string;
             /** @description User responsible for completing this task */
             assigned_to?: number | null;
@@ -11043,7 +11009,7 @@ export interface components {
         };
         /** @description Serializer for updating task status. */
         VendorTaskStatusUpdateRequest: {
-            status: components["schemas"]["StatusA06Enum"];
+            status: components["schemas"]["Status8b3Enum"];
             completion_notes?: string;
         };
         /** @description Serializer for vendor task summary statistics. */
