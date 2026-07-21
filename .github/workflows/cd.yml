@@ -136,7 +136,7 @@ jobs:
       env:
         GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
         GHCR_PAT: ${{ secrets.GHCR_PAT }}
-      uses: azure/CLI@v1
+      uses: azure/CLI@v3
       with:
         inlineScript: |
           if [[ -n "$GHCR_USERNAME" && -n "$GHCR_PAT" ]]; then
@@ -164,7 +164,7 @@ jobs:
     # --- Multi-container (Compose) deploy to slot
     - name: Deploy compose to staging slot
       if: ${{ steps.detect.outputs.mode == 'compose' }}
-      uses: azure/CLI@v1
+      uses: azure/CLI@v3
       with:
         inlineScript: |
           az webapp config container set \
@@ -188,7 +188,7 @@ jobs:
         echo "❌ Staging slot health check failed"; exit 1
 
     - name: Swap staging -> production
-      uses: azure/CLI@v1
+      uses: azure/CLI@v3
       with:
         inlineScript: |
           az webapp deployment slot swap \
@@ -226,7 +226,7 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     - name: Swap back production -> staging
-      uses: azure/CLI@v1
+      uses: azure/CLI@v3
       with:
         inlineScript: |
           echo "🔄 Rolling back: swapping production back to staging..."
