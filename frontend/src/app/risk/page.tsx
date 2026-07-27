@@ -1,18 +1,42 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { Card, Typography, Space, Button, Row, Col, Statistic, Progress, Table, Tag, message, Modal, Form, Input, Select } from 'antd'
+import React, { useCallback, useRef, useState, useEffect } from 'react'
+import { Card, Typography, Space, Button, Row, Col, Progress, Table, Tag, message, Modal, Form, Input, Select } from 'antd'
 import { SafetyOutlined, PlusOutlined, ExclamationCircleOutlined, WarningOutlined, CheckCircleOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import { Breadcrumb, KPICard, RiskKPICard, StatusTag, PriorityTag, Loading, ExportButton, FilterPanel } from '@/components/ui'
-import { riskService, type Risk, type RiskCategory } from '@/lib/services/riskService'
+import { riskService, type Risk, type RiskCategory, type RiskFilters } from '@/lib/services/riskService'
 
 const { Title, Text } = Typography
+
+interface RiskAnalytics {
+  totalRisks: number
+  highRiskItems: number
+  overdueActions: number
+  avgRiskScore: number
+  riskTrend: number
+}
+
+interface ChoiceOption {
+  value: string
+  label: string
+}
+
+interface RiskChoices {
+  risk_levels?: ChoiceOption[]
+  status_choices?: ChoiceOption[]
+  treatment_strategies?: ChoiceOption[]
+}
+
+type FilterValue = string | string[] | null | undefined
+type FilterValues = Record<string, FilterValue>
+type PaginationConfig = { current?: number; pageSize?: number }
 
 export default function RiskPage() {
   const [loading, setLoading] = useState(true)
   const [riskData, setRiskData] = useState<Risk[]>([])
-  const [analytics, setAnalytics] = useState<any>({
+  const riskDataRef = useRef<Risk[]>([])
+  const [analytics, setAnalytics] = useState<RiskAnalytics>({
     totalRisks: 0,
     highRiskItems: 0,
     overdueActions: 0,
@@ -20,16 +44,22 @@ export default function RiskPage() {
     riskTrend: 0
   })
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 })
-  const [filters, setFilters] = useState<any>({})
-  const [dynamicFilters, setDynamicFilters] = useState<any[]>([])
+  const [filters, setFilters] = useState<FilterValues>({})
+  const [dynamicFilters, setDynamicFilters] = useState<Array<{
+    key: string
+    label: string
+    type: 'multiSelect' | 'search'
+    options?: ChoiceOption[]
+    placeholder?: string
+  }>>([])
   const [riskCategories, setRiskCategories] = useState<RiskCategory[]>([])
-  const [riskChoices, setRiskChoices] = useState<any>({})
+  const [riskChoices, setRiskChoices] = useState<RiskChoices>({})
   const [isAddRiskModalVisible, setIsAddRiskModalVisible] = useState(false)
   const [addRiskForm] = Form.useForm()
   const router = useRouter()
 
   // Fetch risks data
-  const fetchRisks = async (currentFilters = filters, page = 1, pageSize = 10) => {
+  const fetchRisks = useCallback(async (currentFilters: RiskFilters = {}, page = 1, pageSize = 10) => {
     try {
       setLoading(true)
       const response = await riskService.getRisks({
@@ -38,7 +68,9 @@ export default function RiskPage() {
         pageSize
       })
 
-      setRiskData(response.results || [])
+      const risks = response.results || []
+      riskDataRef.current = risks
+      setRiskData(risks)
       setPagination({
         current: page,
         pageSize,
@@ -48,36 +80,38 @@ export default function RiskPage() {
       message.error('Failed to load risk data. Using cached data.')
       console.error('Error fetching risks:', error)
       // Keep existing data if available
-      if (riskData.length === 0) {
+      setRiskData((previousRisks) => {
+        riskDataRef.current = previousRisks
         // Only show empty state if no data at all
-        setRiskData([])
-      }
+        return previousRisks.length === 0 ? [] : previousRisks
+      })
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // Fetch analytics
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       const data = await riskService.getRiskAnalytics()
       setAnalytics(data)
     } catch (error) {
       console.error('Error fetching analytics:', error)
+      const currentRisks = riskDataRef.current
       // Set default analytics if API fails
       setAnalytics({
-        totalRisks: riskData.length || 0,
-        highRiskItems: riskData.filter(r => r.risk_level === 'high' || r.risk_level === 'critical').length || 0,
+        totalRisks: currentRisks.length || 0,
+        highRiskItems: currentRisks.filter(r => r.risk_level === 'high' || r.risk_level === 'critical').length || 0,
         overdueActions: 0,
-        avgRiskScore: riskData.length ?
-          riskData.reduce((sum, r) => sum + (r.risk_score || 0), 0) / riskData.length : 0,
+        avgRiskScore: currentRisks.length ?
+          currentRisks.reduce((sum, r) => sum + (r.risk_score || 0), 0) / currentRisks.length : 0,
         riskTrend: 0
       })
     }
-  }
+  }, [])
 
   // Fetch dynamic filter data
-  const fetchDynamicData = async () => {
+  const fetchDynamicData = useCallback(async () => {
     try {
       const [categories, choices] = await Promise.all([
         riskService.getRiskCategories(),
@@ -128,23 +162,23 @@ export default function RiskPage() {
         }
       ])
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchRisks()
     fetchAnalytics()
     fetchDynamicData()
-  }, [])
+  }, [fetchAnalytics, fetchDynamicData, fetchRisks])
 
   // Handle filter changes
-  const handleFilterChange = (newFilters: any) => {
+  const handleFilterChange = (newFilters: FilterValues) => {
     setFilters(newFilters)
-    fetchRisks(newFilters, 1, pagination.pageSize)
+    fetchRisks(newFilters as RiskFilters, 1, pagination.pageSize)
   }
 
   // Handle table pagination/sorting
-  const handleTableChange = (paginationConfig: any) => {
-    fetchRisks(filters, paginationConfig.current, paginationConfig.pageSize)
+  const handleTableChange = (paginationConfig: PaginationConfig) => {
+    fetchRisks(filters as RiskFilters, paginationConfig.current, paginationConfig.pageSize)
   }
 
   // Handle Add Risk
@@ -163,7 +197,7 @@ export default function RiskPage() {
   }
 
   // Handle Add Risk form submission
-  const handleAddRiskSubmit = async (values: any) => {
+  const handleAddRiskSubmit = async (values: Partial<Risk>) => {
     try {
       await riskService.createRisk(values)
       message.success('Risk created successfully')
@@ -207,7 +241,7 @@ export default function RiskPage() {
       title: 'Category',
       dataIndex: 'category',
       key: 'category',
-      render: (category: any) => {
+      render: (category: RiskCategory | null) => {
         if (!category) return <Tag>Uncategorized</Tag>
         return <Tag color={category.color || 'default'}>{category.name}</Tag>
       }
@@ -228,7 +262,7 @@ export default function RiskPage() {
       title: 'Owner',
       dataIndex: 'risk_owner',
       key: 'risk_owner',
-      render: (owner: any) => {
+      render: (owner: Risk['risk_owner']) => {
         if (!owner) return <Text type="secondary">Unassigned</Text>
         return <Text>{owner.first_name} {owner.last_name}</Text>
       }
@@ -485,7 +519,7 @@ export default function RiskPage() {
                 label="Treatment Strategy"
               >
                 <Select placeholder="Select strategy">
-                  {riskChoices.treatment_strategies?.map((strategy: any) => (
+                  {riskChoices.treatment_strategies?.map((strategy) => (
                     <Select.Option key={strategy.value} value={strategy.value}>
                       {strategy.label}
                     </Select.Option>

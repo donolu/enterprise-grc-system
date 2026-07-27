@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   Card,
   Row,
@@ -26,7 +26,6 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   ExclamationCircleOutlined,
-  SearchOutlined,
   ReloadOutlined,
   TrophyOutlined,
   WarningOutlined
@@ -79,10 +78,6 @@ export default function PolicyDashboardPage() {
     fetchDashboardData()
   }, [])
 
-  useEffect(() => {
-    filterAndSortData()
-  }, [dashboardData, searchTerm, filterStatus, sortBy])
-
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
@@ -96,7 +91,7 @@ export default function PolicyDashboardPage() {
     }
   }
 
-  const filterAndSortData = () => {
+  const filterAndSortData = useCallback(() => {
     let filtered = [...dashboardData]
 
     // Apply search filter
@@ -133,7 +128,11 @@ export default function PolicyDashboardPage() {
     })
 
     setFilteredData(filtered)
-  }
+  }, [dashboardData, filterStatus, searchTerm, sortBy])
+
+  useEffect(() => {
+    filterAndSortData()
+  }, [filterAndSortData])
 
   const getOverallStats = () => {
     if (dashboardData.length === 0) {
@@ -184,7 +183,7 @@ export default function PolicyDashboardPage() {
       title: 'Policy',
       dataIndex: 'policy',
       key: 'policy',
-      render: (policy: any) => (
+      render: (policy: PolicyStats['policy']) => (
         <div>
           <Text strong>{policy.title}</Text>
           <br />
@@ -203,7 +202,7 @@ export default function PolicyDashboardPage() {
       title: 'Acknowledgment Rate',
       dataIndex: 'stats',
       key: 'rate',
-      render: (stats: any) => (
+      render: (stats: PolicyStats['stats']) => (
         <div>
           <Progress
             percent={stats.acknowledgment_rate}
@@ -219,7 +218,7 @@ export default function PolicyDashboardPage() {
       title: 'Stats',
       dataIndex: 'stats',
       key: 'stats',
-      render: (stats: any) => (
+      render: (stats: PolicyStats['stats']) => (
         <Space direction="vertical">
           <Text>
             <CheckCircleOutlined style={{ color: '#52c41a' }} /> {stats.total_acknowledged} / {stats.total_distributed}
@@ -239,9 +238,9 @@ export default function PolicyDashboardPage() {
       title: 'Pending Users',
       dataIndex: 'pending_users',
       key: 'pending_users',
-      render: (pending_users: any[]) => (
+      render: (pending_users: PolicyStats['pending_users']) => (
         <div>
-          {pending_users.slice(0, 3).map((user, index) => (
+          {pending_users.slice(0, 3).map((user) => (
             <Tag key={user.id}>
               {user.first_name} {user.last_name}
               {user.reminder_count > 0 && (

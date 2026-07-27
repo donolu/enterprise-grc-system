@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Input, AutoComplete, Space, Tag, Typography } from 'antd'
 import { SearchOutlined, FileTextOutlined, TeamOutlined, SafetyOutlined, CheckSquareOutlined, VideoCameraOutlined } from '@ant-design/icons'
 import { useTheme } from '@/theme'

@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { Card, Typography, Space, Button, Row, Col, Descriptions, Tag, Progress, Divider, message, Modal, Form, Input, Select, Avatar } from 'antd'
-import { TeamOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined, GlobalOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons'
+import React, { useCallback, useState, useEffect } from 'react'
+import { Card, Typography, Space, Button, Row, Col, Descriptions, Tag, Progress, Divider, message, Modal, Form, Input, Avatar } from 'antd'
+import { TeamOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined, GlobalOutlined } from '@ant-design/icons'
 import { useRouter, useParams } from 'next/navigation'
 import { Breadcrumb, StatusTag, PriorityTag, Loading } from '@/components/ui'
 import { vendorService, type Vendor } from '@/lib/services/vendorService'
@@ -18,7 +18,7 @@ export default function VendorDetailPage() {
   const params = useParams()
 
   // Fetch vendor details
-  const fetchVendor = async () => {
+  const fetchVendor = useCallback(async () => {
     try {
       setLoading(true)
       const data = await vendorService.getVendor(params.id as string)
@@ -32,11 +32,11 @@ export default function VendorDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [editForm, params.id, router])
 
   useEffect(() => {
     fetchVendor()
-  }, [params.id])
+  }, [fetchVendor])
 
   // Handle edit vendor
   const handleEditVendor = () => {
@@ -44,7 +44,7 @@ export default function VendorDetailPage() {
   }
 
   // Handle edit form submission
-  const handleEditSubmit = async (values: any) => {
+  const handleEditSubmit = async (values: Partial<Vendor>) => {
     try {
       const updatedVendor = await vendorService.updateVendor(params.id as string, values)
       setVendor(updatedVendor)

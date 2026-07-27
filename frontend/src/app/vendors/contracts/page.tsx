@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Card, Typography, Space, Button, Table, Tag, Progress } from 'antd'
+import { Card, Typography, Space, Button, Table, Tag } from 'antd'
 import { TeamOutlined, ArrowLeftOutlined, ClockCircleOutlined, WarningOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import { Breadcrumb } from '@/components/ui'

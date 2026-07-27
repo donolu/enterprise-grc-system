@@ -2,15 +2,49 @@
 
 import React, { useState } from 'react'
 import { Card, Typography, Space, Button, Table, Tag, Progress, Row, Col, Modal, Descriptions, Divider, Form, Input, Select, message } from 'antd'
-import { SafetyOutlined, ArrowLeftOutlined, CheckCircleOutlined, ClockCircleOutlined, EyeOutlined, EditOutlined } from '@ant-design/icons'
+import { SafetyOutlined, ArrowLeftOutlined, CheckCircleOutlined, EyeOutlined, EditOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import { Breadcrumb, StatusTag, PriorityTag } from '@/components/ui'
 
 const { Title, Text } = Typography
 
+interface MitigationAction {
+  task: string
+  status: string
+  dueDate: string
+}
+
+interface MitigationPlan {
+  id: number
+  riskId: string
+  riskTitle: string
+  strategy: string
+  status: string
+  owner: string
+  ownerEmail: string
+  progress: number
+  dueDate: string
+  priority: string
+  description: string
+  riskLevel: string
+  impact: number
+  likelihood: number
+  category: string
+  treatmentPlan: string
+  currentControls: string
+  actions: MitigationAction[]
+}
+
+interface MitigationFormValues {
+  treatmentPlan: string
+  currentControls?: string
+  progress: number
+  status: string
+}
+
 export default function RiskMitigationPage() {
   const router = useRouter()
-  const [selectedRisk, setSelectedRisk] = useState<any>(null)
+  const [selectedRisk, setSelectedRisk] = useState<MitigationPlan | null>(null)
   const [isViewModalVisible, setIsViewModalVisible] = useState(false)
   const [isEditModalVisible, setIsEditModalVisible] = useState(false)
   const [editForm] = Form.useForm()
@@ -72,7 +106,7 @@ export default function RiskMitigationPage() {
       title: 'Risk ID',
       dataIndex: 'riskId',
       key: 'riskId',
-      render: (text: string, record: any) => (
+      render: (text: string, record: MitigationPlan) => (
         <Button
           type="link"
           style={{ padding: 0, height: 'auto' }}
@@ -127,7 +161,7 @@ export default function RiskMitigationPage() {
     {
       title: 'Actions',
       key: 'actions',
-      render: (record: any) => (
+      render: (record: MitigationPlan) => (
         <Space>
           <Button
             icon={<EyeOutlined />}
@@ -226,7 +260,9 @@ export default function RiskMitigationPage() {
         footer={[
           <Button key="edit" type="primary" onClick={() => {
             setIsViewModalVisible(false)
-            handleEditRisk(selectedRisk)
+            if (selectedRisk) {
+              handleEditRisk(selectedRisk)
+            }
           }}>
             Edit Mitigation Plan
           </Button>,
@@ -278,7 +314,7 @@ export default function RiskMitigationPage() {
             <Table
 
               pagination={false}
-              dataSource={selectedRisk.actions.map((action: any, index: number) => ({ ...action, key: index }))}
+              dataSource={selectedRisk.actions.map((action, index) => ({ ...action, key: index }))}
               columns={[
                 { title: 'Task', dataIndex: 'task', key: 'task' },
                 {
@@ -371,12 +407,12 @@ export default function RiskMitigationPage() {
   )
 
   // Handler functions
-  function handleViewRisk(record: any) {
+  function handleViewRisk(record: MitigationPlan) {
     setSelectedRisk(record)
     setIsViewModalVisible(true)
   }
 
-  function handleEditRisk(record: any) {
+  function handleEditRisk(record: MitigationPlan) {
     setSelectedRisk(record)
     editForm.setFieldsValue({
       treatmentPlan: record.treatmentPlan,
@@ -387,7 +423,7 @@ export default function RiskMitigationPage() {
     setIsEditModalVisible(true)
   }
 
-  function handleEditSubmit(values: any) {
+  function handleEditSubmit(values: MitigationFormValues) {
     try {
       // Simulate API call
       console.log('Updating mitigation plan:', { ...selectedRisk, ...values })

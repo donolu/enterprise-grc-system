@@ -1,18 +1,41 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useCallback, useState, useEffect } from 'react'
 import { Card, Typography, Space, Button, Row, Col, Table, Tag, Progress, Avatar, message, Modal, Form, Input, Select } from 'antd'
 import { TeamOutlined, PlusOutlined, WarningOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import { Breadcrumb, VendorKPICard, KPICard, StatusTag, PriorityTag, Loading, ExportButton, FilterPanel } from '@/components/ui'
-import { vendorService, type Vendor, type VendorCategory } from '@/lib/services/vendorService'
+import { vendorService, type Vendor, type VendorCategory, type VendorFilters } from '@/lib/services/vendorService'
 
 const { Title, Text } = Typography
+
+interface VendorAnalytics {
+  totalVendors: number
+  contractsExpiring: number
+  highRiskVendors: number
+  avgPerformance: number
+  performanceTrend: number
+}
+
+interface ChoiceOption {
+  value: string
+  label: string
+}
+
+interface VendorChoices {
+  risk_level_choices?: ChoiceOption[]
+  status_choices?: ChoiceOption[]
+  vendor_type_choices?: ChoiceOption[]
+}
+
+type FilterValue = string | string[] | null | undefined
+type FilterValues = Record<string, FilterValue>
+type PaginationConfig = { current?: number; pageSize?: number }
 
 export default function VendorsPage() {
   const [loading, setLoading] = useState(true)
   const [vendorData, setVendorData] = useState<Vendor[]>([])
-  const [analytics, setAnalytics] = useState<any>({
+  const [analytics, setAnalytics] = useState<VendorAnalytics>({
     totalVendors: 0,
     contractsExpiring: 0,
     highRiskVendors: 0,
@@ -20,16 +43,22 @@ export default function VendorsPage() {
     performanceTrend: 0
   })
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 })
-  const [filters, setFilters] = useState<any>({})
-  const [dynamicFilters, setDynamicFilters] = useState<any[]>([])
+  const [filters, setFilters] = useState<FilterValues>({})
+  const [dynamicFilters, setDynamicFilters] = useState<Array<{
+    key: string
+    label: string
+    type: 'multiSelect' | 'search'
+    options?: ChoiceOption[]
+    placeholder?: string
+  }>>([])
   const [vendorCategories, setVendorCategories] = useState<VendorCategory[]>([])
-  const [vendorChoices, setVendorChoices] = useState<any>({})
+  const [vendorChoices, setVendorChoices] = useState<VendorChoices>({})
   const [isAddVendorModalVisible, setIsAddVendorModalVisible] = useState(false)
   const [addVendorForm] = Form.useForm()
   const router = useRouter()
 
   // Fetch vendors data
-  const fetchVendors = async (currentFilters = filters, page = 1, pageSize = 10) => {
+  const fetchVendors = useCallback(async (currentFilters: VendorFilters = {}, page = 1, pageSize = 10) => {
     try {
       setLoading(true)
       const response = await vendorService.getVendors({
@@ -50,20 +79,20 @@ export default function VendorsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // Fetch analytics
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       const data = await vendorService.getVendorAnalytics()
       setAnalytics(data)
     } catch (error) {
       console.error('Error fetching analytics:', error)
     }
-  }
+  }, [])
 
   // Fetch dynamic filter data
-  const fetchDynamicData = async () => {
+  const fetchDynamicData = useCallback(async () => {
     try {
       const [categories, choices] = await Promise.all([
         vendorService.getVendorCategories(),
@@ -120,23 +149,23 @@ export default function VendorsPage() {
         }
       ])
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchVendors()
     fetchAnalytics()
     fetchDynamicData()
-  }, [])
+  }, [fetchAnalytics, fetchDynamicData, fetchVendors])
 
   // Handle filter changes
-  const handleFilterChange = (newFilters: any) => {
+  const handleFilterChange = (newFilters: FilterValues) => {
     setFilters(newFilters)
-    fetchVendors(newFilters, 1, pagination.pageSize)
+    fetchVendors(newFilters as VendorFilters, 1, pagination.pageSize)
   }
 
   // Handle table pagination/sorting
-  const handleTableChange = (paginationConfig: any) => {
-    fetchVendors(filters, paginationConfig.current, paginationConfig.pageSize)
+  const handleTableChange = (paginationConfig: PaginationConfig) => {
+    fetchVendors(filters as VendorFilters, paginationConfig.current, paginationConfig.pageSize)
   }
 
   // Handle Add Vendor
@@ -155,7 +184,7 @@ export default function VendorsPage() {
   }
 
   // Handle Add Vendor form submission
-  const handleAddVendorSubmit = async (values: any) => {
+  const handleAddVendorSubmit = async (values: Partial<Vendor>) => {
     try {
       await vendorService.createVendor(values)
       message.success('Vendor created successfully')
@@ -275,7 +304,7 @@ export default function VendorsPage() {
       title: 'Owner',
       dataIndex: 'assigned_to',
       key: 'assigned_to',
-      render: (owner: any) => {
+      render: (owner: Vendor['assigned_to']) => {
         if (!owner) return <Text type="secondary">Unassigned</Text>
         return <Text>{owner.first_name} {owner.last_name}</Text>
       }
@@ -501,7 +530,7 @@ export default function VendorsPage() {
                 rules={[{ required: true, message: 'Please select vendor type' }]}
               >
                 <Select placeholder="Select vendor type">
-                  {vendorChoices.vendor_type_choices?.map((type: any) => (
+                  {vendorChoices.vendor_type_choices?.map((type) => (
                     <Select.Option key={type.value} value={type.value}>
                       {type.label}
                     </Select.Option>

@@ -6,13 +6,10 @@ import {
   SafetyOutlined,
   TeamOutlined,
   FileTextOutlined,
-  RiseOutlined,
-  WarningOutlined,
   EyeOutlined,
   PlusOutlined
 } from "@ant-design/icons";
 import {
-  KPICard,
   ComplianceKPICard,
   RiskKPICard,
   PolicyKPICard,
@@ -20,12 +17,30 @@ import {
   StatusTag,
   AssessmentStatusTag,
   RiskStatusTag,
-  EmptyState,
   Loading
 } from "@/components/ui";
 import { useTheme } from "@/theme";
-import { riskService } from "@/lib/services/riskService";
+import { riskService, type Risk } from "@/lib/services/riskService";
 import { analyticsService } from "@/lib/services/analyticsService";
+
+interface RecentAssessment {
+  name: string
+  framework: string
+  progress: number
+  status: string
+  dueDate: string
+}
+
+interface DashboardData {
+  recentAssessments: RecentAssessment[]
+  recentRisks: Risk[]
+  analytics: {
+    totalAssessments: number
+    activeRisks: number
+    totalVendors: number
+    complianceScore: number
+  }
+}
 
 const { Title, Text } = Typography;
 
@@ -35,7 +50,7 @@ export default function DashboardPage() {
 
   // State management
   const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState({
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
     recentAssessments: [],
     recentRisks: [],
     analytics: {
@@ -103,7 +118,7 @@ export default function DashboardPage() {
       title: 'Assessment',
       dataIndex: 'name',
       key: 'name',
-      render: (text: string, record: any) => (
+      render: (text: string, record: RecentAssessment) => (
         <div>
           <Text strong style={{ display: 'block' }}>{text}</Text>
           <Text type="secondary" style={{ fontSize: 12 }}>
@@ -151,7 +166,7 @@ export default function DashboardPage() {
       title: 'Risk',
       dataIndex: 'title',
       key: 'title',
-      render: (text: string, record: any) => (
+      render: (text: string, record: Risk) => (
         <div>
           <Text strong style={{ display: 'block' }}>{text}</Text>
           <Text type="secondary" style={{ fontSize: 12 }}>

@@ -1,5 +1,5 @@
 "use client";
-import { Empty, Button, Typography, Space } from "antd";
+import { Button, Typography, Space } from "antd";
 import {
   FileTextOutlined,
   PlusOutlined,
@@ -158,14 +158,17 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {image ? (
         <div style={{ marginBottom: 24 }}>
           {typeof image === 'string' ? (
-            <img
-              src={image}
-              alt="Empty state"
-              style={{
-                maxWidth: size === 'small' ? 120 : size === 'large' ? 200 : 160,
-                opacity: 0.8
-              }}
-            />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={image}
+                alt="Empty state"
+                style={{
+                  maxWidth: size === 'small' ? 120 : size === 'large' ? 200 : 160,
+                  opacity: 0.8
+                }}
+              />
+            </>
           ) : (
             image
           )}

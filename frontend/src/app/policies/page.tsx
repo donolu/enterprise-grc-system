@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react'
 import { Card, Row, Col, Typography, Button, Empty, Spin, message, Badge, Tag } from 'antd'
-import { FileTextOutlined, CheckCircleOutlined, ClockCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
-import { api } from '@/lib/api'
+import { FileTextOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { api, getErrorMessage } from '@/lib/api'
 import { useTheme } from '@/theme'
 
 const { Title, Text, Paragraph } = Typography
@@ -120,10 +120,9 @@ export default function PoliciesPage() {
 
       // Remove the acknowledged policy from the list
       setPolicies(prev => prev.filter(p => p.policy.id !== policyId))
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to acknowledge policy:', error)
-      const errorMsg = error.response?.data?.error || 'Failed to acknowledge policy'
-      message.error(errorMsg)
+      message.error(getErrorMessage(error) || 'Failed to acknowledge policy')
     } finally {
       setAcknowledging(null)
     }

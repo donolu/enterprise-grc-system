@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Card, Row, Col, Typography, Spin, message, Tabs, Space, Divider } from 'antd'
+import { Card, Row, Col, Typography, Spin, message, Tabs, Space } from 'antd'
 import {
   BarChartOutlined,
   DashboardOutlined,
@@ -12,7 +12,6 @@ import {
   TrophyOutlined,
   RiseOutlined
 } from '@ant-design/icons'
-import { api } from '@/lib/api'
 import {
   KPICard,
   ComplianceKPICard,
@@ -20,8 +19,6 @@ import {
   VendorKPICard,
   PolicyKPICard
 } from '@/components/ui'
-import { StatusTag, AssessmentStatusTag, RiskStatusTag } from '@/components/ui/StatusTag'
-import { PriorityTag } from '@/components/ui'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 const { Title, Text, Paragraph } = Typography

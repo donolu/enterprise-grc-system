@@ -3,9 +3,7 @@ import { Card, Statistic, Progress, Typography, Space } from "antd";
 import {
   ArrowUpOutlined,
   ArrowDownOutlined,
-  MinusOutlined,
   RiseOutlined,
-  FallOutlined
 } from "@ant-design/icons";
 import { useTheme } from "@/theme";
 
