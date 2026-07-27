@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Breadcrumb as AntBreadcrumb, Typography } from 'antd'
+import { Breadcrumb as AntBreadcrumb } from 'antd'
 import { HomeOutlined } from '@ant-design/icons'
 import Link from 'next/link'
 import { useTheme } from '@/theme'

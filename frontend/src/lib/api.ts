@@ -17,7 +17,7 @@ export class APIException extends Error {
   public data: APIError;
   public isAPIError = true;
 
-  constructor(status: number, data: APIError, originalError?: AxiosError) {
+  constructor(status: number, data: APIError) {
     const message = data.detail || data.message || data.non_field_errors?.[0] || 'An error occurred';
     super(message);
     this.name = 'APIException';
@@ -94,7 +94,7 @@ api.interceptors.response.use(
       }
       
       // Create structured API exception
-      const apiError = new APIException(status, data as APIError, err);
+      const apiError = new APIException(status, data as APIError);
       
       // Handle specific status codes
       switch (status) {
@@ -134,14 +134,14 @@ api.interceptors.response.use(
       console.error('Network error - check your connection');
       const networkError = new APIException(0, { 
         message: 'Network error - please check your connection and try again'
-      }, err);
+      });
       return Promise.reject(networkError);
     } else {
       // Request setup error
       console.error('Request setup error:', err.message);
       const setupError = new APIException(0, { 
         message: 'Request setup error - please try again'
-      }, err);
+      });
       return Promise.reject(setupError);
     }
   }
