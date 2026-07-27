@@ -14,7 +14,7 @@ permissions:
 
 env:
   PYTHON_VERSION: '3.12'
-  NODE_VERSION: '20'
+  NODE_VERSION: '24'
   DJANGO_SETTINGS_MODULE: app.settings.test
   POSTGRES_DB: grc_test
   POSTGRES_USER: grc
