@@ -2,11 +2,16 @@
 
 import React, { useState } from 'react'
 import { Card, Space, Select, DatePicker, Input, Button, Row, Col, Collapse, Badge } from 'antd'
-import { FilterOutlined, ClearOutlined, SearchOutlined } from '@ant-design/icons'
+import { FilterOutlined, ClearOutlined } from '@ant-design/icons'
+import type { Dayjs } from 'dayjs'
 import { useTheme } from '@/theme'
 
 const { Option } = Select
 const { RangePicker } = DatePicker
+
+type DateRangeValue = [Dayjs | null, Dayjs | null]
+type FilterValue = string | string[] | DateRangeValue | null | undefined
+type FilterValues = Record<string, FilterValue>
 
 interface FilterOption {
   key: string
@@ -18,7 +23,7 @@ interface FilterOption {
 
 interface FilterPanelProps {
   filters: FilterOption[]
-  onFilterChange?: (filters: Record<string, any>) => void
+  onFilterChange?: (filters: FilterValues) => void
   onClear?: () => void
   defaultOpen?: boolean
   showCount?: boolean
@@ -35,10 +40,10 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 }) => {
   const { mode } = useTheme()
   const isDark = mode === 'dark'
-  const [filterValues, setFilterValues] = useState<Record<string, any>>({})
+  const [filterValues, setFilterValues] = useState<FilterValues>({})
   const [isOpen, setIsOpen] = useState(defaultOpen)
 
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: string, value: FilterValue) => {
     const newFilters = { ...filterValues, [key]: value }
 
     // Remove empty values
@@ -66,7 +71,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             placeholder={filter.placeholder || `Select ${filter.label}`}
             style={{ width: '100%' }}
             allowClear
-            value={filterValues[filter.key]}
+            value={filterValues[filter.key] as string | undefined}
             onChange={(value) => handleFilterChange(filter.key, value)}
           >
             {filter.options?.map(option => (
@@ -84,7 +89,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             placeholder={filter.placeholder || `Select ${filter.label}`}
             style={{ width: '100%' }}
             allowClear
-            value={filterValues[filter.key]}
+            value={filterValues[filter.key] as string[] | undefined}
             onChange={(value) => handleFilterChange(filter.key, value)}
           >
             {filter.options?.map(option => (
@@ -100,7 +105,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           <Input.Search
             placeholder={filter.placeholder || `Search ${filter.label}`}
             allowClear
-            value={filterValues[filter.key]}
+            value={filterValues[filter.key] as string | undefined}
             onChange={(e) => handleFilterChange(filter.key, e.target.value)}
             onSearch={(value) => handleFilterChange(filter.key, value)}
           />
@@ -111,7 +116,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           <Input
             placeholder={filter.placeholder || filter.label}
             allowClear
-            value={filterValues[filter.key]}
+            value={filterValues[filter.key] as string | undefined}
             onChange={(e) => handleFilterChange(filter.key, e.target.value)}
           />
         )
@@ -121,7 +126,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           <RangePicker
             style={{ width: '100%' }}
             placeholder={['Start Date', 'End Date']}
-            value={filterValues[filter.key]}
+            value={filterValues[filter.key] as DateRangeValue | null | undefined}
             onChange={(dates) => handleFilterChange(filter.key, dates)}
           />
         )
@@ -150,7 +155,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     children: (
       <>
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-          {filters.map((filter, index) => (
+          {filters.map((filter) => (
             <Col
               key={filter.key}
               xs={24}

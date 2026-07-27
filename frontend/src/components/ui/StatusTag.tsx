@@ -11,7 +11,6 @@ import {
   PlayCircleOutlined,
   PauseCircleOutlined
 } from "@ant-design/icons";
-import { useTheme } from "@/theme";
 
 // Status definitions for different contexts
 export const StatusConfigs = {
@@ -209,9 +208,6 @@ export const StatusTag: React.FC<StatusTagProps> = ({
   style,
   onClick
 }) => {
-  const { mode } = useTheme();
-  const isDark = mode === 'dark';
-
   const config = StatusConfigs[context]?.[status];
 
   if (!config) {

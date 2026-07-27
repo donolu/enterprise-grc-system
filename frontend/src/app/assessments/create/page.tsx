@@ -5,10 +5,10 @@ import { Card, Typography, Space, Button, Row, Col, Form, Input, Select, DatePic
 import { SafetyOutlined, ArrowLeftOutlined, CheckOutlined } from '@ant-design/icons'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Breadcrumb } from '@/components/ui'
-import { riskService } from '@/lib/services/riskService'
-import { vendorService } from '@/lib/services/vendorService'
+import { riskService, type Risk } from '@/lib/services/riskService'
+import { vendorService, type Vendor } from '@/lib/services/vendorService'
 
-const { Title, Text, Paragraph } = Typography
+const { Title, Text } = Typography
 const { TextArea } = Input
 const { Step } = Steps
 
@@ -17,8 +17,8 @@ export default function CreateAssessmentPage() {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [assessmentType, setAssessmentType] = useState<'risk' | 'vendor' | 'security'>('risk')
-  const [risks, setRisks] = useState([])
-  const [vendors, setVendors] = useState([])
+  const [risks, setRisks] = useState<Risk[]>([])
+  const [vendors, setVendors] = useState<Vendor[]>([])
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -60,7 +60,7 @@ export default function CreateAssessmentPage() {
     setCurrentStep(currentStep - 1)
   }
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async () => {
     try {
       setLoading(true)
 
@@ -194,7 +194,7 @@ export default function CreateAssessmentPage() {
                 placeholder="Select related risks (optional)"
                 allowClear
               >
-                {risks.map((risk: any) => (
+                {risks.map((risk) => (
                   <Select.Option key={risk.id} value={risk.id}>
                     {risk.risk_id} - {risk.title}
                   </Select.Option>
@@ -214,7 +214,7 @@ export default function CreateAssessmentPage() {
                 placeholder="Select vendors to assess"
                 allowClear
               >
-                {vendors.map((vendor: any) => (
+                {vendors.map((vendor) => (
                   <Select.Option key={vendor.id} value={vendor.id}>
                     {vendor.name} ({vendor.vendor_id})
                   </Select.Option>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useCallback, useState, useEffect } from 'react'
 import { Card, Typography, Space, Button, Row, Col, Descriptions, Tag, Progress, Divider, message, Modal, Form, Input, Select } from 'antd'
 import { SafetyOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { useRouter, useParams } from 'next/navigation'
@@ -18,7 +18,7 @@ export default function RiskDetailPage() {
   const params = useParams()
 
   // Fetch risk details
-  const fetchRisk = async () => {
+  const fetchRisk = useCallback(async () => {
     try {
       setLoading(true)
       const data = await riskService.getRisk(params.id as string)
@@ -32,11 +32,11 @@ export default function RiskDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [editForm, params.id, router])
 
   useEffect(() => {
     fetchRisk()
-  }, [params.id])
+  }, [fetchRisk])
 
   // Handle edit risk
   const handleEditRisk = () => {
@@ -44,7 +44,7 @@ export default function RiskDetailPage() {
   }
 
   // Handle edit form submission
-  const handleEditSubmit = async (values: any) => {
+  const handleEditSubmit = async (values: Partial<Risk>) => {
     try {
       const updatedRisk = await riskService.updateRisk(params.id as string, values)
       setRisk(updatedRisk)

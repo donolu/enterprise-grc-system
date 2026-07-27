@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useCallback, useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, Typography, Button, Tag, Row, Col, Progress, message, Spin } from 'antd'
 import {
@@ -43,42 +43,51 @@ export default function VideoPlayerPage() {
   const [loading, setLoading] = useState(true)
   const [watchProgress, setWatchProgress] = useState(0)
   const [isCompleted, setIsCompleted] = useState(false)
-  const [viewStartTime, setViewStartTime] = useState<Date | null>(null)
   const progressInterval = useRef<NodeJS.Timeout | null>(null)
+  const videoRef = useRef<TrainingVideo | null>(null)
+  const viewStartTimeRef = useRef<Date | null>(null)
+  const watchProgressRef = useRef(0)
+  const isCompletedRef = useRef(false)
 
   const videoId = params.id as string
 
-  useEffect(() => {
-    if (videoId) {
-      fetchVideo()
+  const trackVideoView = useCallback(async (completed: boolean) => {
+    const currentVideo = videoRef.current
+    const currentViewStartTime = viewStartTimeRef.current
+    if (!currentVideo || !currentViewStartTime) return
+
+    const durationWatched = Math.floor((new Date().getTime() - currentViewStartTime.getTime()) / 1000)
+
+    try {
+      await api.post(`/training/videos/${currentVideo.id}/track_view/`, {
+        duration_watched: durationWatched,
+        completed,
+        completion_percentage: watchProgressRef.current
+      })
+    } catch (error) {
+      console.error('Failed to track video view:', error)
     }
+  }, [])
 
-    return () => {
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current)
-      }
-
-      // Track final view when component unmounts
-      if (video && viewStartTime) {
-        trackVideoView(false)
-      }
-    }
-  }, [videoId])
-
-  const fetchVideo = async () => {
+  const fetchVideo = useCallback(async () => {
     try {
       setLoading(true)
       const response = await api.get(`/training/videos/${videoId}/`)
-      setVideo(response.data)
-      setViewStartTime(new Date())
+      const fetchedVideo = response.data as TrainingVideo
+      const startedAt = new Date()
+      setVideo(fetchedVideo)
+      videoRef.current = fetchedVideo
+      viewStartTimeRef.current = startedAt
 
       // Start tracking progress every 10 seconds
       progressInterval.current = setInterval(() => {
         setWatchProgress(prev => {
           const newProgress = Math.min(prev + 10, 100)
+          watchProgressRef.current = newProgress
 
           // Mark as completed when reaching 80% or more
-          if (newProgress >= 80 && !isCompleted) {
+          if (newProgress >= 80 && !isCompletedRef.current) {
+            isCompletedRef.current = true
             setIsCompleted(true)
             trackVideoView(true)
           }
@@ -94,23 +103,24 @@ export default function VideoPlayerPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [router, trackVideoView, videoId])
 
-  const trackVideoView = async (completed: boolean) => {
-    if (!video || !viewStartTime) return
-
-    const durationWatched = Math.floor((new Date().getTime() - viewStartTime.getTime()) / 1000)
-
-    try {
-      await api.post(`/training/videos/${video.id}/track_view/`, {
-        duration_watched: durationWatched,
-        completed,
-        completion_percentage: watchProgress
-      })
-    } catch (error) {
-      console.error('Failed to track video view:', error)
+  useEffect(() => {
+    if (videoId) {
+      fetchVideo()
     }
-  }
+
+    return () => {
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current)
+      }
+
+      // Track final view when component unmounts
+      if (videoRef.current && viewStartTimeRef.current) {
+        trackVideoView(false)
+      }
+    }
+  }, [fetchVideo, trackVideoView, videoId])
 
   const handleVideoLoad = () => {
     // Called when video iframe loads
@@ -118,7 +128,9 @@ export default function VideoPlayerPage() {
   }
 
   const handleMarkComplete = () => {
+    isCompletedRef.current = true
     setIsCompleted(true)
+    watchProgressRef.current = 100
     setWatchProgress(100)
     trackVideoView(true)
     message.success('Video marked as completed!')
