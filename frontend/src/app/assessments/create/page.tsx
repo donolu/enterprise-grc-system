@@ -10,7 +10,6 @@ import { vendorService, type Vendor } from '@/lib/services/vendorService'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
-const { Step } = Steps
 
 export default function CreateAssessmentPage() {
   const [currentStep, setCurrentStep] = useState(0)
@@ -305,11 +304,11 @@ export default function CreateAssessmentPage() {
           Create New Assessment
         </Title>
 
-        <Steps current={currentStep} style={{ marginBottom: 32 }}>
-          {steps.map(item => (
-            <Step key={item.title} title={item.title} />
-          ))}
-        </Steps>
+        <Steps
+          current={currentStep}
+          items={steps.map((item) => ({ title: item.title }))}
+          style={{ marginBottom: 32 }}
+        />
 
         <Form
           form={form}
