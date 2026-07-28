@@ -1,24 +1,12 @@
 import api from "@/lib/api";
+import type { OperationResponse } from "@/lib/api/types";
 
-export interface TemplateImportSample {
-  title: string;
-  module: string;
-  document_type: string;
-  source_filename: string;
-  linkage_status: string;
-}
+export type TemplateImportResponse = OperationResponse<
+  "catalogs_api_template_documents_import_library_create",
+  200
+>;
 
-export interface TemplateImportResponse {
-  dry_run: boolean;
-  importable_count?: number;
-  imported_count?: number;
-  updated_count?: number;
-  skipped_count: number;
-  total_importable?: number;
-  modules: Record<string, number>;
-  document_types: Record<string, number>;
-  samples?: TemplateImportSample[];
-}
+export type TemplateImportSample = NonNullable<TemplateImportResponse["samples"]>[number];
 
 export async function importTemplateLibrary(options: {
   file: File;
