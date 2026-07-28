@@ -11,8 +11,8 @@ class DocumentSerializer(serializers.ModelSerializer):
     Serializer for document uploads with file validation and metadata.
     """
     uploaded_by = serializers.StringRelatedField(read_only=True)
-    file_url = serializers.ReadOnlyField()
-    file_name = serializers.ReadOnlyField()
+    file_url = serializers.URLField(read_only=True, allow_null=True)
+    file_name = serializers.CharField(read_only=True)
     
     class Meta:
         model = Document
@@ -55,7 +55,7 @@ class DocumentListSerializer(serializers.ModelSerializer):
     Simplified serializer for document listings.
     """
     uploaded_by = serializers.StringRelatedField(read_only=True)
-    file_name = serializers.ReadOnlyField()
+    file_name = serializers.CharField(read_only=True)
     
     class Meta:
         model = Document

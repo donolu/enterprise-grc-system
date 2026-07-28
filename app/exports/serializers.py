@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from catalogs.models import Framework, ControlAssessment
 from core.serializers import DocumentSerializer
 from .models import AssessmentReport, TenantDataExport
@@ -178,6 +179,7 @@ class TenantDataExportSerializer(serializers.ModelSerializer):
             'coverage_manifest',
         ]
 
+    @extend_schema_field(serializers.URLField(allow_null=True))
     def get_download_url(self, obj):
         if obj.status != 'completed' or not obj.generated_file_id:
             return None

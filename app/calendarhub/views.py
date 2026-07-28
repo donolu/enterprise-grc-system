@@ -71,6 +71,7 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
 
 
 class CalendarNotificationPreferenceViewSet(viewsets.ViewSet):
+    serializer_class = CalendarNotificationPreferenceSerializer
     permission_classes = [IsAuthenticated]
 
     def list(self, request):

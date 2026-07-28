@@ -5,8 +5,8 @@ from .models import Asset, AssetReviewReminderLog
 
 class AssetListSerializer(serializers.ModelSerializer):
     owner_display = serializers.SerializerMethodField()
-    is_review_overdue = serializers.ReadOnlyField()
-    days_until_review = serializers.ReadOnlyField()
+    is_review_overdue = serializers.BooleanField(read_only=True)
+    days_until_review = serializers.IntegerField(read_only=True, allow_null=True)
     linked_risk_count = serializers.SerializerMethodField()
     linked_control_count = serializers.SerializerMethodField()
     linked_document_count = serializers.SerializerMethodField()
@@ -21,26 +21,26 @@ class AssetListSerializer(serializers.ModelSerializer):
             'linked_control_count', 'linked_document_count',
         ]
 
-    def get_owner_display(self, obj):
+    def get_owner_display(self, obj) -> str | None:
         if obj.owner:
             return obj.owner.get_full_name() or obj.owner.username
         return obj.owner_name
 
-    def get_linked_risk_count(self, obj):
+    def get_linked_risk_count(self, obj) -> int:
         return obj.linked_risks.count()
 
-    def get_linked_control_count(self, obj):
+    def get_linked_control_count(self, obj) -> int:
         return obj.linked_controls.count()
 
-    def get_linked_document_count(self, obj):
+    def get_linked_document_count(self, obj) -> int:
         return obj.linked_documents.count()
 
 
 class AssetDetailSerializer(serializers.ModelSerializer):
     owner_display = serializers.SerializerMethodField()
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
-    is_review_overdue = serializers.ReadOnlyField()
-    days_until_review = serializers.ReadOnlyField()
+    is_review_overdue = serializers.BooleanField(read_only=True)
+    days_until_review = serializers.IntegerField(read_only=True, allow_null=True)
 
     class Meta:
         model = Asset
@@ -63,7 +63,7 @@ class AssetDetailSerializer(serializers.ModelSerializer):
             'is_review_overdue', 'days_until_review',
         ]
 
-    def get_owner_display(self, obj):
+    def get_owner_display(self, obj) -> str | None:
         if obj.owner:
             return obj.owner.get_full_name() or obj.owner.username
         return obj.owner_name
