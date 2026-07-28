@@ -93,7 +93,7 @@ export const vendorService = {
   async getVendors(filters: VendorFilters = {}): Promise<PaginatedResponse<Vendor>> {
     try {
       const params = new URLSearchParams()
-      
+
       if (filters.riskLevel) {
         params.append('risk_level', filters.riskLevel)
       }
@@ -123,7 +123,7 @@ export const vendorService = {
       return response.data
     } catch (error) {
       console.error('Error fetching vendors:', error)
-      
+
       // Return mock data as fallback with Django model structure
       return {
         results: [
@@ -295,7 +295,7 @@ export const vendorService = {
       return response.data
     } catch (error) {
       console.error('Error fetching vendor analytics:', error)
-      
+
       // Return mock analytics as fallback
       return {
         totalVendors: 89,

@@ -14,9 +14,7 @@ class PolicyAnalyticsService:
     @staticmethod
     def executive_summary():
         total_distributions = PolicyDistribution.objects.count()
-        acknowledged_distributions = PolicyDistribution.objects.filter(
-            acknowledged=True
-        ).count()
+        acknowledged_distributions = PolicyDistribution.objects.filter(acknowledged=True).count()
         acknowledgment_rate = 0
         if total_distributions > 0:
             acknowledgment_rate = round(
@@ -46,15 +44,11 @@ class PolicyAnalyticsService:
                 requires_acknowledgment=True
             ).count(),
             "draft_policies": Policy.objects.filter(status="draft").count(),
-            "under_review_policies": Policy.objects.filter(
-                status="under_review"
-            ).count(),
+            "under_review_policies": Policy.objects.filter(status="under_review").count(),
         }
 
         total_distributions = PolicyDistribution.objects.count()
-        acknowledged_distributions = PolicyDistribution.objects.filter(
-            acknowledged=True
-        ).count()
+        acknowledged_distributions = PolicyDistribution.objects.filter(acknowledged=True).count()
 
         acknowledgment_stats = {
             "total_distributions": total_distributions,
@@ -84,15 +78,11 @@ class PolicyAnalyticsService:
         for category in category_stats:
             total = category["total_distributions"]
             category["avg_acknowledgment_rate"] = (
-                round((category["acknowledged_distributions"] / total) * 100, 1)
-                if total
-                else 0
+                round((category["acknowledged_distributions"] / total) * 100, 1) if total else 0
             )
 
         recent_activity = {
-            "new_policies": Policy.objects.filter(
-                created_at__date__gte=ninety_days_ago
-            ).count(),
+            "new_policies": Policy.objects.filter(created_at__date__gte=ninety_days_ago).count(),
             "updated_policies": PolicyVersion.objects.filter(
                 created_at__date__gte=ninety_days_ago
             ).count(),
@@ -138,7 +128,5 @@ class PolicyAnalyticsService:
     @staticmethod
     def acknowledgment_rate_percentage():
         total_distributions = PolicyDistribution.objects.count()
-        acknowledged_distributions = PolicyDistribution.objects.filter(
-            acknowledged=True
-        ).count()
+        acknowledged_distributions = PolicyDistribution.objects.filter(acknowledged=True).count()
         return acknowledged_distributions / max(total_distributions, 1) * 100

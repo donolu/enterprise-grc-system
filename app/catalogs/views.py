@@ -11,11 +11,19 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Q
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse, OpenApiExample
+from drf_spectacular.utils import (
+    extend_schema,
+    extend_schema_view,
+    OpenApiParameter,
+    OpenApiResponse,
+    OpenApiExample,
+)
 from drf_spectacular.types import OpenApiTypes
 from django.db import transaction
 from django.core.management.base import CommandError
-from catalogs.management.commands.import_template_library import Command as TemplateLibraryImportCommand
+from catalogs.management.commands.import_template_library import (
+    Command as TemplateLibraryImportCommand,
+)
 from .audit import (
     ASSESSMENT_EVIDENCE_FIELDS,
     ASSESSMENT_FIELDS,
@@ -33,19 +41,35 @@ from .audit import (
     snapshot_model,
 )
 from .models import (
-    Framework, Clause, Control, ControlEvidence, FrameworkMapping,
-    ControlAssessment, AssessmentEvidence, TemplateDocument
+    Framework,
+    Clause,
+    Control,
+    ControlEvidence,
+    FrameworkMapping,
+    ControlAssessment,
+    AssessmentEvidence,
+    TemplateDocument,
 )
 from .serializers import (
-    FrameworkListSerializer, FrameworkDetailSerializer,
-    ClauseListSerializer, ClauseDetailSerializer,
-    ControlListSerializer, ControlDetailSerializer, ControlCreateUpdateSerializer,
-    ControlEvidenceSerializer, FrameworkMappingSerializer,
-    FrameworkStatsSerializer, ControlTestingSerializer,
-    ControlAssessmentListSerializer, ControlAssessmentDetailSerializer, 
-    ControlAssessmentCreateUpdateSerializer, AssessmentStatusUpdateSerializer,
-    BulkAssessmentCreateSerializer, AssessmentEvidenceSerializer,
-    AssessmentProgressSerializer, TemplateDocumentSerializer,
+    FrameworkListSerializer,
+    FrameworkDetailSerializer,
+    ClauseListSerializer,
+    ClauseDetailSerializer,
+    ControlListSerializer,
+    ControlDetailSerializer,
+    ControlCreateUpdateSerializer,
+    ControlEvidenceSerializer,
+    FrameworkMappingSerializer,
+    FrameworkStatsSerializer,
+    ControlTestingSerializer,
+    ControlAssessmentListSerializer,
+    ControlAssessmentDetailSerializer,
+    ControlAssessmentCreateUpdateSerializer,
+    AssessmentStatusUpdateSerializer,
+    BulkAssessmentCreateSerializer,
+    AssessmentEvidenceSerializer,
+    AssessmentProgressSerializer,
+    TemplateDocumentSerializer,
     TemplateDocumentSummarySerializer,
     TemplateImportRequestSerializer,
     TemplateImportSummarySerializer,
@@ -55,10 +79,10 @@ from .serializers import (
 class CatalogueAuditMixin:
     request: Any
     audit_fields: tuple[str, ...] = ()
-    audit_event_prefix: str = ''
-    audit_display: Callable[[Any], str] = staticmethod(lambda instance: '')
+    audit_event_prefix: str = ""
+    audit_display: Callable[[Any], str] = staticmethod(lambda instance: "")
     audit_snapshot: Callable[[Any], dict[str, Any]] | None = None
-    audit_created_by_field: str = ''
+    audit_created_by_field: str = ""
 
     def _audit_snapshot(self, instance):
         if self.audit_snapshot:
@@ -69,7 +93,7 @@ class CatalogueAuditMixin:
         return self.audit_display(instance)
 
     def _audit_event(self, action):
-        return f'{self.audit_event_prefix}_{action}'
+        return f"{self.audit_event_prefix}_{action}"
 
     def _audit_save_kwargs(self):
         if self.audit_created_by_field:
@@ -79,7 +103,7 @@ class CatalogueAuditMixin:
     def perform_create(self, serializer):
         instance = serializer.save(**self._audit_save_kwargs())
         audit_catalogue_change(
-            event=self._audit_event('CREATED'),
+            event=self._audit_event("CREATED"),
             actor=self.request.user,
             target=instance,
             object_display=self._audit_display(instance),
@@ -95,7 +119,7 @@ class CatalogueAuditMixin:
         previous_changed, new_changed = changed_values(previous, new)
         if previous_changed or new_changed:
             audit_catalogue_change(
-                event=self._audit_event('UPDATED'),
+                event=self._audit_event("UPDATED"),
                 actor=self.request.user,
                 target=updated,
                 object_display=self._audit_display(updated),
@@ -107,7 +131,7 @@ class CatalogueAuditMixin:
     def perform_destroy(self, instance):
         previous = self._audit_snapshot(instance)
         audit_catalogue_change(
-            event=self._audit_event('DELETED'),
+            event=self._audit_event("DELETED"),
             actor=self.request.user,
             target=instance,
             object_display=self._audit_display(instance),
@@ -123,253 +147,263 @@ class CatalogueAuditMixin:
         description="Retrieve a paginated list of compliance frameworks with filtering, searching, and ordering capabilities.",
         parameters=[
             OpenApiParameter(
-                name='framework_type',
+                name="framework_type",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description='Filter by framework type (iso27001, nist_csf, soc2, etc.)'
+                description="Filter by framework type (iso27001, nist_csf, soc2, etc.)",
             ),
             OpenApiParameter(
-                name='status',
+                name="status",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description='Filter by framework status (active, draft, archived)'
+                description="Filter by framework status (active, draft, archived)",
             ),
             OpenApiParameter(
-                name='is_mandatory',
+                name="is_mandatory",
                 type=OpenApiTypes.BOOL,
                 location=OpenApiParameter.QUERY,
-                description='Filter by mandatory status'
+                description="Filter by mandatory status",
             ),
             OpenApiParameter(
-                name='active_only',
+                name="active_only",
                 type=OpenApiTypes.BOOL,
                 location=OpenApiParameter.QUERY,
-                description='Show only active frameworks'
+                description="Show only active frameworks",
             ),
             OpenApiParameter(
-                name='search',
+                name="search",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description='Search across name, short_name, description, and issuing_organization'
+                description="Search across name, short_name, description, and issuing_organization",
             ),
             OpenApiParameter(
-                name='ordering',
+                name="ordering",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description='Order by: name, version, effective_date, created_at (prefix with - for descending)'
+                description="Order by: name, version, effective_date, created_at (prefix with - for descending)",
             ),
         ],
-        tags=['Frameworks'],
+        tags=["Frameworks"],
         examples=[
             OpenApiExample(
-                'List active frameworks',
-                summary='Get active ISO 27001 frameworks',
-                description='Example of filtering for active ISO 27001 frameworks',
-                value='?framework_type=iso27001&status=active'
+                "List active frameworks",
+                summary="Get active ISO 27001 frameworks",
+                description="Example of filtering for active ISO 27001 frameworks",
+                value="?framework_type=iso27001&status=active",
             ),
-        ]
+        ],
     ),
     create=extend_schema(
         summary="Create new compliance framework",
         description="Create a new compliance framework with all required metadata and configuration.",
-        tags=['Frameworks'],
+        tags=["Frameworks"],
     ),
     retrieve=extend_schema(
         summary="Get framework details",
         description="Retrieve detailed information about a specific compliance framework including metadata and configuration.",
-        tags=['Frameworks'],
+        tags=["Frameworks"],
     ),
     update=extend_schema(
         summary="Update framework",
         description="Update an existing compliance framework. Requires all fields.",
-        tags=['Frameworks'],
+        tags=["Frameworks"],
     ),
     partial_update=extend_schema(
         summary="Partially update framework",
         description="Update specific fields of an existing compliance framework.",
-        tags=['Frameworks'],
+        tags=["Frameworks"],
     ),
     destroy=extend_schema(
         summary="Delete framework",
         description="Delete a compliance framework. This will also remove all associated clauses and mappings.",
-        tags=['Frameworks'],
+        tags=["Frameworks"],
     ),
 )
 class FrameworkViewSet(CatalogueAuditMixin, viewsets.ModelViewSet):
     """
     **Compliance Framework Management**
-    
+
     This ViewSet provides comprehensive management of compliance frameworks including:
     - Full CRUD operations for framework lifecycle management
     - Framework-specific data retrieval (clauses, controls, statistics)
     - Advanced filtering and search capabilities
     - Framework status and metadata management
-    
+
     **Key Features:**
     - Support for major frameworks (ISO 27001, NIST CSF, SOC 2, etc.)
     - Framework versioning and effective date tracking
     - Integration with clause and control management
     - Statistical reporting and analytics
-    
+
     **Common Use Cases:**
     - Import new compliance frameworks
     - Track framework versions and updates
     - Analyze framework coverage and implementation
     - Generate framework-specific reports
     """
+
     queryset = Framework.objects.all()
     permission_classes = [IsAuthenticated]
     audit_fields = FRAMEWORK_FIELDS
-    audit_event_prefix = 'CATALOGUE_FRAMEWORK'
+    audit_event_prefix = "CATALOGUE_FRAMEWORK"
     audit_display = staticmethod(framework_display)
-    audit_created_by_field = 'created_by'
+    audit_created_by_field = "created_by"
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['framework_type', 'status', 'is_mandatory']
-    search_fields = ['name', 'short_name', 'description', 'issuing_organization']
-    ordering_fields = ['name', 'version', 'effective_date', 'created_at']
-    ordering = ['name', '-version']
-    
+    filterset_fields = ["framework_type", "status", "is_mandatory"]
+    search_fields = ["name", "short_name", "description", "issuing_organization"]
+    ordering_fields = ["name", "version", "effective_date", "created_at"]
+    ordering = ["name", "-version"]
+
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action == "list":
             return FrameworkListSerializer
         return FrameworkDetailSerializer
-    
+
     def get_queryset(self):
-        queryset = Framework.objects.select_related('created_by')
-        
+        queryset = Framework.objects.select_related("created_by")
+
         # Filter by active status if requested
-        if self.request.query_params.get('active_only', '').lower() == 'true':
-            queryset = queryset.filter(status='active')
-        
+        if self.request.query_params.get("active_only", "").lower() == "true":
+            queryset = queryset.filter(status="active")
+
         return queryset
-    
+
     @extend_schema(
         summary="Get framework clauses",
         description="Retrieve all clauses associated with a specific framework with optional filtering by clause type and criticality.",
         parameters=[
             OpenApiParameter(
-                name='clause_type',
+                name="clause_type",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description='Filter by clause type (control, guidance, requirement, etc.)'
+                description="Filter by clause type (control, guidance, requirement, etc.)",
             ),
             OpenApiParameter(
-                name='criticality',
+                name="criticality",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description='Filter by criticality level (low, medium, high, critical)'
+                description="Filter by criticality level (low, medium, high, critical)",
             ),
         ],
         responses={
             200: ClauseListSerializer(many=True),
-            404: OpenApiResponse(description='Framework not found'),
+            404: OpenApiResponse(description="Framework not found"),
         },
-        tags=['Frameworks'],
+        tags=["Frameworks"],
     )
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=["get"])
     def clauses(self, request, pk=None):
         """Get all clauses for a specific framework with optional filtering."""
         framework = self.get_object()
-        clauses = framework.clauses.all().order_by('sort_order', 'clause_id')
-        
+        clauses = framework.clauses.all().order_by("sort_order", "clause_id")
+
         # Apply filtering
-        clause_type = request.query_params.get('clause_type')
+        clause_type = request.query_params.get("clause_type")
         if clause_type:
             clauses = clauses.filter(clause_type=clause_type)
-        
-        criticality = request.query_params.get('criticality')
+
+        criticality = request.query_params.get("criticality")
         if criticality:
             clauses = clauses.filter(criticality=criticality)
-        
+
         serializer = ClauseListSerializer(clauses, many=True)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Get framework controls",
         description="Retrieve all controls mapped to a specific framework through clause relationships.",
         responses={
             200: ControlListSerializer(many=True),
-            404: OpenApiResponse(description='Framework not found'),
+            404: OpenApiResponse(description="Framework not found"),
         },
-        tags=['Frameworks'],
+        tags=["Frameworks"],
     )
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=["get"])
     def controls(self, request, pk=None):
         """Get all controls mapped to a specific framework."""
         framework = self.get_object()
-        controls = Control.objects.filter(
-            clauses__framework=framework
-        ).distinct().select_related('control_owner', 'created_by')
-        
+        controls = (
+            Control.objects.filter(clauses__framework=framework)
+            .distinct()
+            .select_related("control_owner", "created_by")
+        )
+
         serializer = ControlListSerializer(controls, many=True)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Get framework statistics",
         description="Retrieve comprehensive statistics for a specific framework including clause counts, control distribution, and testing status.",
         responses={
             200: OpenApiResponse(
-                description='Framework statistics',
+                description="Framework statistics",
                 examples=[
                     OpenApiExample(
-                        'Framework Statistics',
-                        summary='Example framework statistics response',
-                        description='Comprehensive statistics for ISO 27001 framework',
+                        "Framework Statistics",
+                        summary="Example framework statistics response",
+                        description="Comprehensive statistics for ISO 27001 framework",
                         value={
-                            'framework_id': 1,
-                            'framework_name': 'ISO 27001:2022',
-                            'total_clauses': 114,
-                            'total_controls': 93,
-                            'active_controls': 89,
-                            'controls_needing_testing': 12,
-                            'clause_types': {'control': 93, 'guidance': 21},
-                            'control_statuses': {'active': 89, 'draft': 4}
-                        }
+                            "framework_id": 1,
+                            "framework_name": "ISO 27001:2022",
+                            "total_clauses": 114,
+                            "total_controls": 93,
+                            "active_controls": 89,
+                            "controls_needing_testing": 12,
+                            "clause_types": {"control": 93, "guidance": 21},
+                            "control_statuses": {"active": 89, "draft": 4},
+                        },
                     ),
-                ]
+                ],
             ),
-            404: OpenApiResponse(description='Framework not found'),
+            404: OpenApiResponse(description="Framework not found"),
         },
-        tags=['Frameworks'],
+        tags=["Frameworks"],
     )
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=["get"])
     def stats(self, request, pk=None):
         """Get comprehensive statistics for a specific framework."""
         framework = self.get_object()
-        
+
         total_clauses = framework.clauses.count()
         total_controls = Control.objects.filter(clauses__framework=framework).distinct().count()
-        active_controls = Control.objects.filter(
-            clauses__framework=framework, status='active'
-        ).distinct().count()
-        controls_needing_testing = Control.objects.filter(
-            clauses__framework=framework
-        ).distinct().filter(
-            Q(last_tested_date__isnull=True) |
-            Q(last_tested_date__lt=timezone.now().date() - timezone.timedelta(days=90))
-        ).count()
-        
-        clause_types = framework.clauses.values('clause_type').annotate(
-            count=Count('id')
-        ).order_by('clause_type')
-        
-        control_statuses = Control.objects.filter(
-            clauses__framework=framework
-        ).distinct().values('status').annotate(
-            count=Count('id')
-        ).order_by('status')
-        
+        active_controls = (
+            Control.objects.filter(clauses__framework=framework, status="active").distinct().count()
+        )
+        controls_needing_testing = (
+            Control.objects.filter(clauses__framework=framework)
+            .distinct()
+            .filter(
+                Q(last_tested_date__isnull=True)
+                | Q(last_tested_date__lt=timezone.now().date() - timezone.timedelta(days=90))
+            )
+            .count()
+        )
+
+        clause_types = (
+            framework.clauses.values("clause_type")
+            .annotate(count=Count("id"))
+            .order_by("clause_type")
+        )
+
+        control_statuses = (
+            Control.objects.filter(clauses__framework=framework)
+            .distinct()
+            .values("status")
+            .annotate(count=Count("id"))
+            .order_by("status")
+        )
+
         stats = {
-            'framework_id': framework.id,
-            'framework_name': framework.name,
-            'total_clauses': total_clauses,
-            'total_controls': total_controls,
-            'active_controls': active_controls,
-            'controls_needing_testing': controls_needing_testing,
-            'clause_types': {item['clause_type']: item['count'] for item in clause_types},
-            'control_statuses': {item['status']: item['count'] for item in control_statuses}
+            "framework_id": framework.id,
+            "framework_name": framework.name,
+            "total_clauses": total_clauses,
+            "total_controls": total_controls,
+            "active_controls": active_controls,
+            "controls_needing_testing": controls_needing_testing,
+            "clause_types": {item["clause_type"]: item["count"] for item in clause_types},
+            "control_statuses": {item["status"]: item["count"] for item in control_statuses},
         }
-        
+
         return Response(stats)
 
 
@@ -378,58 +412,57 @@ class ClauseViewSet(CatalogueAuditMixin, viewsets.ModelViewSet):
     ViewSet for managing framework clauses.
     Provides CRUD operations and clause-specific endpoints.
     """
+
     queryset = Clause.objects.all()
     permission_classes = [IsAuthenticated]
     audit_fields = CLAUSE_FIELDS
-    audit_event_prefix = 'CATALOGUE_CLAUSE'
+    audit_event_prefix = "CATALOGUE_CLAUSE"
     audit_display = staticmethod(clause_display)
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['framework', 'clause_type', 'criticality', 'is_testable', 'parent_clause']
-    search_fields = ['clause_id', 'title', 'description']
-    ordering_fields = ['sort_order', 'clause_id', 'created_at']
-    ordering = ['framework', 'sort_order', 'clause_id']
-    
+    filterset_fields = ["framework", "clause_type", "criticality", "is_testable", "parent_clause"]
+    search_fields = ["clause_id", "title", "description"]
+    ordering_fields = ["sort_order", "clause_id", "created_at"]
+    ordering = ["framework", "sort_order", "clause_id"]
+
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action == "list":
             return ClauseListSerializer
         return ClauseDetailSerializer
-    
+
     def get_queryset(self):
-        queryset = Clause.objects.select_related('framework', 'parent_clause')
-        
+        queryset = Clause.objects.select_related("framework", "parent_clause")
+
         # Filter by framework if specified
-        framework_id = self.request.query_params.get('framework')
+        framework_id = self.request.query_params.get("framework")
         if framework_id:
             queryset = queryset.filter(framework_id=framework_id)
-        
+
         return queryset
-    
-    @action(detail=True, methods=['get'])
+
+    @action(detail=True, methods=["get"])
     def controls(self, request, pk=None):
         """Get all controls mapped to a specific clause."""
         clause = self.get_object()
-        controls = clause.controls.all().select_related('control_owner', 'created_by')
-        
+        controls = clause.controls.all().select_related("control_owner", "created_by")
+
         serializer = ControlListSerializer(controls, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=["get"])
     def templates(self, request, pk=None):
         """Get template documents linked to a specific clause."""
         clause = self.get_object()
-        templates = clause.template_documents.select_related(
-            'document', 'framework', 'control'
-        )
+        templates = clause.template_documents.select_related("document", "framework", "control")
 
         serializer = TemplateDocumentSummarySerializer(templates, many=True)
         return Response(serializer.data)
-    
-    @action(detail=True, methods=['get'])
+
+    @action(detail=True, methods=["get"])
     def subclauses(self, request, pk=None):
         """Get all subclauses for a specific clause."""
         clause = self.get_object()
-        subclauses = clause.subclauses.all().order_by('sort_order', 'clause_id')
-        
+        subclauses = clause.subclauses.all().order_by("sort_order", "clause_id")
+
         serializer = ClauseListSerializer(subclauses, many=True)
         return Response(serializer.data)
 
@@ -439,128 +472,133 @@ class ControlViewSet(CatalogueAuditMixin, viewsets.ModelViewSet):
     ViewSet for managing controls.
     Provides CRUD operations and control-specific endpoints.
     """
+
     queryset = Control.objects.all()
     permission_classes = [IsAuthenticated]
     audit_fields = CONTROL_FIELDS
-    audit_event_prefix = 'CATALOGUE_CONTROL'
+    audit_event_prefix = "CATALOGUE_CONTROL"
     audit_display = staticmethod(control_display)
     audit_snapshot = staticmethod(snapshot_control)
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
-        'control_type', 'automation_level', 'status', 'control_owner',
-        'effectiveness_rating', 'last_test_result', 'risk_rating'
+        "control_type",
+        "automation_level",
+        "status",
+        "control_owner",
+        "effectiveness_rating",
+        "last_test_result",
+        "risk_rating",
     ]
-    search_fields = ['control_id', 'name', 'description', 'business_owner']
-    ordering_fields = ['control_id', 'name', 'last_tested_date', 'created_at']
-    ordering = ['control_id']
-    
+    search_fields = ["control_id", "name", "description", "business_owner"]
+    ordering_fields = ["control_id", "name", "last_tested_date", "created_at"]
+    ordering = ["control_id"]
+
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action == "list":
             return ControlListSerializer
-        elif self.action in ['create', 'update', 'partial_update']:
+        elif self.action in ["create", "update", "partial_update"]:
             return ControlCreateUpdateSerializer
         return ControlDetailSerializer
-    
+
     def get_queryset(self):
-        queryset = Control.objects.select_related(
-            'control_owner', 'created_by'
-        ).prefetch_related('clauses__framework')
-        
+        queryset = Control.objects.select_related("control_owner", "created_by").prefetch_related(
+            "clauses__framework"
+        )
+
         # Filter by framework if specified
-        framework_id = self.request.query_params.get('framework')
+        framework_id = self.request.query_params.get("framework")
         if framework_id:
             queryset = queryset.filter(clauses__framework_id=framework_id).distinct()
-        
+
         # Filter by testing status
-        needs_testing = self.request.query_params.get('needs_testing')
-        if needs_testing == 'true':
+        needs_testing = self.request.query_params.get("needs_testing")
+        if needs_testing == "true":
             queryset = queryset.filter(
-                Q(last_tested_date__isnull=True) |
-                Q(last_tested_date__lt=timezone.now().date() - timezone.timedelta(days=90))
+                Q(last_tested_date__isnull=True)
+                | Q(last_tested_date__lt=timezone.now().date() - timezone.timedelta(days=90))
             )
-        
+
         # Filter by active status
-        active_only = self.request.query_params.get('active_only')
-        if active_only == 'true':
-            queryset = queryset.filter(status='active')
-        
+        active_only = self.request.query_params.get("active_only")
+        if active_only == "true":
+            queryset = queryset.filter(status="active")
+
         return queryset
-    
-    @action(detail=True, methods=['post'])
+
+    @action(detail=True, methods=["post"])
     def update_testing(self, request, pk=None):
         """Update control testing results."""
         control = self.get_object()
         previous = snapshot_control(control)
-        serializer = ControlTestingSerializer(
-            data=request.data, 
-            context={'request': request}
-        )
-        
+        serializer = ControlTestingSerializer(data=request.data, context={"request": request})
+
         if serializer.is_valid():
             updated_control = serializer.update_control_testing(control)
             new = snapshot_control(updated_control)
             previous_changed, new_changed = changed_values(previous, new)
             audit_catalogue_change(
-                event='CATALOGUE_CONTROL_TESTING_UPDATED',
+                event="CATALOGUE_CONTROL_TESTING_UPDATED",
                 actor=request.user,
                 target=updated_control,
                 object_display=control_display(updated_control),
                 request=request,
                 previous=previous_changed,
                 new=new_changed,
-                reason=serializer.validated_data.get('notes', ''),
+                reason=serializer.validated_data.get("notes", ""),
             )
             response_serializer = ControlDetailSerializer(updated_control)
             return Response(response_serializer.data)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    @action(detail=True, methods=['get'])
+
+    @action(detail=True, methods=["get"])
     def evidence(self, request, pk=None):
         """Get all evidence for a specific control."""
         control = self.get_object()
-        evidence = control.evidence.all().select_related(
-            'collected_by', 'validated_by', 'document'
-        ).order_by('-evidence_date')
-        
+        evidence = (
+            control.evidence.all()
+            .select_related("collected_by", "validated_by", "document")
+            .order_by("-evidence_date")
+        )
+
         serializer = ControlEvidenceSerializer(evidence, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=["get"])
     def templates(self, request, pk=None):
         """Get template documents linked to a specific control."""
         control = self.get_object()
-        templates = control.template_documents.select_related(
-            'document', 'framework', 'clause'
-        )
+        templates = control.template_documents.select_related("document", "framework", "clause")
 
         serializer = TemplateDocumentSummarySerializer(templates, many=True)
         return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'])
+
+    @action(detail=False, methods=["get"])
     def needing_testing(self, request):
         """Get all controls that need testing."""
         controls = self.get_queryset().filter(
-            Q(last_tested_date__isnull=True) |
-            Q(last_tested_date__lt=timezone.now().date() - timezone.timedelta(days=90))
+            Q(last_tested_date__isnull=True)
+            | Q(last_tested_date__lt=timezone.now().date() - timezone.timedelta(days=90))
         )
-        
+
         serializer = ControlListSerializer(controls, many=True)
         return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'])
+
+    @action(detail=False, methods=["get"])
     def by_effectiveness(self, request):
         """Get controls grouped by effectiveness rating."""
         effectiveness_groups = {}
-        
+
         for rating, display in Control.EFFECTIVENESS_RATINGS:
             controls = self.get_queryset().filter(effectiveness_rating=rating)
             effectiveness_groups[rating] = {
-                'display_name': display,
-                'count': controls.count(),
-                'controls': ControlListSerializer(controls[:10], many=True).data  # Limit for performance
+                "display_name": display,
+                "count": controls.count(),
+                "controls": ControlListSerializer(
+                    controls[:10], many=True
+                ).data,  # Limit for performance
             }
-        
+
         return Response(effectiveness_groups)
 
 
@@ -568,93 +606,91 @@ class ControlEvidenceViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing control evidence.
     """
+
     queryset = ControlEvidence.objects.all()
     serializer_class = ControlEvidenceSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['control', 'evidence_type', 'is_validated', 'collected_by']
-    search_fields = ['title', 'description']
-    ordering_fields = ['evidence_date', 'created_at']
-    ordering = ['-evidence_date']
+    filterset_fields = ["control", "evidence_type", "is_validated", "collected_by"]
+    search_fields = ["title", "description"]
+    ordering_fields = ["evidence_date", "created_at"]
+    ordering = ["-evidence_date"]
     throttle_scope_by_action = {"create": "evidence_upload"}
 
     def get_throttles(self):
-        self.throttle_scope = self.throttle_scope_by_action.get(
-            getattr(self, "action", "") or ""
-        )
+        self.throttle_scope = self.throttle_scope_by_action.get(getattr(self, "action", "") or "")
         return super().get_throttles()
-    
+
     def get_queryset(self):
         return ControlEvidence.objects.select_related(
-            'control', 'collected_by', 'validated_by', 'document'
+            "control", "collected_by", "validated_by", "document"
         )
-    
+
     def perform_create(self, serializer):
         serializer.save(collected_by=self.request.user)
-    
-    @action(detail=True, methods=['post'])
+
+    @action(detail=True, methods=["post"])
     def validate_evidence(self, request, pk=None):
         """Validate a piece of evidence."""
         evidence = self.get_object()
-        notes = request.data.get('notes', '')
-        
+        notes = request.data.get("notes", "")
+
         evidence.validate_evidence(request.user, notes)
-        
+
         serializer = self.get_serializer(evidence)
         return Response(serializer.data)
-    
-    @action(detail=True, methods=['get'])
+
+    @action(detail=True, methods=["get"])
     def assessments(self, request, pk=None):
         """Get all assessments that use this evidence."""
         evidence = self.get_object()
-        
+
         assessment_links = AssessmentEvidence.objects.select_related(
-            'assessment',
-            'assessment__control',
-            'created_by'
+            "assessment", "assessment__control", "created_by"
         ).filter(evidence=evidence)
-        
+
         assessments_data = []
         for link in assessment_links:
-            assessments_data.append({
-                'assessment_id': link.assessment.id,
-                'assessment_identifier': link.assessment.assessment_id,
-                'control_id': link.assessment.control.control_id,
-                'control_name': link.assessment.control.name,
-                'assessment_status': link.assessment.status,
-                'evidence_purpose': link.evidence_purpose,
-                'is_primary_evidence': link.is_primary_evidence,
-                'linked_by': link.created_by.username if link.created_by else None,
-                'linked_at': link.created_at
-            })
-        
-        return Response({
-            'evidence_id': evidence.id,
-            'evidence_title': evidence.title,
-            'usage_count': assessment_links.count(),
-            'assessments': assessments_data
-        })
+            assessments_data.append(
+                {
+                    "assessment_id": link.assessment.id,
+                    "assessment_identifier": link.assessment.assessment_id,
+                    "control_id": link.assessment.control.control_id,
+                    "control_name": link.assessment.control.name,
+                    "assessment_status": link.assessment.status,
+                    "evidence_purpose": link.evidence_purpose,
+                    "is_primary_evidence": link.is_primary_evidence,
+                    "linked_by": link.created_by.username if link.created_by else None,
+                    "linked_at": link.created_at,
+                }
+            )
+
+        return Response(
+            {
+                "evidence_id": evidence.id,
+                "evidence_title": evidence.title,
+                "usage_count": assessment_links.count(),
+                "assessments": assessments_data,
+            }
+        )
 
 
 class TemplateDocumentViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for discovering imported template and sample documents.
     """
+
     serializer_class = TemplateDocumentSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = [
-        'module', 'document_type', 'framework', 'clause', 'control'
-    ]
-    search_fields = [
-        'title', 'document_code', 'source_filename', 'source_path'
-    ]
-    ordering_fields = ['title', 'module', 'document_type', 'created_at']
-    ordering = ['module', 'document_type', 'title']
+    filterset_fields = ["module", "document_type", "framework", "clause", "control"]
+    search_fields = ["title", "document_code", "source_filename", "source_path"]
+    ordering_fields = ["title", "module", "document_type", "created_at"]
+    ordering = ["module", "document_type", "title"]
 
     def get_queryset(self):
         return TemplateDocument.objects.select_related(
-            'document', 'framework', 'clause', 'control', 'imported_by'
+            "document", "framework", "clause", "control", "imported_by"
         )
 
     @extend_schema(
@@ -664,39 +700,41 @@ class TemplateDocumentViewSet(viewsets.ReadOnlyModelViewSet):
         responses={
             200: TemplateImportSummarySerializer,
             201: TemplateImportSummarySerializer,
-            400: OpenApiResponse(description='Missing or invalid template library upload'),
-            403: OpenApiResponse(description='Staff administrator access required'),
+            400: OpenApiResponse(description="Missing or invalid template library upload"),
+            403: OpenApiResponse(description="Staff administrator access required"),
         },
-        tags=['Template Documents'],
+        tags=["Template Documents"],
     )
     @action(
         detail=False,
-        methods=['post'],
+        methods=["post"],
         parser_classes=[MultiPartParser, FormParser],
-        url_path='import-library',
+        url_path="import-library",
     )
     def import_library(self, request):
         """Import a ZIP template library from the admin web interface."""
         if not request.user.is_staff and not request.user.is_superuser:
             return Response(
-                {'detail': 'Only staff administrators can import template libraries.'},
+                {"detail": "Only staff administrators can import template libraries."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        upload = request.FILES.get('file')
+        upload = request.FILES.get("file")
         if not upload:
             return Response(
-                {'file': ['A ZIP file is required.']},
+                {"file": ["A ZIP file is required."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        dry_run = str(request.data.get('dry_run', '')).lower() in {'1', 'true', 'yes'}
-        framework_identifier = request.data.get('framework') or ''
-        framework_version = request.data.get('framework_version') or ''
-        module = request.data.get('module') or ''
-        document_type = request.data.get('document_type') or ''
+        dry_run = str(request.data.get("dry_run", "")).lower() in {"1", "true", "yes"}
+        framework_identifier = request.data.get("framework") or ""
+        framework_version = request.data.get("framework_version") or ""
+        module = request.data.get("module") or ""
+        document_type = request.data.get("document_type") or ""
         command = TemplateLibraryImportCommand()
 
-        with tempfile.NamedTemporaryFile(suffix=Path(upload.name).suffix, delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            suffix=Path(upload.name).suffix, delete=False
+        ) as temp_file:
             temp_path = Path(temp_file.name)
             for chunk in upload.chunks():
                 temp_file.write(chunk)
@@ -713,33 +751,33 @@ class TemplateDocumentViewSet(viewsets.ReadOnlyModelViewSet):
             except CommandError:
                 return Response(
                     {
-                        'detail': 'Template library import failed. Check the file type and supplied metadata.',
-                        'code': 'template_import_invalid',
+                        "detail": "Template library import failed. Check the file type and supplied metadata.",
+                        "code": "template_import_invalid",
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            if len(entries) == 1 and not upload.name.lower().endswith('.zip'):
-                entries[0]['source_path'] = upload.name
-                entries[0]['source_filename'] = upload.name
-                entries[0]['title'] = command.extract_title(upload.name)
-                entries[0]['document_code'] = command.extract_document_code(upload.name)
-                entries[0]['version'] = command.extract_version(upload.name)
+            if len(entries) == 1 and not upload.name.lower().endswith(".zip"):
+                entries[0]["source_path"] = upload.name
+                entries[0]["source_filename"] = upload.name
+                entries[0]["title"] = command.extract_title(upload.name)
+                entries[0]["document_code"] = command.extract_document_code(upload.name)
+                entries[0]["version"] = command.extract_version(upload.name)
 
             if dry_run:
                 return Response(
                     {
-                        'dry_run': True,
-                        'importable_count': len(entries),
-                        'skipped_count': command.skipped_count,
-                        'modules': command.count_by_key(entries, 'module'),
-                        'document_types': command.count_by_key(entries, 'document_type'),
-                        'samples': [
+                        "dry_run": True,
+                        "importable_count": len(entries),
+                        "skipped_count": command.skipped_count,
+                        "modules": command.count_by_key(entries, "module"),
+                        "document_types": command.count_by_key(entries, "document_type"),
+                        "samples": [
                             {
-                                'title': entry['title'],
-                                'module': entry['module'],
-                                'document_type': entry['document_type'],
-                                'source_filename': entry['source_filename'],
-                                'linkage_status': entry['metadata']['linkage_status'],
+                                "title": entry["title"],
+                                "module": entry["module"],
+                                "document_type": entry["document_type"],
+                                "source_filename": entry["source_filename"],
+                                "linkage_status": entry["metadata"]["linkage_status"],
                             }
                             for entry in entries[:10]
                         ],
@@ -758,13 +796,13 @@ class TemplateDocumentViewSet(viewsets.ReadOnlyModelViewSet):
 
             return Response(
                 {
-                    'dry_run': False,
-                    'imported_count': imported,
-                    'updated_count': updated,
-                    'skipped_count': command.skipped_count,
-                    'total_importable': len(entries),
-                    'modules': command.count_by_key(entries, 'module'),
-                    'document_types': command.count_by_key(entries, 'document_type'),
+                    "dry_run": False,
+                    "imported_count": imported,
+                    "updated_count": updated,
+                    "skipped_count": command.skipped_count,
+                    "total_importable": len(entries),
+                    "modules": command.count_by_key(entries, "module"),
+                    "document_types": command.count_by_key(entries, "document_type"),
                 },
                 status=status.HTTP_201_CREATED,
             )
@@ -776,59 +814,64 @@ class FrameworkMappingViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing framework mappings.
     """
+
     queryset = FrameworkMapping.objects.all()
     serializer_class = FrameworkMappingSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['mapping_type', 'source_clause__framework', 'target_clause__framework']
-    search_fields = ['mapping_rationale']
-    ordering_fields = ['confidence_level', 'created_at']
-    ordering = ['-confidence_level']
-    
+    filterset_fields = ["mapping_type", "source_clause__framework", "target_clause__framework"]
+    search_fields = ["mapping_rationale"]
+    ordering_fields = ["confidence_level", "created_at"]
+    ordering = ["-confidence_level"]
+
     def get_queryset(self):
         return FrameworkMapping.objects.select_related(
-            'source_clause__framework', 'target_clause__framework',
-            'created_by', 'verified_by'
+            "source_clause__framework", "target_clause__framework", "created_by", "verified_by"
         )
-    
+
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
 
-@action(detail=False, methods=['get'])
+@action(detail=False, methods=["get"])
 def framework_stats(request):
     """Get overall framework catalog statistics."""
     total_frameworks = Framework.objects.count()
-    active_frameworks = Framework.objects.filter(status='active').count()
+    active_frameworks = Framework.objects.filter(status="active").count()
     total_clauses = Clause.objects.count()
     total_controls = Control.objects.count()
-    active_controls = Control.objects.filter(status='active').count()
+    active_controls = Control.objects.filter(status="active").count()
     controls_needing_testing = Control.objects.filter(
-        Q(last_tested_date__isnull=True) |
-        Q(last_tested_date__lt=timezone.now().date() - timezone.timedelta(days=90))
+        Q(last_tested_date__isnull=True)
+        | Q(last_tested_date__lt=timezone.now().date() - timezone.timedelta(days=90))
     ).count()
-    
-    framework_types = Framework.objects.values('framework_type').annotate(
-        count=Count('id')
-    ).order_by('framework_type')
-    
-    control_effectiveness = Control.objects.filter(
-        effectiveness_rating__isnull=False
-    ).values('effectiveness_rating').annotate(
-        count=Count('id')
-    ).order_by('effectiveness_rating')
-    
+
+    framework_types = (
+        Framework.objects.values("framework_type")
+        .annotate(count=Count("id"))
+        .order_by("framework_type")
+    )
+
+    control_effectiveness = (
+        Control.objects.filter(effectiveness_rating__isnull=False)
+        .values("effectiveness_rating")
+        .annotate(count=Count("id"))
+        .order_by("effectiveness_rating")
+    )
+
     stats = {
-        'total_frameworks': total_frameworks,
-        'active_frameworks': active_frameworks,
-        'total_clauses': total_clauses,
-        'total_controls': total_controls,
-        'active_controls': active_controls,
-        'controls_needing_testing': controls_needing_testing,
-        'framework_types': {item['framework_type']: item['count'] for item in framework_types},
-        'control_effectiveness': {item['effectiveness_rating']: item['count'] for item in control_effectiveness}
+        "total_frameworks": total_frameworks,
+        "active_frameworks": active_frameworks,
+        "total_clauses": total_clauses,
+        "total_controls": total_controls,
+        "active_controls": active_controls,
+        "controls_needing_testing": controls_needing_testing,
+        "framework_types": {item["framework_type"]: item["count"] for item in framework_types},
+        "control_effectiveness": {
+            item["effectiveness_rating"]: item["count"] for item in control_effectiveness
+        },
     }
-    
+
     serializer = FrameworkStatsSerializer(stats)
     return Response(serializer.data)
 
@@ -839,241 +882,242 @@ def framework_stats(request):
         description="Retrieve a paginated list of control assessments with comprehensive filtering, searching, and ordering capabilities.",
         parameters=[
             OpenApiParameter(
-                name='framework',
+                name="framework",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
-                description='Filter by framework ID'
+                description="Filter by framework ID",
             ),
             OpenApiParameter(
-                name='status',
+                name="status",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description='Filter by assessment status (not_started, pending, in_progress, under_review, complete, not_applicable)'
+                description="Filter by assessment status (not_started, pending, in_progress, under_review, complete, not_applicable)",
             ),
             OpenApiParameter(
-                name='applicability',
+                name="applicability",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description='Filter by applicability (applicable, not_applicable, conditional)'
+                description="Filter by applicability (applicable, not_applicable, conditional)",
             ),
             OpenApiParameter(
-                name='assigned_to',
+                name="assigned_to",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
-                description='Filter by assigned user ID'
+                description="Filter by assigned user ID",
             ),
             OpenApiParameter(
-                name='overdue',
+                name="overdue",
                 type=OpenApiTypes.BOOL,
                 location=OpenApiParameter.QUERY,
-                description='Show only overdue assessments'
+                description="Show only overdue assessments",
             ),
             OpenApiParameter(
-                name='completed',
+                name="completed",
                 type=OpenApiTypes.BOOL,
                 location=OpenApiParameter.QUERY,
-                description='Filter by completion status'
+                description="Filter by completion status",
             ),
             OpenApiParameter(
-                name='my_assignments',
+                name="my_assignments",
                 type=OpenApiTypes.BOOL,
                 location=OpenApiParameter.QUERY,
-                description='Show only assessments assigned to current user'
+                description="Show only assessments assigned to current user",
             ),
             OpenApiParameter(
-                name='search',
+                name="search",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description='Search across assessment_id, control_id, control_name, and assessment_notes'
+                description="Search across assessment_id, control_id, control_name, and assessment_notes",
             ),
         ],
-        tags=['Assessments'],
+        tags=["Assessments"],
         examples=[
             OpenApiExample(
-                'My overdue assessments',
-                summary='Get current user\'s overdue assessments',
-                description='Example of filtering for current user\'s overdue assessments',
-                value='?my_assignments=true&overdue=true'
+                "My overdue assessments",
+                summary="Get current user's overdue assessments",
+                description="Example of filtering for current user's overdue assessments",
+                value="?my_assignments=true&overdue=true",
             ),
-        ]
+        ],
     ),
     create=extend_schema(
         summary="Create control assessment",
         description="Create a new control assessment with all required metadata and assignment information.",
-        tags=['Assessments'],
+        tags=["Assessments"],
     ),
     retrieve=extend_schema(
         summary="Get assessment details",
         description="Retrieve detailed information about a specific control assessment including evidence links and progress.",
-        tags=['Assessments'],
+        tags=["Assessments"],
     ),
     update=extend_schema(
         summary="Update assessment",
         description="Update an existing control assessment. Requires all fields.",
-        tags=['Assessments'],
+        tags=["Assessments"],
     ),
     partial_update=extend_schema(
         summary="Partially update assessment",
         description="Update specific fields of an existing control assessment.",
-        tags=['Assessments'],
+        tags=["Assessments"],
     ),
     destroy=extend_schema(
         summary="Delete assessment",
         description="Delete a control assessment and all associated evidence links.",
-        tags=['Assessments'],
+        tags=["Assessments"],
     ),
 )
 class ControlAssessmentViewSet(CatalogueAuditMixin, viewsets.ModelViewSet):
     """
     **Control Assessment Management**
-    
+
     This ViewSet provides comprehensive management of control assessments including:
     - Full assessment lifecycle management (creation, assignment, completion)
     - Evidence management and linking capabilities
     - Status tracking and progress monitoring
     - Bulk operations for efficiency
     - Advanced filtering and search capabilities
-    
+
     **Key Features:**
     - Support for various assessment statuses and workflows
     - Evidence upload and linking with file management
     - Bulk assessment creation for frameworks
     - Progress tracking and reporting
     - Assignment management and notifications
-    
+
     **Assessment Workflow:**
     1. Create assessment (manual or bulk)
     2. Assign to assessor
     3. Collect and link evidence
     4. Update status and notes
     5. Review and complete
-    
+
     **Common Use Cases:**
     - Conduct periodic control assessments
     - Track assessment progress across frameworks
     - Manage evidence collection and validation
     - Generate assessment reports and metrics
     """
+
     queryset = ControlAssessment.objects.all()
     permission_classes = [IsAuthenticated]
     audit_fields = ASSESSMENT_FIELDS
-    audit_event_prefix = 'CONTROL_ASSESSMENT'
+    audit_event_prefix = "CONTROL_ASSESSMENT"
     audit_display = staticmethod(assessment_display)
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
-        'applicability', 'status', 'implementation_status', 'assigned_to',
-        'reviewer', 'risk_rating', 'control', 'control__clauses__framework'
+        "applicability",
+        "status",
+        "implementation_status",
+        "assigned_to",
+        "reviewer",
+        "risk_rating",
+        "control",
+        "control__clauses__framework",
     ]
-    search_fields = ['assessment_id', 'control__control_id', 'control__name', 'assessment_notes']
-    ordering_fields = ['due_date', 'created_at', 'updated_at', 'completion_percentage']
-    ordering = ['due_date', 'control__control_id']
+    search_fields = ["assessment_id", "control__control_id", "control__name", "assessment_notes"]
+    ordering_fields = ["due_date", "created_at", "updated_at", "completion_percentage"]
+    ordering = ["due_date", "control__control_id"]
     throttle_scope_by_action = {
         "upload_evidence": "evidence_upload",
         "bulk_upload_evidence": "evidence_upload",
     }
 
     def get_throttles(self):
-        self.throttle_scope = self.throttle_scope_by_action.get(
-            getattr(self, "action", "") or ""
-        )
+        self.throttle_scope = self.throttle_scope_by_action.get(getattr(self, "action", "") or "")
         return super().get_throttles()
-    
+
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action == "list":
             return ControlAssessmentListSerializer
-        elif self.action in ['create', 'update', 'partial_update']:
+        elif self.action in ["create", "update", "partial_update"]:
             return ControlAssessmentCreateUpdateSerializer
         return ControlAssessmentDetailSerializer
-    
+
     def get_queryset(self):
         queryset = ControlAssessment.objects.select_related(
-            'framework', 'control', 'assigned_to', 'reviewer', 'remediation_owner',
-            'created_by'
-        ).prefetch_related('control__clauses__framework', 'evidence_links__evidence')
-        
+            "framework", "control", "assigned_to", "reviewer", "remediation_owner", "created_by"
+        ).prefetch_related("control__clauses__framework", "evidence_links__evidence")
+
         # Filter by framework if specified
-        framework_id = self.request.query_params.get('framework')
+        framework_id = self.request.query_params.get("framework")
         if framework_id:
             queryset = queryset.filter(
                 Q(framework_id=framework_id)
                 | Q(framework__isnull=True, control__clauses__framework_id=framework_id)
             ).distinct()
-        
+
         # Filter by overdue status
-        overdue = self.request.query_params.get('overdue')
-        if overdue == 'true':
+        overdue = self.request.query_params.get("overdue")
+        if overdue == "true":
             today = timezone.now().date()
             queryset = queryset.filter(
                 due_date__lt=today,
-                status__in=['not_started', 'pending', 'in_progress', 'under_review']
+                status__in=["not_started", "pending", "in_progress", "under_review"],
             )
-        
+
         # Filter by completion status
-        completed = self.request.query_params.get('completed')
-        if completed == 'true':
-            queryset = queryset.filter(status='complete')
-        elif completed == 'false':
-            queryset = queryset.exclude(status__in=['complete', 'not_applicable'])
-        
+        completed = self.request.query_params.get("completed")
+        if completed == "true":
+            queryset = queryset.filter(status="complete")
+        elif completed == "false":
+            queryset = queryset.exclude(status__in=["complete", "not_applicable"])
+
         # Filter by assigned user
-        my_assignments = self.request.query_params.get('my_assignments')
-        if my_assignments == 'true':
+        my_assignments = self.request.query_params.get("my_assignments")
+        if my_assignments == "true":
             queryset = queryset.filter(assigned_to=self.request.user)
-        
+
         return queryset
-    
-    @action(detail=True, methods=['post'])
+
+    @action(detail=True, methods=["post"])
     def update_status(self, request, pk=None):
         """Update assessment status with notes."""
         assessment = self.get_object()
         previous = snapshot_model(assessment, ASSESSMENT_FIELDS)
         serializer = AssessmentStatusUpdateSerializer(
-            data=request.data,
-            context={'request': request}
+            data=request.data, context={"request": request}
         )
-        
+
         if serializer.is_valid():
             updated_assessment = serializer.update_assessment_status(assessment)
             new = snapshot_model(updated_assessment, ASSESSMENT_FIELDS)
             previous_changed, new_changed = changed_values(previous, new)
             audit_catalogue_change(
-                event='CONTROL_ASSESSMENT_STATUS_UPDATED',
+                event="CONTROL_ASSESSMENT_STATUS_UPDATED",
                 actor=request.user,
                 target=updated_assessment,
                 object_display=assessment_display(updated_assessment),
                 request=request,
                 previous=previous_changed,
                 new=new_changed,
-                reason=serializer.validated_data.get('notes', ''),
+                reason=serializer.validated_data.get("notes", ""),
                 details={
-                    'framework_id': updated_assessment.framework_id,
-                    'framework_version': (
+                    "framework_id": updated_assessment.framework_id,
+                    "framework_version": (
                         updated_assessment.framework.version
-                        if updated_assessment.framework_id else ''
+                        if updated_assessment.framework_id
+                        else ""
                     ),
                 },
             )
             response_serializer = ControlAssessmentDetailSerializer(updated_assessment)
             return Response(response_serializer.data)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    @action(detail=True, methods=['post'])
+
+    @action(detail=True, methods=["post"])
     def link_evidence(self, request, pk=None):
         """Link evidence to this assessment."""
         assessment = self.get_object()
         data = request.data.copy()
-        data['assessment'] = assessment.id
-        
-        serializer = AssessmentEvidenceSerializer(
-            data=data,
-            context={'request': request}
-        )
-        
+        data["assessment"] = assessment.id
+
+        serializer = AssessmentEvidenceSerializer(data=data, context={"request": request})
+
         if serializer.is_valid():
             link = serializer.save()
             audit_catalogue_change(
-                event='ASSESSMENT_EVIDENCE_LINKED',
+                event="ASSESSMENT_EVIDENCE_LINKED",
                 actor=request.user,
                 target=link,
                 object_display=assessment_evidence_display(link),
@@ -1081,193 +1125,204 @@ class ControlAssessmentViewSet(CatalogueAuditMixin, viewsets.ModelViewSet):
                 new=snapshot_model(link, ASSESSMENT_EVIDENCE_FIELDS),
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     @extend_schema(
         summary="Upload evidence to assessment",
         description="Upload a file as evidence and link it directly to this assessment. Creates document, evidence, and assessment link in one operation.",
         request={
-            'multipart/form-data': {
-                'type': 'object',
-                'properties': {
-                    'file': {'type': 'string', 'format': 'binary'},
-                    'title': {'type': 'string', 'description': 'Document title'},
-                    'description': {'type': 'string', 'description': 'Document description'},
-                    'evidence_title': {'type': 'string', 'description': 'Evidence title'},
-                    'evidence_type': {'type': 'string', 'description': 'Evidence type'},
-                    'evidence_description': {'type': 'string', 'description': 'Evidence description'},
-                    'evidence_purpose': {'type': 'string', 'description': 'Purpose of evidence'},
-                    'is_primary_evidence': {'type': 'boolean', 'description': 'Is primary evidence'},
-                    'evidence_date': {'type': 'string', 'format': 'date', 'description': 'Evidence date'},
-                }
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "file": {"type": "string", "format": "binary"},
+                    "title": {"type": "string", "description": "Document title"},
+                    "description": {"type": "string", "description": "Document description"},
+                    "evidence_title": {"type": "string", "description": "Evidence title"},
+                    "evidence_type": {"type": "string", "description": "Evidence type"},
+                    "evidence_description": {
+                        "type": "string",
+                        "description": "Evidence description",
+                    },
+                    "evidence_purpose": {"type": "string", "description": "Purpose of evidence"},
+                    "is_primary_evidence": {
+                        "type": "boolean",
+                        "description": "Is primary evidence",
+                    },
+                    "evidence_date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Evidence date",
+                    },
+                },
             }
         },
         responses={
             201: OpenApiResponse(
-                description='Evidence uploaded and linked successfully',
+                description="Evidence uploaded and linked successfully",
                 examples=[
                     OpenApiExample(
-                        'Successful Upload',
-                        summary='Evidence upload success response',
-                        description='Response when evidence is successfully uploaded and linked',
+                        "Successful Upload",
+                        summary="Evidence upload success response",
+                        description="Response when evidence is successfully uploaded and linked",
                         value={
-                            'message': 'Evidence uploaded and linked to assessment successfully',
-                            'document': {
-                                'id': 123,
-                                'title': 'Network Security Policy.pdf',
-                                'file_url': '/media/documents/network_policy.pdf',
-                                'file_size': 2048576
+                            "message": "Evidence uploaded and linked to assessment successfully",
+                            "document": {
+                                "id": 123,
+                                "title": "Network Security Policy.pdf",
+                                "file_url": "/media/documents/network_policy.pdf",
+                                "file_size": 2048576,
                             },
-                            'evidence': {
-                                'id': 456,
-                                'title': 'Network Security Policy Evidence',
-                                'evidence_type': 'document'
+                            "evidence": {
+                                "id": 456,
+                                "title": "Network Security Policy Evidence",
+                                "evidence_type": "document",
                             },
-                            'assessment_link': {
-                                'id': 789,
-                                'evidence_purpose': 'Policy documentation'
-                            }
-                        }
+                            "assessment_link": {
+                                "id": 789,
+                                "evidence_purpose": "Policy documentation",
+                            },
+                        },
                     ),
-                ]
+                ],
             ),
-            400: OpenApiResponse(description='Bad request - file missing or invalid data'),
-            404: OpenApiResponse(description='Assessment not found'),
+            400: OpenApiResponse(description="Bad request - file missing or invalid data"),
+            404: OpenApiResponse(description="Assessment not found"),
         },
-        tags=['Assessments'],
+        tags=["Assessments"],
     )
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=["post"])
     def upload_evidence(self, request, pk=None):
         """Upload evidence file directly to this assessment with automatic linking."""
         assessment = self.get_object()
-        
+
         # Extract file and metadata from request
-        uploaded_file = request.FILES.get('file')
+        uploaded_file = request.FILES.get("file")
         if not uploaded_file:
-            return Response({
-                'error': 'No file provided. Please include a file in the request.'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {"error": "No file provided. Please include a file in the request."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Create document first
         from core.models import Document
+
         document = Document.objects.create(
-            title=request.data.get('title', uploaded_file.name),
-            description=request.data.get('description', ''),
+            title=request.data.get("title", uploaded_file.name),
+            description=request.data.get("description", ""),
             file=uploaded_file,
-            uploaded_by=request.user
+            uploaded_by=request.user,
         )
-        
+
         # Create evidence linked to the control
         evidence_data = {
-            'title': request.data.get('evidence_title', document.title),
-            'evidence_type': request.data.get('evidence_type', 'document'),
-            'description': request.data.get('evidence_description', ''),
-            'document': document.id,
-            'evidence_date': request.data.get('evidence_date', timezone.now().date()),
+            "title": request.data.get("evidence_title", document.title),
+            "evidence_type": request.data.get("evidence_type", "document"),
+            "description": request.data.get("evidence_description", ""),
+            "document": document.id,
+            "evidence_date": request.data.get("evidence_date", timezone.now().date()),
         }
-        
+
         evidence_serializer = ControlEvidenceSerializer(
-            data=evidence_data,
-            context={'request': request}
+            data=evidence_data, context={"request": request}
         )
-        
+
         if not evidence_serializer.is_valid():
             # Clean up document if evidence creation fails
             document.delete()
             return Response(evidence_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Save evidence with control relationship
-        evidence = evidence_serializer.save(
-            control=assessment.control,
-            collected_by=request.user
-        )
-        
+        evidence = evidence_serializer.save(control=assessment.control, collected_by=request.user)
+
         # Link evidence to assessment
         assessment_evidence_data = {
-            'assessment': assessment.id,
-            'evidence': evidence.id,
-            'evidence_purpose': request.data.get('evidence_purpose', 'Assessment evidence'),
-            'is_primary_evidence': request.data.get('is_primary_evidence', False)
+            "assessment": assessment.id,
+            "evidence": evidence.id,
+            "evidence_purpose": request.data.get("evidence_purpose", "Assessment evidence"),
+            "is_primary_evidence": request.data.get("is_primary_evidence", False),
         }
-        
+
         link_serializer = AssessmentEvidenceSerializer(
-            data=assessment_evidence_data,
-            context={'request': request}
+            data=assessment_evidence_data, context={"request": request}
         )
-        
+
         if link_serializer.is_valid():
             link = link_serializer.save()
             audit_catalogue_change(
-                event='ASSESSMENT_EVIDENCE_LINKED',
+                event="ASSESSMENT_EVIDENCE_LINKED",
                 actor=request.user,
                 target=link,
                 object_display=assessment_evidence_display(link),
                 request=request,
                 new=snapshot_model(link, ASSESSMENT_EVIDENCE_FIELDS),
-                source={'type': 'upload', 'reference': uploaded_file.name},
+                source={"type": "upload", "reference": uploaded_file.name},
             )
-            
+
             # Return complete evidence information
-            return Response({
-                'message': 'Evidence uploaded and linked to assessment successfully',
-                'document': {
-                    'id': document.id,
-                    'title': document.title,
-                    'file_url': document.file_url,
-                    'file_size': document.file_size
+            return Response(
+                {
+                    "message": "Evidence uploaded and linked to assessment successfully",
+                    "document": {
+                        "id": document.id,
+                        "title": document.title,
+                        "file_url": document.file_url,
+                        "file_size": document.file_size,
+                    },
+                    "evidence": evidence_serializer.data,
+                    "assessment_link": link_serializer.data,
                 },
-                'evidence': evidence_serializer.data,
-                'assessment_link': link_serializer.data
-            }, status=status.HTTP_201_CREATED)
+                status=status.HTTP_201_CREATED,
+            )
         else:
             # Clean up if linking fails
             evidence.delete()
             document.delete()
             return Response(link_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    @action(detail=True, methods=['get'])
+
+    @action(detail=True, methods=["get"])
     def evidence(self, request, pk=None):
         """Get all evidence linked to this assessment."""
         assessment = self.get_object()
-        
+
         # Get assessment evidence links with related evidence
         evidence_links = AssessmentEvidence.objects.select_related(
-            'evidence',
-            'evidence__document',
-            'evidence__collected_by',
-            'evidence__validated_by',
-            'created_by'
+            "evidence",
+            "evidence__document",
+            "evidence__collected_by",
+            "evidence__validated_by",
+            "created_by",
         ).filter(assessment=assessment)
-        
+
         serializer = AssessmentEvidenceSerializer(evidence_links, many=True)
-        
-        return Response({
-            'assessment_id': assessment.id,
-            'assessment_control': assessment.control.control_id,
-            'evidence_count': evidence_links.count(),
-            'evidence': serializer.data
-        })
-    
-    @action(detail=True, methods=['delete'])
+
+        return Response(
+            {
+                "assessment_id": assessment.id,
+                "assessment_control": assessment.control.control_id,
+                "evidence_count": evidence_links.count(),
+                "evidence": serializer.data,
+            }
+        )
+
+    @action(detail=True, methods=["delete"])
     def remove_evidence(self, request, pk=None):
         """Remove evidence link from this assessment."""
         assessment = self.get_object()
-        evidence_id = request.data.get('evidence_id')
-        
+        evidence_id = request.data.get("evidence_id")
+
         if not evidence_id:
-            return Response({
-                'error': 'evidence_id is required'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {"error": "evidence_id is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
             evidence_link = AssessmentEvidence.objects.get(
-                assessment=assessment,
-                evidence_id=evidence_id
+                assessment=assessment, evidence_id=evidence_id
             )
             previous = snapshot_model(evidence_link, ASSESSMENT_EVIDENCE_FIELDS)
             audit_catalogue_change(
-                event='ASSESSMENT_EVIDENCE_UNLINKED',
+                event="ASSESSMENT_EVIDENCE_UNLINKED",
                 actor=request.user,
                 target=evidence_link,
                 object_display=assessment_evidence_display(evidence_link),
@@ -1275,319 +1330,349 @@ class ControlAssessmentViewSet(CatalogueAuditMixin, viewsets.ModelViewSet):
                 previous=previous,
             )
             evidence_link.delete()
-            
-            return Response({
-                'message': 'Evidence removed from assessment successfully'
-            }, status=status.HTTP_200_OK)
-            
+
+            return Response(
+                {"message": "Evidence removed from assessment successfully"},
+                status=status.HTTP_200_OK,
+            )
+
         except AssessmentEvidence.DoesNotExist:
-            return Response({
-                'error': 'Evidence link not found for this assessment'
-            }, status=status.HTTP_404_NOT_FOUND)
-    
-    @action(detail=True, methods=['post'])
+            return Response(
+                {"error": "Evidence link not found for this assessment"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    @action(detail=True, methods=["post"])
     def bulk_upload_evidence(self, request, pk=None):
         """Upload multiple evidence files to this assessment."""
         assessment = self.get_object()
-        
-        uploaded_files = request.FILES.getlist('files')
+
+        uploaded_files = request.FILES.getlist("files")
         if not uploaded_files:
-            return Response({
-                'error': 'No files provided. Please include files in the request.'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {"error": "No files provided. Please include files in the request."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Process each file
         results = []
         errors = []
-        
+
         for i, uploaded_file in enumerate(uploaded_files):
             try:
                 # Create document
                 from core.models import Document
+
                 document = Document.objects.create(
-                    title=request.data.get(f'title_{i}', uploaded_file.name),
-                    description=request.data.get(f'description_{i}', ''),
+                    title=request.data.get(f"title_{i}", uploaded_file.name),
+                    description=request.data.get(f"description_{i}", ""),
                     file=uploaded_file,
-                    uploaded_by=request.user
+                    uploaded_by=request.user,
                 )
-                
+
                 # Create evidence
                 evidence = ControlEvidence.objects.create(
                     control=assessment.control,
-                    title=request.data.get(f'evidence_title_{i}', document.title),
-                    evidence_type=request.data.get(f'evidence_type_{i}', 'document'),
-                    description=request.data.get(f'evidence_description_{i}', ''),
+                    title=request.data.get(f"evidence_title_{i}", document.title),
+                    evidence_type=request.data.get(f"evidence_type_{i}", "document"),
+                    description=request.data.get(f"evidence_description_{i}", ""),
                     document=document,
                     evidence_date=timezone.now().date(),
-                    collected_by=request.user
+                    collected_by=request.user,
                 )
-                
+
                 # Link to assessment
                 assessment_evidence = AssessmentEvidence.objects.create(
                     assessment=assessment,
                     evidence=evidence,
-                    evidence_purpose=request.data.get(f'evidence_purpose_{i}', 'Assessment evidence'),
+                    evidence_purpose=request.data.get(
+                        f"evidence_purpose_{i}", "Assessment evidence"
+                    ),
                     is_primary_evidence=False,
-                    created_by=request.user
+                    created_by=request.user,
                 )
                 audit_catalogue_change(
-                    event='ASSESSMENT_EVIDENCE_LINKED',
+                    event="ASSESSMENT_EVIDENCE_LINKED",
                     actor=request.user,
                     target=assessment_evidence,
                     object_display=assessment_evidence_display(assessment_evidence),
                     request=request,
                     new=snapshot_model(assessment_evidence, ASSESSMENT_EVIDENCE_FIELDS),
-                    source={'type': 'upload', 'reference': uploaded_file.name},
+                    source={"type": "upload", "reference": uploaded_file.name},
                 )
-                
-                results.append({
-                    'file_name': uploaded_file.name,
-                    'document_id': document.id,
-                    'evidence_id': evidence.id,
-                    'assessment_link_id': assessment_evidence.id,
-                    'status': 'success'
-                })
-                
+
+                results.append(
+                    {
+                        "file_name": uploaded_file.name,
+                        "document_id": document.id,
+                        "evidence_id": evidence.id,
+                        "assessment_link_id": assessment_evidence.id,
+                        "status": "success",
+                    }
+                )
+
             except Exception as e:
-                errors.append({
-                    'file_name': uploaded_file.name,
-                    'error': str(e),
-                    'status': 'failed'
-                })
-        
-        return Response({
-            'message': f'Processed {len(uploaded_files)} files',
-            'successful_uploads': len(results),
-            'failed_uploads': len(errors),
-            'results': results,
-            'errors': errors
-        }, status=status.HTTP_201_CREATED if results else status.HTTP_400_BAD_REQUEST)
-    
+                errors.append(
+                    {"file_name": uploaded_file.name, "error": str(e), "status": "failed"}
+                )
+
+        return Response(
+            {
+                "message": f"Processed {len(uploaded_files)} files",
+                "successful_uploads": len(results),
+                "failed_uploads": len(errors),
+                "results": results,
+                "errors": errors,
+            },
+            status=status.HTTP_201_CREATED if results else status.HTTP_400_BAD_REQUEST,
+        )
+
     @extend_schema(
         summary="Bulk create assessments",
         description="Create multiple control assessments in bulk for a specific framework. Automatically creates assessments for all controls in the framework.",
         request=BulkAssessmentCreateSerializer,
         responses={
             201: OpenApiResponse(
-                description='Assessments created successfully',
+                description="Assessments created successfully",
                 examples=[
                     OpenApiExample(
-                        'Bulk Creation Success',
-                        summary='Successful bulk assessment creation',
-                        description='Response when assessments are successfully created in bulk',
+                        "Bulk Creation Success",
+                        summary="Successful bulk assessment creation",
+                        description="Response when assessments are successfully created in bulk",
                         value={
-                            'message': 'Created 93 assessments',
-                            'created_count': 93,
-                            'assessments': [
+                            "message": "Created 93 assessments",
+                            "created_count": 93,
+                            "assessments": [
                                 {
-                                    'id': 1,
-                                    'assessment_id': 'ASSESS-001',
-                                    'control': {'control_id': 'A.5.1.1', 'name': 'Information security policy'},
-                                    'status': 'not_started',
-                                    'assigned_to': {'username': 'assessor1', 'full_name': 'John Assessor'},
-                                    'due_date': '2024-03-15'
+                                    "id": 1,
+                                    "assessment_id": "ASSESS-001",
+                                    "control": {
+                                        "control_id": "A.5.1.1",
+                                        "name": "Information security policy",
+                                    },
+                                    "status": "not_started",
+                                    "assigned_to": {
+                                        "username": "assessor1",
+                                        "full_name": "John Assessor",
+                                    },
+                                    "due_date": "2024-03-15",
                                 }
-                            ]
-                        }
+                            ],
+                        },
                     ),
-                ]
+                ],
             ),
-            400: OpenApiResponse(description='Bad request - invalid framework or data'),
+            400: OpenApiResponse(description="Bad request - invalid framework or data"),
         },
-        tags=['Assessments'],
+        tags=["Assessments"],
     )
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=["post"])
     def bulk_create(self, request):
         """Create multiple control assessments in bulk for a framework."""
-        serializer = BulkAssessmentCreateSerializer(
-            data=request.data,
-            context={'request': request}
-        )
-        
+        serializer = BulkAssessmentCreateSerializer(data=request.data, context={"request": request})
+
         if serializer.is_valid():
             created_assessments = serializer.create_bulk_assessments()
-            framework = Framework.objects.get(id=serializer.validated_data['framework_id'])
+            framework = Framework.objects.get(id=serializer.validated_data["framework_id"])
             if created_assessments:
                 audit_catalogue_change(
-                    event='CONTROL_ASSESSMENTS_BULK_CREATED',
+                    event="CONTROL_ASSESSMENTS_BULK_CREATED",
                     actor=request.user,
                     target=framework,
                     object_display=framework_display(framework),
                     request=request,
                     new={
-                        'framework_id': str(framework.id),
-                        'framework_version': framework.version,
-                        'created_count': len(created_assessments),
-                        'assessment_ids': [
+                        "framework_id": str(framework.id),
+                        "framework_version": framework.version,
+                        "created_count": len(created_assessments),
+                        "assessment_ids": [
                             str(assessment.id) for assessment in created_assessments
                         ],
                     },
                 )
             response_serializer = ControlAssessmentListSerializer(created_assessments, many=True)
-            return Response({
-                'message': f'Created {len(created_assessments)} assessments',
-                'created_count': len(created_assessments),
-                'assessments': response_serializer.data
-            }, status=status.HTTP_201_CREATED)
-        
+            return Response(
+                {
+                    "message": f"Created {len(created_assessments)} assessments",
+                    "created_count": len(created_assessments),
+                    "assessments": response_serializer.data,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    @action(detail=False, methods=['get'])
+
+    @action(detail=False, methods=["get"])
     def overdue(self, request):
         """Get all overdue assessments."""
         today = timezone.now().date()
         assessments = self.get_queryset().filter(
-            due_date__lt=today,
-            status__in=['not_started', 'pending', 'in_progress', 'under_review']
+            due_date__lt=today, status__in=["not_started", "pending", "in_progress", "under_review"]
         )
-        
+
         serializer = ControlAssessmentListSerializer(assessments, many=True)
         return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'])
+
+    @action(detail=False, methods=["get"])
     def my_assignments(self, request):
         """Get assessments assigned to current user."""
         assessments = self.get_queryset().filter(assigned_to=request.user)
-        
+
         serializer = ControlAssessmentListSerializer(assessments, many=True)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Get assessment progress report",
         description="Generate comprehensive progress report with statistics, breakdowns, and upcoming deadlines. Optionally filter by framework.",
         parameters=[
             OpenApiParameter(
-                name='framework',
+                name="framework",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
-                description='Filter progress report by specific framework ID'
+                description="Filter progress report by specific framework ID",
             ),
         ],
         responses={
             200: AssessmentProgressSerializer,
         },
-        tags=['Assessments'],
+        tags=["Assessments"],
         examples=[
             OpenApiExample(
-                'Progress Report',
-                summary='Assessment progress report example',
-                description='Comprehensive progress report with statistics and breakdowns',
+                "Progress Report",
+                summary="Assessment progress report example",
+                description="Comprehensive progress report with statistics and breakdowns",
                 value={
-                    'framework_id': 1,
-                    'total_assessments': 93,
-                    'completed_assessments': 67,
-                    'overdue_assessments': 5,
-                    'completion_percentage': 72.0,
-                    'status_breakdown': {
-                        'complete': {'display': 'Complete', 'count': 67},
-                        'in_progress': {'display': 'In Progress', 'count': 21},
-                        'overdue': {'display': 'Overdue', 'count': 5}
+                    "framework_id": 1,
+                    "total_assessments": 93,
+                    "completed_assessments": 67,
+                    "overdue_assessments": 5,
+                    "completion_percentage": 72.0,
+                    "status_breakdown": {
+                        "complete": {"display": "Complete", "count": 67},
+                        "in_progress": {"display": "In Progress", "count": 21},
+                        "overdue": {"display": "Overdue", "count": 5},
                     },
-                    'upcoming_due_dates': [
+                    "upcoming_due_dates": [
                         {
-                            'assessment_id': 'ASSESS-089',
-                            'control_id': 'A.8.1.2',
-                            'due_date': '2024-03-20',
-                            'days_until_due': 5
+                            "assessment_id": "ASSESS-089",
+                            "control_id": "A.8.1.2",
+                            "due_date": "2024-03-20",
+                            "days_until_due": 5,
                         }
-                    ]
-                }
+                    ],
+                },
             ),
-        ]
+        ],
     )
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=["get"])
     def progress_report(self, request):
         """Generate comprehensive assessment progress report with statistics and analytics."""
         queryset = self.get_queryset()
-        framework_id = request.query_params.get('framework')
-        
+        framework_id = request.query_params.get("framework")
+
         if framework_id:
             queryset = queryset.filter(
                 Q(framework_id=framework_id)
                 | Q(framework__isnull=True, control__clauses__framework_id=framework_id)
             ).distinct()
-        
+
         # Calculate statistics
         total_assessments = queryset.count()
-        completed_assessments = queryset.filter(status='complete').count()
+        completed_assessments = queryset.filter(status="complete").count()
         overdue_assessments = queryset.filter(
             due_date__lt=timezone.now().date(),
-            status__in=['not_started', 'pending', 'in_progress', 'under_review']
+            status__in=["not_started", "pending", "in_progress", "under_review"],
         ).count()
-        
-        completion_percentage = (completed_assessments / total_assessments * 100) if total_assessments > 0 else 0
-        
+
+        completion_percentage = (
+            (completed_assessments / total_assessments * 100) if total_assessments > 0 else 0
+        )
+
         # Status breakdown
         status_breakdown = {}
         for status_choice, display in ControlAssessment.STATUS_CHOICES:
             count = queryset.filter(status=status_choice).count()
-            status_breakdown[status_choice] = {'display': display, 'count': count}
-        
+            status_breakdown[status_choice] = {"display": display, "count": count}
+
         # Applicability breakdown
         applicability_breakdown = {}
         for app_choice, display in ControlAssessment.APPLICABILITY_CHOICES:
             count = queryset.filter(applicability=app_choice).count()
-            applicability_breakdown[app_choice] = {'display': display, 'count': count}
-        
+            applicability_breakdown[app_choice] = {"display": display, "count": count}
+
         # Risk breakdown
         risk_breakdown = {}
-        for risk_choice, display in [('low', 'Low'), ('medium', 'Medium'), ('high', 'High'), ('critical', 'Critical')]:
+        for risk_choice, display in [
+            ("low", "Low"),
+            ("medium", "Medium"),
+            ("high", "High"),
+            ("critical", "Critical"),
+        ]:
             count = queryset.filter(risk_rating=risk_choice).count()
-            risk_breakdown[risk_choice] = {'display': display, 'count': count}
-        
+            risk_breakdown[risk_choice] = {"display": display, "count": count}
+
         # Upcoming due dates (next 30 days)
         upcoming = queryset.filter(
             due_date__gte=timezone.now().date(),
             due_date__lte=timezone.now().date() + timezone.timedelta(days=30),
-            status__in=['not_started', 'pending', 'in_progress', 'under_review']
-        ).order_by('due_date')
-        
+            status__in=["not_started", "pending", "in_progress", "under_review"],
+        ).order_by("due_date")
+
         upcoming_due_dates = []
         for assessment in upcoming[:10]:  # Limit to top 10
-            upcoming_due_dates.append({
-                'assessment_id': assessment.assessment_id,
-                'control_id': assessment.control.control_id,
-                'due_date': assessment.due_date,
-                'days_until_due': assessment.days_until_due,
-                'assigned_to': assessment.assigned_to.get_full_name() if assessment.assigned_to else None
-            })
-        
+            upcoming_due_dates.append(
+                {
+                    "assessment_id": assessment.assessment_id,
+                    "control_id": assessment.control.control_id,
+                    "due_date": assessment.due_date,
+                    "days_until_due": assessment.days_until_due,
+                    "assigned_to": assessment.assigned_to.get_full_name()
+                    if assessment.assigned_to
+                    else None,
+                }
+            )
+
         # Assignments by user
         assignments_by_user = {}
-        user_assignments = queryset.filter(assigned_to__isnull=False).values(
-            'assigned_to__username', 'assigned_to__first_name', 'assigned_to__last_name'
-        ).annotate(
-            total=Count('id'),
-            completed=Count('id', filter=Q(status='complete')),
-            overdue=Count('id', filter=Q(
-                due_date__lt=timezone.now().date(),
-                status__in=['not_started', 'pending', 'in_progress', 'under_review']
-            ))
+        user_assignments = (
+            queryset.filter(assigned_to__isnull=False)
+            .values("assigned_to__username", "assigned_to__first_name", "assigned_to__last_name")
+            .annotate(
+                total=Count("id"),
+                completed=Count("id", filter=Q(status="complete")),
+                overdue=Count(
+                    "id",
+                    filter=Q(
+                        due_date__lt=timezone.now().date(),
+                        status__in=["not_started", "pending", "in_progress", "under_review"],
+                    ),
+                ),
+            )
         )
-        
+
         for user_data in user_assignments:
-            username = user_data['assigned_to__username']
+            username = user_data["assigned_to__username"]
             full_name = f"{user_data['assigned_to__first_name']} {user_data['assigned_to__last_name']}".strip()
             assignments_by_user[username] = {
-                'full_name': full_name or username,
-                'total': user_data['total'],
-                'completed': user_data['completed'],
-                'overdue': user_data['overdue']
+                "full_name": full_name or username,
+                "total": user_data["total"],
+                "completed": user_data["completed"],
+                "overdue": user_data["overdue"],
             }
-        
+
         progress_data = {
-            'framework_id': int(framework_id) if framework_id else None,
-            'total_assessments': total_assessments,
-            'completed_assessments': completed_assessments,
-            'overdue_assessments': overdue_assessments,
-            'completion_percentage': round(completion_percentage, 1),
-            'status_breakdown': status_breakdown,
-            'applicability_breakdown': applicability_breakdown,
-            'risk_breakdown': risk_breakdown,
-            'upcoming_due_dates': upcoming_due_dates,
-            'assignments_by_user': assignments_by_user
+            "framework_id": int(framework_id) if framework_id else None,
+            "total_assessments": total_assessments,
+            "completed_assessments": completed_assessments,
+            "overdue_assessments": overdue_assessments,
+            "completion_percentage": round(completion_percentage, 1),
+            "status_breakdown": status_breakdown,
+            "applicability_breakdown": applicability_breakdown,
+            "risk_breakdown": risk_breakdown,
+            "upcoming_due_dates": upcoming_due_dates,
+            "assignments_by_user": assignments_by_user,
         }
-        
+
         serializer = AssessmentProgressSerializer(progress_data)
         return Response(serializer.data)
 
@@ -1596,27 +1681,26 @@ class AssessmentEvidenceViewSet(CatalogueAuditMixin, viewsets.ModelViewSet):
     """
     ViewSet for managing assessment evidence links.
     """
+
     queryset = AssessmentEvidence.objects.all()
     serializer_class = AssessmentEvidenceSerializer
     permission_classes = [IsAuthenticated]
     audit_fields = ASSESSMENT_EVIDENCE_FIELDS
-    audit_event_prefix = 'ASSESSMENT_EVIDENCE'
+    audit_event_prefix = "ASSESSMENT_EVIDENCE"
     audit_display = staticmethod(assessment_evidence_display)
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['assessment', 'evidence', 'is_primary_evidence']
-    search_fields = ['evidence_purpose', 'evidence__title']
-    ordering_fields = ['created_at']
-    ordering = ['-created_at']
-    
+    filterset_fields = ["assessment", "evidence", "is_primary_evidence"]
+    search_fields = ["evidence_purpose", "evidence__title"]
+    ordering_fields = ["created_at"]
+    ordering = ["-created_at"]
+
     def get_queryset(self):
-        return AssessmentEvidence.objects.select_related(
-            'assessment', 'evidence', 'created_by'
-        )
-    
+        return AssessmentEvidence.objects.select_related("assessment", "evidence", "created_by")
+
     def perform_create(self, serializer):
         link = serializer.save(created_by=self.request.user)
         audit_catalogue_change(
-            event='ASSESSMENT_EVIDENCE_LINKED',
+            event="ASSESSMENT_EVIDENCE_LINKED",
             actor=self.request.user,
             target=link,
             object_display=assessment_evidence_display(link),
@@ -1627,7 +1711,7 @@ class AssessmentEvidenceViewSet(CatalogueAuditMixin, viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         previous = snapshot_model(instance, ASSESSMENT_EVIDENCE_FIELDS)
         audit_catalogue_change(
-            event='ASSESSMENT_EVIDENCE_UNLINKED',
+            event="ASSESSMENT_EVIDENCE_UNLINKED",
             actor=self.request.user,
             target=instance,
             object_display=assessment_evidence_display(instance),

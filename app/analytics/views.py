@@ -26,6 +26,7 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from .services import CrossModuleAnalyticsService, AnalyticsReportGenerator
 from .models import AnalyticsReport, DashboardConfiguration
 from .operator import OperatorAnalyticsWindow, OperatorProductAnalyticsService
+
 # from .tasks import generate_analytics_report, cache_analytics_metrics  # TODO: Add PDF dependencies
 from billing.decorators import require_advanced_reporting
 
@@ -33,25 +34,28 @@ logger = logging.getLogger(__name__)
 
 
 def _is_operator(user, tenant):
-    public_schema_name = getattr(settings, 'PUBLIC_SCHEMA_NAME', 'public')
+    public_schema_name = getattr(settings, "PUBLIC_SCHEMA_NAME", "public")
     return bool(
         user
         and user.is_authenticated
         and (user.is_staff or user.is_superuser)
-        and getattr(tenant, 'schema_name', None) == public_schema_name
+        and getattr(tenant, "schema_name", None) == public_schema_name
     )
 
 
 @extend_schema(
     summary="Operator usage dashboard",
     parameters=[
-        OpenApiParameter('days', OpenApiTypes.INT, OpenApiParameter.QUERY),
-        OpenApiParameter('export', OpenApiTypes.STR, OpenApiParameter.QUERY),
+        OpenApiParameter("days", OpenApiTypes.INT, OpenApiParameter.QUERY),
+        OpenApiParameter("export", OpenApiTypes.STR, OpenApiParameter.QUERY),
     ],
-    responses={200: OpenApiTypes.OBJECT, 403: OpenApiResponse(description='Operator access required')},
-    tags=['Analytics'],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        403: OpenApiResponse(description="Operator access required"),
+    },
+    tags=["Analytics"],
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def operator_usage_dashboard(request):
     """
@@ -60,26 +64,26 @@ def operator_usage_dashboard(request):
     Returns aggregate tenant, subscription, module adoption and usage metrics
     without returning tenant-owned content such as document names or policy text.
     """
-    if not _is_operator(request.user, getattr(request, 'tenant', None)):
+    if not _is_operator(request.user, getattr(request, "tenant", None)):
         return Response(
-            {'detail': 'Only staff operators can access product analytics.'},
+            {"detail": "Only staff operators can access product analytics."},
             status=status.HTTP_403_FORBIDDEN,
         )
 
     try:
-        window = OperatorAnalyticsWindow.from_days(request.query_params.get('days', 90))
+        window = OperatorAnalyticsWindow.from_days(request.query_params.get("days", 90))
     except ValueError:
         return Response(
-            {'days': ['Enter a whole number between 1 and 365.']},
+            {"days": ["Enter a whole number between 1 and 365."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
     service = OperatorProductAnalyticsService(window=window)
     dashboard = service.build_dashboard()
 
-    if request.query_params.get('export') == 'csv':
-        response = HttpResponse(service.to_csv(dashboard), content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="operator-product-analytics.csv"'
+    if request.query_params.get("export") == "csv":
+        response = HttpResponse(service.to_csv(dashboard), content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="operator-product-analytics.csv"'
         return response
 
     return Response(dashboard)
@@ -87,10 +91,13 @@ def operator_usage_dashboard(request):
 
 @extend_schema(
     summary="Executive analytics dashboard",
-    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate executive dashboard')},
-    tags=['Analytics'],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        500: OpenApiResponse(description="Failed to generate executive dashboard"),
+    },
+    tags=["Analytics"],
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 @cache_page(60 * 15)  # Cache for 15 minutes
 def executive_dashboard(request):
@@ -106,17 +113,20 @@ def executive_dashboard(request):
     except Exception as e:
         logger.error(f"Error generating executive dashboard: {str(e)}")
         return Response(
-            {'error': 'Failed to generate executive dashboard'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to generate executive dashboard"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
 @extend_schema(
     summary="Compliance analytics dashboard",
-    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate compliance dashboard')},
-    tags=['Analytics'],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        500: OpenApiResponse(description="Failed to generate compliance dashboard"),
+    },
+    tags=["Analytics"],
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 @cache_page(60 * 10)  # Cache for 10 minutes
 def compliance_dashboard(request):
@@ -132,17 +142,20 @@ def compliance_dashboard(request):
     except Exception as e:
         logger.error(f"Error generating compliance dashboard: {str(e)}")
         return Response(
-            {'error': 'Failed to generate compliance dashboard'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to generate compliance dashboard"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
 @extend_schema(
     summary="Vendor risk analytics dashboard",
-    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate vendor dashboard')},
-    tags=['Analytics'],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        500: OpenApiResponse(description="Failed to generate vendor dashboard"),
+    },
+    tags=["Analytics"],
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 @cache_page(60 * 10)  # Cache for 10 minutes
 def vendor_risk_dashboard(request):
@@ -158,17 +171,20 @@ def vendor_risk_dashboard(request):
     except Exception as e:
         logger.error(f"Error generating vendor dashboard: {str(e)}")
         return Response(
-            {'error': 'Failed to generate vendor dashboard'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to generate vendor dashboard"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
 @extend_schema(
     summary="Policy management analytics dashboard",
-    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate policy dashboard')},
-    tags=['Analytics'],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        500: OpenApiResponse(description="Failed to generate policy dashboard"),
+    },
+    tags=["Analytics"],
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 @cache_page(60 * 10)  # Cache for 10 minutes
 def policy_management_dashboard(request):
@@ -184,17 +200,20 @@ def policy_management_dashboard(request):
     except Exception as e:
         logger.error(f"Error generating policy dashboard: {str(e)}")
         return Response(
-            {'error': 'Failed to generate policy dashboard'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to generate policy dashboard"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
 @extend_schema(
     summary="Training effectiveness analytics dashboard",
-    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate training dashboard')},
-    tags=['Analytics'],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        500: OpenApiResponse(description="Failed to generate training dashboard"),
+    },
+    tags=["Analytics"],
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 @cache_page(60 * 10)  # Cache for 10 minutes
 def training_effectiveness_dashboard(request):
@@ -210,17 +229,20 @@ def training_effectiveness_dashboard(request):
     except Exception as e:
         logger.error(f"Error generating training dashboard: {str(e)}")
         return Response(
-            {'error': 'Failed to generate training dashboard'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to generate training dashboard"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
 @extend_schema(
     summary="Integrated risk posture analytics",
-    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate integrated risk analysis')},
-    tags=['Analytics'],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        500: OpenApiResponse(description="Failed to generate integrated risk analysis"),
+    },
+    tags=["Analytics"],
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 @require_advanced_reporting  # Premium feature
 @cache_page(60 * 20)  # Cache for 20 minutes
@@ -238,17 +260,20 @@ def integrated_risk_posture(request):
     except Exception as e:
         logger.error(f"Error generating integrated risk posture: {str(e)}")
         return Response(
-            {'error': 'Failed to generate integrated risk analysis'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to generate integrated risk analysis"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
 @extend_schema(
     summary="Executive report analytics data",
-    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate executive report')},
-    tags=['Analytics'],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        500: OpenApiResponse(description="Failed to generate executive report"),
+    },
+    tags=["Analytics"],
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 @require_advanced_reporting  # Premium feature
 @cache_page(60 * 30)  # Cache for 30 minutes
@@ -266,17 +291,20 @@ def executive_report_data(request):
     except Exception as e:
         logger.error(f"Error generating executive report: {str(e)}")
         return Response(
-            {'error': 'Failed to generate executive report'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to generate executive report"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
 @extend_schema(
     summary="Operational analytics dashboard",
-    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate operational dashboard')},
-    tags=['Analytics'],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        500: OpenApiResponse(description="Failed to generate operational dashboard"),
+    },
+    tags=["Analytics"],
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 @cache_page(60 * 5)  # Cache for 5 minutes
 def operational_dashboard(request):
@@ -292,17 +320,20 @@ def operational_dashboard(request):
     except Exception as e:
         logger.error(f"Error generating operational dashboard: {str(e)}")
         return Response(
-            {'error': 'Failed to generate operational dashboard'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to generate operational dashboard"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
 @extend_schema(
     summary="Analytics health check",
-    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Analytics service unavailable')},
-    tags=['Analytics'],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        500: OpenApiResponse(description="Analytics service unavailable"),
+    },
+    tags=["Analytics"],
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def analytics_health_check(request):
     """
@@ -314,19 +345,20 @@ def analytics_health_check(request):
     try:
         # Basic health checks
         from django.db import connections
-        db_conn = connections['default']
+
+        db_conn = connections["default"]
         db_conn.cursor()
 
         # Check cache availability
-        cache.set('health_check', 'ok', 30)
-        cache_status = cache.get('health_check') == 'ok'
+        cache.set("health_check", "ok", 30)
+        cache_status = cache.get("health_check") == "ok"
 
         health_data = {
-            'status': 'healthy',
-            'database': 'connected',
-            'cache': 'available' if cache_status else 'unavailable',
-            'analytics_service': 'operational',
-            'timestamp': CrossModuleAnalyticsService.get_executive_dashboard_data()['generated_at']
+            "status": "healthy",
+            "database": "connected",
+            "cache": "available" if cache_status else "unavailable",
+            "analytics_service": "operational",
+            "timestamp": CrossModuleAnalyticsService.get_executive_dashboard_data()["generated_at"],
         }
 
         return Response(health_data, status=status.HTTP_200_OK)
@@ -334,12 +366,8 @@ def analytics_health_check(request):
     except Exception as e:
         logger.error(f"Analytics health check failed: {str(e)}")
         return Response(
-            {
-                'status': 'unhealthy',
-                'error': str(e),
-                'timestamp': timezone.now().isoformat()
-            },
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"status": "unhealthy", "error": str(e), "timestamp": timezone.now().isoformat()},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
@@ -348,12 +376,12 @@ def analytics_health_check(request):
     request=OpenApiTypes.OBJECT,
     responses={
         202: OpenApiTypes.OBJECT,
-        400: OpenApiResponse(description='Invalid report export request'),
-        500: OpenApiResponse(description='Failed to create export job'),
+        400: OpenApiResponse(description="Invalid report export request"),
+        500: OpenApiResponse(description="Failed to create export job"),
     },
-    tags=['Analytics'],
+    tags=["Analytics"],
 )
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def export_report(request):
     """
@@ -364,28 +392,31 @@ def export_report(request):
     """
     try:
         # Validate request data
-        report_type = request.data.get('report_type')
-        export_format = request.data.get('export_format', 'pdf')
-        title = request.data.get('title', f'{report_type.title()} Analytics Report')
-        description = request.data.get('description', '')
-        filters = request.data.get('filters', {})
+        report_type = request.data.get("report_type")
+        export_format = request.data.get("export_format", "pdf")
+        title = request.data.get("title", f"{report_type.title()} Analytics Report")
+        description = request.data.get("description", "")
+        filters = request.data.get("filters", {})
 
         if not report_type:
             return Response(
-                {'error': 'report_type is required'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "report_type is required"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         if report_type not in [choice[0] for choice in AnalyticsReport.REPORT_TYPES]:
             return Response(
-                {'error': f'Invalid report_type. Must be one of: {[choice[0] for choice in AnalyticsReport.REPORT_TYPES]}'},
-                status=status.HTTP_400_BAD_REQUEST
+                {
+                    "error": f"Invalid report_type. Must be one of: {[choice[0] for choice in AnalyticsReport.REPORT_TYPES]}"
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if export_format not in [choice[0] for choice in AnalyticsReport.EXPORT_FORMATS]:
             return Response(
-                {'error': f'Invalid export_format. Must be one of: {[choice[0] for choice in AnalyticsReport.EXPORT_FORMATS]}'},
-                status=status.HTTP_400_BAD_REQUEST
+                {
+                    "error": f"Invalid export_format. Must be one of: {[choice[0] for choice in AnalyticsReport.EXPORT_FORMATS]}"
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Create the report record
@@ -396,38 +427,43 @@ def export_report(request):
             title=title,
             description=description,
             filters=filters,
-            date_range_start=request.data.get('date_range_start'),
-            date_range_end=request.data.get('date_range_end'),
+            date_range_start=request.data.get("date_range_start"),
+            date_range_end=request.data.get("date_range_end"),
         )
 
         # Queue the background job
         # task_result = generate_analytics_report.delay(str(report.id))  # TODO: Enable when tasks are ready
-        task_result = type('MockTask', (), {'id': 'mock-task-id'})()
+        task_result = type("MockTask", (), {"id": "mock-task-id"})()
 
         logger.info(f"Queued analytics report generation: {report.id} for user {request.user.id}")
 
-        return Response({
-            'report_id': str(report.id),
-            'task_id': task_result.id,
-            'status': 'queued',
-            'estimated_completion': timezone.now() + timezone.timedelta(minutes=5),
-            'message': f'{export_format.upper()} report generation has been queued'
-        }, status=status.HTTP_202_ACCEPTED)
+        return Response(
+            {
+                "report_id": str(report.id),
+                "task_id": task_result.id,
+                "status": "queued",
+                "estimated_completion": timezone.now() + timezone.timedelta(minutes=5),
+                "message": f"{export_format.upper()} report generation has been queued",
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
 
     except Exception as e:
         logger.error(f"Error creating export job: {str(e)}")
         return Response(
-            {'error': 'Failed to create export job'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to create export job"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
 @extend_schema(
     summary="Get analytics report status",
-    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to check report status')},
-    tags=['Analytics'],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        500: OpenApiResponse(description="Failed to check report status"),
+    },
+    tags=["Analytics"],
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def report_status(request, report_id):
     """
@@ -437,61 +473,58 @@ def report_status(request, report_id):
     when completed.
     """
     try:
-        report = get_object_or_404(
-            AnalyticsReport,
-            id=report_id,
-            requested_by=request.user
-        )
+        report = get_object_or_404(AnalyticsReport, id=report_id, requested_by=request.user)
 
         response_data = {
-            'report_id': str(report.id),
-            'status': report.status,
-            'title': report.title,
-            'report_type': report.report_type,
-            'export_format': report.export_format,
-            'created_at': report.created_at,
-            'started_at': report.started_at,
-            'completed_at': report.completed_at,
+            "report_id": str(report.id),
+            "status": report.status,
+            "title": report.title,
+            "report_type": report.report_type,
+            "export_format": report.export_format,
+            "created_at": report.created_at,
+            "started_at": report.started_at,
+            "completed_at": report.completed_at,
         }
 
-        if report.status == 'completed' and report.is_downloadable:
-            response_data.update({
-                'download_url': f'/api/analytics/reports/{report_id}/download/',
-                'file_size': report.file_size,
-                'data_points_included': report.data_points_included,
-                'generation_time_seconds': report.generation_time_seconds,
-                'expires_at': report.expires_at,
-                'download_count': report.download_count,
-            })
-        elif report.status == 'failed':
-            response_data['error_message'] = report.error_message
-        elif report.status == 'processing':
+        if report.status == "completed" and report.is_downloadable:
+            response_data.update(
+                {
+                    "download_url": f"/api/analytics/reports/{report_id}/download/",
+                    "file_size": report.file_size,
+                    "data_points_included": report.data_points_included,
+                    "generation_time_seconds": report.generation_time_seconds,
+                    "expires_at": report.expires_at,
+                    "download_count": report.download_count,
+                }
+            )
+        elif report.status == "failed":
+            response_data["error_message"] = report.error_message
+        elif report.status == "processing":
             if report.started_at:
                 elapsed = (timezone.now() - report.started_at).total_seconds()
-                response_data['processing_time_seconds'] = elapsed
+                response_data["processing_time_seconds"] = elapsed
 
         return Response(response_data)
 
     except Exception as e:
         logger.error(f"Error checking report status {report_id}: {str(e)}")
         return Response(
-            {'error': 'Failed to check report status'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to check report status"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
 @extend_schema(
     summary="Download analytics report",
     responses={
-        200: OpenApiResponse(description='Generated report file'),
-        400: OpenApiResponse(description='Report is not ready'),
-        404: OpenApiResponse(description='Report file not found'),
-        410: OpenApiResponse(description='Report has expired'),
-        500: OpenApiResponse(description='Failed to download report'),
+        200: OpenApiResponse(description="Generated report file"),
+        400: OpenApiResponse(description="Report is not ready"),
+        404: OpenApiResponse(description="Report file not found"),
+        410: OpenApiResponse(description="Report has expired"),
+        500: OpenApiResponse(description="Failed to download report"),
     },
-    tags=['Analytics'],
+    tags=["Analytics"],
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def download_report(request, report_id):
     """
@@ -500,34 +533,28 @@ def download_report(request, report_id):
     Serves the generated report file and increments download counter.
     """
     try:
-        report = get_object_or_404(
-            AnalyticsReport,
-            id=report_id,
-            requested_by=request.user
-        )
+        report = get_object_or_404(AnalyticsReport, id=report_id, requested_by=request.user)
 
         if not report.is_downloadable:
-            if report.status != 'completed':
+            if report.status != "completed":
                 return Response(
-                    {'error': f'Report is not ready for download. Status: {report.status}'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": f"Report is not ready for download. Status: {report.status}"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             elif report.is_expired:
                 return Response(
-                    {'error': 'Report has expired and is no longer available'},
-                    status=status.HTTP_410_GONE
+                    {"error": "Report has expired and is no longer available"},
+                    status=status.HTTP_410_GONE,
                 )
             else:
                 return Response(
-                    {'error': 'Report file is not available'},
-                    status=status.HTTP_404_NOT_FOUND
+                    {"error": "Report file is not available"}, status=status.HTTP_404_NOT_FOUND
                 )
 
         # Check if file exists in storage
         if not default_storage.exists(report.file_path):
             return Response(
-                {'error': 'Report file not found in storage'},
-                status=status.HTTP_404_NOT_FOUND
+                {"error": "Report file not found in storage"}, status=status.HTTP_404_NOT_FOUND
             )
 
         # Get file content and metadata
@@ -537,22 +564,24 @@ def download_report(request, report_id):
         if not content_type:
             # Set default content types based on format
             format_content_types = {
-                'pdf': 'application/pdf',
-                'excel': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'csv': 'text/csv',
-                'json': 'application/json',
+                "pdf": "application/pdf",
+                "excel": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "csv": "text/csv",
+                "json": "application/json",
             }
-            content_type = format_content_types.get(report.export_format, 'application/octet-stream')
+            content_type = format_content_types.get(
+                report.export_format, "application/octet-stream"
+            )
 
         # Create filename
         filename = f"{report.title.replace(' ', '_')}_{report.created_at.strftime('%Y%m%d')}.{report.export_format}"
-        if report.export_format == 'excel':
-            filename = filename.replace('.excel', '.xlsx')
+        if report.export_format == "excel":
+            filename = filename.replace(".excel", ".xlsx")
 
         # Create response
         response = HttpResponse(file_content, content_type=content_type)
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        response['Content-Length'] = len(file_content)
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["Content-Length"] = len(file_content)
 
         # Increment download counter
         report.increment_download_count()
@@ -564,18 +593,20 @@ def download_report(request, report_id):
     except Exception as e:
         logger.error(f"Error downloading report {report_id}: {str(e)}")
         return Response(
-            {'error': 'Failed to download report'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to download report"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
 @extend_schema(
     summary="List my analytics reports",
-    parameters=[OpenApiParameter('page', OpenApiTypes.INT, OpenApiParameter.QUERY)],
-    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to fetch reports')},
-    tags=['Analytics'],
+    parameters=[OpenApiParameter("page", OpenApiTypes.INT, OpenApiParameter.QUERY)],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        500: OpenApiResponse(description="Failed to fetch reports"),
+    },
+    tags=["Analytics"],
 )
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def my_reports(request):
     """
@@ -584,68 +615,70 @@ def my_reports(request):
     Returns paginated list of reports with status and metadata.
     """
     try:
-        reports = AnalyticsReport.objects.filter(
-            requested_by=request.user
-        ).order_by('-created_at')
+        reports = AnalyticsReport.objects.filter(requested_by=request.user).order_by("-created_at")
 
         # Simple pagination
         page_size = 20
-        page = int(request.GET.get('page', 1))
+        page = int(request.GET.get("page", 1))
         offset = (page - 1) * page_size
 
         total_count = reports.count()
-        reports_page = reports[offset:offset + page_size]
+        reports_page = reports[offset : offset + page_size]
 
         reports_data = []
         for report in reports_page:
             report_data = {
-                'id': str(report.id),
-                'title': report.title,
-                'report_type': report.report_type,
-                'report_type_display': report.get_report_type_display(),
-                'export_format': report.export_format,
-                'export_format_display': report.get_export_format_display(),
-                'status': report.status,
-                'status_display': report.get_status_display(),
-                'created_at': report.created_at,
-                'file_size': report.file_size,
-                'download_count': report.download_count,
-                'is_downloadable': report.is_downloadable,
-                'expires_at': report.expires_at,
+                "id": str(report.id),
+                "title": report.title,
+                "report_type": report.report_type,
+                "report_type_display": report.get_report_type_display(),
+                "export_format": report.export_format,
+                "export_format_display": report.get_export_format_display(),
+                "status": report.status,
+                "status_display": report.get_status_display(),
+                "created_at": report.created_at,
+                "file_size": report.file_size,
+                "download_count": report.download_count,
+                "is_downloadable": report.is_downloadable,
+                "expires_at": report.expires_at,
             }
 
-            if report.status == 'failed':
-                report_data['error_message'] = report.error_message
+            if report.status == "failed":
+                report_data["error_message"] = report.error_message
 
             reports_data.append(report_data)
 
-        return Response({
-            'reports': reports_data,
-            'pagination': {
-                'page': page,
-                'page_size': page_size,
-                'total_count': total_count,
-                'total_pages': (total_count + page_size - 1) // page_size,
-                'has_next': offset + page_size < total_count,
-                'has_previous': page > 1,
+        return Response(
+            {
+                "reports": reports_data,
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_count": total_count,
+                    "total_pages": (total_count + page_size - 1) // page_size,
+                    "has_next": offset + page_size < total_count,
+                    "has_previous": page > 1,
+                },
             }
-        })
+        )
 
     except Exception as e:
         logger.error(f"Error fetching user reports: {str(e)}")
         return Response(
-            {'error': 'Failed to fetch reports'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to fetch reports"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
 @extend_schema(
     summary="Delete analytics report",
     request=None,
-    responses={200: OpenApiResponse(description='Report deleted successfully'), 500: OpenApiResponse(description='Failed to delete report')},
-    tags=['Analytics'],
+    responses={
+        200: OpenApiResponse(description="Report deleted successfully"),
+        500: OpenApiResponse(description="Failed to delete report"),
+    },
+    tags=["Analytics"],
 )
-@api_view(['DELETE'])
+@api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def delete_report(request, report_id):
     """
@@ -654,11 +687,7 @@ def delete_report(request, report_id):
     Users can only delete their own reports.
     """
     try:
-        report = get_object_or_404(
-            AnalyticsReport,
-            id=report_id,
-            requested_by=request.user
-        )
+        report = get_object_or_404(AnalyticsReport, id=report_id, requested_by=request.user)
 
         # Delete file if it exists
         if report.file_path and default_storage.exists(report.file_path):
@@ -672,23 +701,25 @@ def delete_report(request, report_id):
 
         logger.info(f"Report {report_id} deleted by user {request.user.id}")
 
-        return Response({'message': 'Report deleted successfully'})
+        return Response({"message": "Report deleted successfully"})
 
     except Exception as e:
         logger.error(f"Error deleting report {report_id}: {str(e)}")
         return Response(
-            {'error': 'Failed to delete report'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to delete report"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
 @extend_schema(
     summary="Refresh analytics cache",
     request=None,
-    responses={202: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to refresh cache')},
-    tags=['Analytics'],
+    responses={
+        202: OpenApiTypes.OBJECT,
+        500: OpenApiResponse(description="Failed to refresh cache"),
+    },
+    tags=["Analytics"],
 )
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @require_advanced_reporting  # Premium feature
 def refresh_cache(request):
@@ -701,19 +732,21 @@ def refresh_cache(request):
     try:
         # Queue the cache refresh task
         # task_result = cache_analytics_metrics.delay()  # TODO: Enable when tasks are ready
-        task_result = type('MockTask', (), {'id': 'mock-cache-task-id'})()
+        task_result = type("MockTask", (), {"id": "mock-cache-task-id"})()
 
         logger.info(f"Analytics cache refresh queued by user {request.user.id}")
 
-        return Response({
-            'task_id': task_result.id,
-            'message': 'Analytics cache refresh has been queued',
-            'estimated_completion': timezone.now() + timezone.timedelta(minutes=2)
-        }, status=status.HTTP_202_ACCEPTED)
+        return Response(
+            {
+                "task_id": task_result.id,
+                "message": "Analytics cache refresh has been queued",
+                "estimated_completion": timezone.now() + timezone.timedelta(minutes=2),
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
 
     except Exception as e:
         logger.error(f"Error queuing cache refresh: {str(e)}")
         return Response(
-            {'error': 'Failed to refresh cache'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"error": "Failed to refresh cache"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

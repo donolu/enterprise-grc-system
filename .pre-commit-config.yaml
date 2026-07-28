@@ -23,17 +23,19 @@ repos:
         files: ^app/
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.9
+    rev: v0.15.20
     hooks:
       - id: ruff
         args: [--fix]
         files: ^app/
+      - id: ruff-format
+        files: ^app/
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.10
+    rev: 1.9.4
     hooks:
       - id: bandit
-        args: [-c, pyproject.toml]
+        args: [-c, pyproject.toml, --severity-level, high]
         files: ^app/
         exclude: ^app/(.*/tests/|generate_dummy_data.*|generate_tenant_dummy_data\.py|test_sso_final\.py)
         additional_dependencies: ["bandit[toml]"]

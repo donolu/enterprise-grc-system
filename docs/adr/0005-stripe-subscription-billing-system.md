@@ -64,7 +64,7 @@ class BillingEvent(models.Model):
 ### 3. Subscription Plan Structure
 **Free Plan** ($0/month):
 - 3 users maximum
-- 50 documents storage limit  
+- 50 documents storage limit
 - 1 compliance framework
 - No API access or advanced features
 

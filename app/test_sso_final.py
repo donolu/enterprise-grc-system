@@ -5,6 +5,7 @@ from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parent
 
+
 def run_validation():
     """Run SSO implementation validation."""
 
@@ -14,16 +15,16 @@ def run_validation():
     # Check file structure
     print("1. Checking SSO file structure:")
     sso_files = [
-        'sso/models.py',
-        'sso/backends.py',
-        'sso/oauth_backends.py',
-        'sso/views.py',
-        'sso/urls.py',
-        'sso/admin.py',
-        'sso/utils.py',
-        'sso/tasks.py',
-        'sso/apps.py',
-        'sso/management/commands/cleanup_sso_sessions.py'
+        "sso/models.py",
+        "sso/backends.py",
+        "sso/oauth_backends.py",
+        "sso/views.py",
+        "sso/urls.py",
+        "sso/admin.py",
+        "sso/utils.py",
+        "sso/tasks.py",
+        "sso/apps.py",
+        "sso/management/commands/cleanup_sso_sessions.py",
     ]
 
     for file_path in sso_files:
@@ -37,16 +38,16 @@ def run_validation():
     # Check models structure
     print("2. Checking SSO models structure:")
     try:
-        with open('sso/models.py', 'r') as f:
+        with open("sso/models.py", "r") as f:
             content = f.read()
 
         models = [
-            'class SSOProvider',
-            'class SAMLProvider',
-            'class OAuthProvider',
-            'class AttributeMapping',
-            'class SSOSession',
-            'class SSOAuditLog'
+            "class SSOProvider",
+            "class SAMLProvider",
+            "class OAuthProvider",
+            "class AttributeMapping",
+            "class SSOSession",
+            "class SSOAuditLog",
         ]
 
         for model in models:
@@ -64,19 +65,19 @@ def run_validation():
     print("3. Checking authentication backends:")
     try:
         # Check SAML backend
-        with open('sso/backends.py', 'r') as f:
+        with open("sso/backends.py", "r") as f:
             saml_content = f.read()
 
-        if 'class SAMLBackend' in saml_content and 'def authenticate' in saml_content:
+        if "class SAMLBackend" in saml_content and "def authenticate" in saml_content:
             print("   ✅ SAML authentication backend implemented")
         else:
             print("   ❌ SAML authentication backend incomplete")
 
         # Check OAuth backend
-        with open('sso/oauth_backends.py', 'r') as f:
+        with open("sso/oauth_backends.py", "r") as f:
             oauth_content = f.read()
 
-        if 'class OAuthBackend' in oauth_content and 'def authenticate' in oauth_content:
+        if "class OAuthBackend" in oauth_content and "def authenticate" in oauth_content:
             print("   ✅ OAuth authentication backend implemented")
         else:
             print("   ❌ OAuth authentication backend incomplete")
@@ -89,15 +90,15 @@ def run_validation():
     # Check views structure
     print("4. Checking SSO views:")
     try:
-        with open('sso/views.py', 'r') as f:
+        with open("sso/views.py", "r") as f:
             content = f.read()
 
         views = [
-            'def sso_login_select',
-            'def saml_login',
-            'def saml_acs',
-            'def oauth_login',
-            'def oauth_callback'
+            "def sso_login_select",
+            "def saml_login",
+            "def saml_acs",
+            "def oauth_login",
+            "def oauth_callback",
         ]
 
         for view in views:
@@ -114,13 +115,13 @@ def run_validation():
     # Check admin interface
     print("5. Checking admin interface:")
     try:
-        with open('sso/admin.py', 'r') as f:
+        with open("sso/admin.py", "r") as f:
             content = f.read()
 
         admin_classes = [
-            'class SSOProviderAdmin',
-            'class SSOSessionAdmin',
-            'class SSOAuditLogAdmin'
+            "class SSOProviderAdmin",
+            "class SSOSessionAdmin",
+            "class SSOAuditLogAdmin",
         ]
 
         for admin_class in admin_classes:
@@ -137,14 +138,14 @@ def run_validation():
     # Check utilities
     print("6. Checking SSO utilities:")
     try:
-        with open('sso/utils.py', 'r') as f:
+        with open("sso/utils.py", "r") as f:
             content = f.read()
 
         utils = [
-            'def provision_user_from_sso',
-            'def get_mapped_attribute_value',
-            'def generate_saml_metadata',
-            'def validate_sso_configuration'
+            "def provision_user_from_sso",
+            "def get_mapped_attribute_value",
+            "def generate_saml_metadata",
+            "def validate_sso_configuration",
         ]
 
         for util in utils:
@@ -161,17 +162,17 @@ def run_validation():
     # Check Celery tasks
     print("7. Checking Celery tasks:")
     try:
-        with open('sso/tasks.py', 'r') as f:
+        with open("sso/tasks.py", "r") as f:
             content = f.read()
 
         tasks = [
-            '@shared_task',
-            'def cleanup_expired_sessions',
-            'def cleanup_old_audit_logs',
-            'def generate_sso_usage_report'
+            "@shared_task",
+            "def cleanup_expired_sessions",
+            "def cleanup_old_audit_logs",
+            "def generate_sso_usage_report",
         ]
 
-        task_count = content.count('@shared_task')
+        task_count = content.count("@shared_task")
         print(f"   ✅ {task_count} Celery tasks defined")
 
         for task in tasks[1:]:  # Skip @shared_task decorator
@@ -186,7 +187,7 @@ def run_validation():
     # Check settings integration
     print("8. Checking Django settings integration:")
     try:
-        with open('app/settings/base.py', 'r') as f:
+        with open("app/settings/base.py", "r") as f:
             content = f.read()
 
         if '"sso",' in content:
@@ -202,14 +203,14 @@ def run_validation():
     # Check requirements
     print("9. Checking requirements.txt:")
     try:
-        with open('requirements.txt', 'r') as f:
+        with open("requirements.txt", "r") as f:
             content = f.read()
 
         sso_deps = [
-            'python3-saml',
-            'social-auth-app-django',
-            'djangorestframework-simplejwt',
-            'xmlsec'
+            "python3-saml",
+            "social-auth-app-django",
+            "djangorestframework-simplejwt",
+            "xmlsec",
         ]
 
         for dep in sso_deps:
@@ -247,7 +248,7 @@ def run_validation():
         "✅ Celery tasks for maintenance and reporting",
         "✅ Management commands for cleanup operations",
         "✅ URL routing for authentication flows",
-        "✅ Configurable security settings (signing, encryption)"
+        "✅ Configurable security settings (signing, encryption)",
     ]
 
     for feature in features:

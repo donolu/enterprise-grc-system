@@ -190,7 +190,7 @@ def render_prometheus_metrics() -> str:
     ]
     for (method, route, status), count in sorted(http_total.items()):
         lines.append(
-            'grc_http_requests_total{'
+            "grc_http_requests_total{"
             f'method="{_escape_label(method)}",route="{_escape_label(route)}",'
             f'status="{_escape_label(status)}"'
             f"}} {count}"
@@ -206,14 +206,18 @@ def render_prometheus_metrics() -> str:
         for bucket in (*_BUCKETS, float("inf")):
             count = http_buckets.get((method, route, bucket), 0)
             lines.append(
-                'grc_http_request_duration_seconds_bucket{'
+                "grc_http_request_duration_seconds_bucket{"
                 f'method="{_escape_label(method)}",route="{_escape_label(route)}",'
                 f'le="{_format_bucket(bucket)}"'
                 f"}} {count}"
             )
         labels = f'method="{_escape_label(method)}",route="{_escape_label(route)}"'
-        lines.append(f"grc_http_request_duration_seconds_sum{{{labels}}} {http_sum[(method, route)]:.6f}")
-        lines.append(f"grc_http_request_duration_seconds_count{{{labels}}} {http_count[(method, route)]}")
+        lines.append(
+            f"grc_http_request_duration_seconds_sum{{{labels}}} {http_sum[(method, route)]:.6f}"
+        )
+        lines.append(
+            f"grc_http_request_duration_seconds_count{{{labels}}} {http_count[(method, route)]}"
+        )
 
     lines.extend(
         [
@@ -223,7 +227,7 @@ def render_prometheus_metrics() -> str:
     )
     for (task_name, status), count in sorted(celery_total.items()):
         lines.append(
-            'grc_celery_tasks_total{'
+            "grc_celery_tasks_total{"
             f'task="{_escape_label(task_name)}",status="{_escape_label(status)}"'
             f"}} {count}"
         )
@@ -238,14 +242,18 @@ def render_prometheus_metrics() -> str:
         for bucket in (*_BUCKETS, float("inf")):
             count = celery_buckets.get((task_name, status, bucket), 0)
             lines.append(
-                'grc_celery_task_duration_seconds_bucket{'
+                "grc_celery_task_duration_seconds_bucket{"
                 f'task="{_escape_label(task_name)}",status="{_escape_label(status)}",'
                 f'le="{_format_bucket(bucket)}"'
                 f"}} {count}"
             )
         labels = f'task="{_escape_label(task_name)}",status="{_escape_label(status)}"'
-        lines.append(f"grc_celery_task_duration_seconds_sum{{{labels}}} {celery_sum[(task_name, status)]:.6f}")
-        lines.append(f"grc_celery_task_duration_seconds_count{{{labels}}} {celery_count[(task_name, status)]}")
+        lines.append(
+            f"grc_celery_task_duration_seconds_sum{{{labels}}} {celery_sum[(task_name, status)]:.6f}"
+        )
+        lines.append(
+            f"grc_celery_task_duration_seconds_count{{{labels}}} {celery_count[(task_name, status)]}"
+        )
 
     return "\n".join(lines) + "\n"
 

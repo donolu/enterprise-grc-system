@@ -112,12 +112,12 @@ export const analyticsService = {
         params.append('start_date', dateRange.start_date)
         params.append('end_date', dateRange.end_date)
       }
-      
+
       const response = await api.get(`/analytics/executive/?${params.toString()}`)
       return response.data
     } catch (error) {
       console.error('Error fetching executive dashboard:', error)
-      
+
       // Return mock data as fallback
       return {
         summary_metrics: {
@@ -166,12 +166,12 @@ export const analyticsService = {
         params.append('start_date', dateRange.start_date)
         params.append('end_date', dateRange.end_date)
       }
-      
+
       const response = await api.get(`/analytics/compliance/?${params.toString()}`)
       return response.data
     } catch (error) {
       console.error('Error fetching compliance dashboard:', error)
-      
+
       // Return mock data as fallback
       return {
         compliance_overview: {
@@ -217,12 +217,12 @@ export const analyticsService = {
         params.append('start_date', dateRange.start_date)
         params.append('end_date', dateRange.end_date)
       }
-      
+
       const response = await api.get(`/analytics/vendor-risk/?${params.toString()}`)
       return response.data
     } catch (error) {
       console.error('Error fetching vendor risk dashboard:', error)
-      
+
       // Return mock data as fallback
       return {
         vendor_metrics: {

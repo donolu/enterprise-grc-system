@@ -27,4 +27,3 @@ Retention changes, deletion jobs and anonymisation jobs must themselves emit aud
 Authorised tenant administrators should be able to review tenant-owned audit records through audit views and tenant data exports. Exported audit data should include event name, timestamp, actor summary, object type, object ID, source and request metadata.
 
 Platform/operator events must remain in the platform context and must not include tenant-owned content. Cross-tenant product analytics should consume aggregate audit counts only.
-

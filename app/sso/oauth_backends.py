@@ -38,13 +38,10 @@ class OAuthBackend(BaseBackend):
                 return None
 
             sso_provider = SSOProvider.objects.get(
-                id=oauth_provider_id,
-                tenant=tenant,
-                is_active=True,
-                provider_type='oauth'
+                id=oauth_provider_id, tenant=tenant, is_active=True, provider_type="oauth"
             )
 
-            if not hasattr(sso_provider, 'oauth_config'):
+            if not hasattr(sso_provider, "oauth_config"):
                 logger.error(f"OAuth config not found for provider {sso_provider.name}")
                 return None
 
@@ -55,8 +52,8 @@ class OAuthBackend(BaseBackend):
             if not token_data:
                 return None
 
-            access_token = token_data.get('access_token')
-            id_token = token_data.get('id_token')
+            access_token = token_data.get("access_token")
+            id_token = token_data.get("id_token")
 
             if not access_token:
                 logger.error("No access token received from OAuth provider")
@@ -75,27 +72,27 @@ class OAuthBackend(BaseBackend):
                 sso_session = SSOSession.objects.create(
                     user=user,
                     sso_provider=sso_provider,
-                    sso_session_id=token_data.get('refresh_token', ''),
+                    sso_session_id=token_data.get("refresh_token", ""),
                     ip_address=SSOAuditLog.get_client_ip(request),
-                    user_agent=request.META.get('HTTP_USER_AGENT', ''),
-                    expires_at=self._calculate_token_expiry(token_data)
+                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                    expires_at=self._calculate_token_expiry(token_data),
                 )
 
                 # Log successful authentication
                 SSOAuditLog.log_event(
-                    'login_success',
+                    "login_success",
                     f"User {user.email} authenticated via OAuth",
                     sso_provider=sso_provider,
                     user=user,
                     request=request,
                     details={
-                        'user_info': user_info,
-                        'token_type': token_data.get('token_type', 'Bearer')
-                    }
+                        "user_info": user_info,
+                        "token_type": token_data.get("token_type", "Bearer"),
+                    },
                 )
 
                 # Store SSO session in Django session
-                request.session['sso_session_id'] = str(sso_session.id)
+                request.session["sso_session_id"] = str(sso_session.id)
 
                 return user
 
@@ -104,11 +101,11 @@ class OAuthBackend(BaseBackend):
         except Exception as e:
             logger.error(f"OAuth authentication error: {str(e)}")
             SSOAuditLog.log_event(
-                'error',
+                "error",
                 f"OAuth authentication error: {str(e)}",
                 request=request,
                 success=False,
-                error_message=str(e)
+                error_message=str(e),
             )
 
         return None
@@ -120,21 +117,21 @@ class OAuthBackend(BaseBackend):
         try:
             # Build redirect URI
             redirect_uri = request.build_absolute_uri(
-                f'/sso/oauth/callback/{oauth_config.sso_provider.id}/'
+                f"/sso/oauth/callback/{oauth_config.sso_provider.id}/"
             )
 
             # Prepare token request
             token_data = {
-                'grant_type': 'authorization_code',
-                'code': code,
-                'redirect_uri': redirect_uri,
-                'client_id': oauth_config.client_id,
-                'client_secret': oauth_config.client_secret
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": redirect_uri,
+                "client_id": oauth_config.client_id,
+                "client_secret": oauth_config.client_secret,
             }
 
             headers = {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json'
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
             }
 
             # Make token request
@@ -143,7 +140,7 @@ class OAuthBackend(BaseBackend):
                 data=token_data,
                 headers=headers,
                 verify=oauth_config.verify_ssl,
-                timeout=30
+                timeout=30,
             )
 
             if response.status_code == 200:
@@ -168,7 +165,7 @@ class OAuthBackend(BaseBackend):
                     # This is a simplified version for demonstration
                     decoded_token = jwt.decode(
                         id_token,
-                        options={"verify_signature": False}  # DO NOT DO THIS IN PRODUCTION
+                        options={"verify_signature": False},  # DO NOT DO THIS IN PRODUCTION
                     )
                     return decoded_token
                 except Exception as e:
@@ -176,16 +173,13 @@ class OAuthBackend(BaseBackend):
 
             # Fall back to UserInfo endpoint
             if oauth_config.userinfo_url:
-                headers = {
-                    'Authorization': f'Bearer {access_token}',
-                    'Accept': 'application/json'
-                }
+                headers = {"Authorization": f"Bearer {access_token}", "Accept": "application/json"}
 
                 response = requests.get(
                     oauth_config.userinfo_url,
                     headers=headers,
                     verify=oauth_config.verify_ssl,
-                    timeout=30
+                    timeout=30,
                 )
 
                 if response.status_code == 200:
@@ -202,7 +196,7 @@ class OAuthBackend(BaseBackend):
         """
         Calculate token expiry time.
         """
-        expires_in = token_data.get('expires_in')
+        expires_in = token_data.get("expires_in")
         if expires_in:
             try:
                 return timezone.now() + timezone.timedelta(seconds=int(expires_in))
@@ -215,7 +209,7 @@ class OAuthBackend(BaseBackend):
         Get existing user or create via JIT provisioning.
         """
         # Try to find existing user by email
-        email = self._get_user_attribute(sso_provider, user_info, 'email')
+        email = self._get_user_attribute(sso_provider, user_info, "email")
         if not email:
             logger.error("No email found in OAuth user info")
             return None
@@ -231,9 +225,7 @@ class OAuthBackend(BaseBackend):
         except User.DoesNotExist:
             # Create new user via JIT provisioning
             if sso_provider.enable_jit_provisioning:
-                return provision_user_from_sso(
-                    sso_provider, user_info, email, request
-                )
+                return provision_user_from_sso(sso_provider, user_info, email, request)
             else:
                 logger.warning(f"JIT provisioning disabled for {email}")
                 return None
@@ -252,7 +244,7 @@ class OAuthBackend(BaseBackend):
             updated = False
 
             # Update basic fields
-            for field in ['first_name', 'last_name']:
+            for field in ["first_name", "last_name"]:
                 value = self._get_user_attribute(sso_provider, user_info, field)
                 if value and getattr(user, field) != value:
                     setattr(user, field, value)
@@ -286,22 +278,22 @@ class OAuthClient:
         """
         # Build redirect URI
         redirect_uri = request.build_absolute_uri(
-            f'/sso/oauth/callback/{oauth_config.sso_provider.id}/'
+            f"/sso/oauth/callback/{oauth_config.sso_provider.id}/"
         )
 
         params = {
-            'response_type': 'code',
-            'client_id': oauth_config.client_id,
-            'redirect_uri': redirect_uri,
-            'scope': oauth_config.scope,
+            "response_type": "code",
+            "client_id": oauth_config.client_id,
+            "redirect_uri": redirect_uri,
+            "scope": oauth_config.scope,
         }
 
         if state:
-            params['state'] = state
+            params["state"] = state
 
         # Add OIDC parameters if enabled
         if oauth_config.use_oidc:
-            params['response_mode'] = 'form_post'
+            params["response_mode"] = "form_post"
 
         return f"{oauth_config.authorization_url}?{urlencode(params)}"
 
@@ -324,14 +316,14 @@ class OAuthClient:
         """
         Populate OAuth configuration from OIDC discovery data.
         """
-        if 'authorization_endpoint' in discovery_data:
-            oauth_config.authorization_url = discovery_data['authorization_endpoint']
+        if "authorization_endpoint" in discovery_data:
+            oauth_config.authorization_url = discovery_data["authorization_endpoint"]
 
-        if 'token_endpoint' in discovery_data:
-            oauth_config.token_url = discovery_data['token_endpoint']
+        if "token_endpoint" in discovery_data:
+            oauth_config.token_url = discovery_data["token_endpoint"]
 
-        if 'userinfo_endpoint' in discovery_data:
-            oauth_config.userinfo_url = discovery_data['userinfo_endpoint']
+        if "userinfo_endpoint" in discovery_data:
+            oauth_config.userinfo_url = discovery_data["userinfo_endpoint"]
 
-        if 'jwks_uri' in discovery_data:
-            oauth_config.jwks_url = discovery_data['jwks_uri']
+        if "jwks_uri" in discovery_data:
+            oauth_config.jwks_url = discovery_data["jwks_uri"]

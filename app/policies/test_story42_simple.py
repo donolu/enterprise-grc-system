@@ -2,12 +2,13 @@
 Simple validation tests for Story 4.2: Track Policy Acknowledgement
 """
 
+
 def test_api_methods_exist():
     """Test that new API methods are implemented in PolicyViewSet."""
     from policies.views import PolicyViewSet
 
     viewset = PolicyViewSet()
-    required_methods = ['acknowledgment_dashboard', 'acknowledgment_status', 'my_policies']
+    required_methods = ["acknowledgment_dashboard", "acknowledgment_status", "my_policies"]
 
     for method in required_methods:
         assert hasattr(viewset, method), f"PolicyViewSet missing {method} method"
@@ -20,10 +21,10 @@ def test_celery_tasks_exist():
     from policies import tasks
 
     required_tasks = [
-        'send_policy_acknowledgment_reminders',
-        'send_overdue_policy_notifications',
-        'generate_acknowledgment_report',
-        'cleanup_expired_acknowledgments'
+        "send_policy_acknowledgment_reminders",
+        "send_overdue_policy_notifications",
+        "generate_acknowledgment_report",
+        "cleanup_expired_acknowledgments",
     ]
 
     for task_name in required_tasks:
@@ -38,7 +39,7 @@ def test_model_enhancements():
 
     # Test PolicyDistribution has is_overdue property
     dist = PolicyDistribution()
-    assert hasattr(dist, 'is_overdue'), "PolicyDistribution missing is_overdue property"
+    assert hasattr(dist, "is_overdue"), "PolicyDistribution missing is_overdue property"
 
     # Test PolicyAcknowledgment exists and is accessible
     ack = PolicyAcknowledgment()
@@ -51,15 +52,15 @@ def test_email_templates_exist():
     """Test that email templates are created."""
     import os
 
-    template_dir = os.path.join(os.path.dirname(__file__), 'templates', 'policies', 'emails')
+    template_dir = os.path.join(os.path.dirname(__file__), "templates", "policies", "emails")
 
     required_templates = [
-        'acknowledgment_reminder.txt',
-        'acknowledgment_reminder.html',
-        'overdue_notification.txt',
-        'overdue_notification.html',
-        'weekly_report.txt',
-        'weekly_report.html'
+        "acknowledgment_reminder.txt",
+        "acknowledgment_reminder.html",
+        "overdue_notification.txt",
+        "overdue_notification.html",
+        "weekly_report.txt",
+        "weekly_report.html",
     ]
 
     for template in required_templates:
@@ -73,14 +74,14 @@ def test_celery_settings():
     """Test that Celery beat schedule is configured."""
     from django.conf import settings
 
-    assert hasattr(settings, 'CELERY_BEAT_SCHEDULE'), "CELERY_BEAT_SCHEDULE not configured"
+    assert hasattr(settings, "CELERY_BEAT_SCHEDULE"), "CELERY_BEAT_SCHEDULE not configured"
 
     beat_schedule = settings.CELERY_BEAT_SCHEDULE
     required_tasks = [
-        'send-policy-acknowledgment-reminders',
-        'send-overdue-policy-notifications',
-        'generate-acknowledgment-report',
-        'cleanup-expired-acknowledgments'
+        "send-policy-acknowledgment-reminders",
+        "send-overdue-policy-notifications",
+        "generate-acknowledgment-report",
+        "cleanup-expired-acknowledgments",
     ]
 
     for task_key in required_tasks:
@@ -93,11 +94,11 @@ def test_frontend_components_exist():
     """Test that frontend components are created."""
     from pathlib import Path
 
-    frontend_dir = Path(__file__).resolve().parents[2] / 'frontend' / 'src' / 'app' / 'policies'
+    frontend_dir = Path(__file__).resolve().parents[2] / "frontend" / "src" / "app" / "policies"
 
     required_files = [
-        'page.tsx',  # Main policies page for staff acknowledgments
-        'dashboard/page.tsx'  # Admin dashboard for tracking acknowledgments
+        "page.tsx",  # Main policies page for staff acknowledgments
+        "dashboard/page.tsx",  # Admin dashboard for tracking acknowledgments
     ]
 
     for file_path in required_files:
@@ -131,7 +132,9 @@ def run_all_tests():
         print("4. ✅ Scheduled reminders sent to users (Celery tasks + email templates + schedule)")
         print()
         print("New Features Added:")
-        print("- 📊 3 new API endpoints: acknowledgment_dashboard, acknowledgment_status, my_policies")
+        print(
+            "- 📊 3 new API endpoints: acknowledgment_dashboard, acknowledgment_status, my_policies"
+        )
         print("- 📧 4 automated Celery tasks for reminders and notifications")
         print("- 📬 6 professional email templates (text + HTML versions)")
         print("- 🕐 Automated daily/weekly task scheduling with Celery Beat")

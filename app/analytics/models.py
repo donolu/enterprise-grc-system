@@ -18,34 +18,36 @@ class AnalyticsReport(models.Model):
     """
 
     REPORT_TYPES = [
-        ('executive', 'Executive Dashboard'),
-        ('compliance', 'Compliance Analytics'),
-        ('risk', 'Risk Management'),
-        ('vendor', 'Vendor Risk Assessment'),
-        ('policy', 'Policy Management'),
-        ('training', 'Training Effectiveness'),
-        ('integrated', 'Integrated Risk Posture'),
-        ('operational', 'Operational Dashboard'),
+        ("executive", "Executive Dashboard"),
+        ("compliance", "Compliance Analytics"),
+        ("risk", "Risk Management"),
+        ("vendor", "Vendor Risk Assessment"),
+        ("policy", "Policy Management"),
+        ("training", "Training Effectiveness"),
+        ("integrated", "Integrated Risk Posture"),
+        ("operational", "Operational Dashboard"),
     ]
 
     EXPORT_FORMATS = [
-        ('pdf', 'PDF Report'),
-        ('excel', 'Excel Spreadsheet'),
-        ('csv', 'CSV Data Export'),
-        ('json', 'JSON Data Export'),
+        ("pdf", "PDF Report"),
+        ("excel", "Excel Spreadsheet"),
+        ("csv", "CSV Data Export"),
+        ("json", "JSON Data Export"),
     ]
 
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('processing', 'Processing'),
-        ('completed', 'Completed'),
-        ('failed', 'Failed'),
+        ("pending", "Pending"),
+        ("processing", "Processing"),
+        ("completed", "Completed"),
+        ("failed", "Failed"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     report_type = models.CharField(max_length=50, choices=REPORT_TYPES)
     export_format = models.CharField(max_length=20, choices=EXPORT_FORMATS)
-    requested_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='analytics_reports')
+    requested_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="analytics_reports"
+    )
 
     # Report configuration
     title = models.CharField(max_length=255)
@@ -55,7 +57,7 @@ class AnalyticsReport(models.Model):
     filters = models.JSONField(default=dict, blank=True)  # Store filter parameters
 
     # Processing status
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     error_message = models.TextField(blank=True)
@@ -75,17 +77,19 @@ class AnalyticsReport(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'analytics_reports'
-        ordering = ['-created_at']
+        db_table = "analytics_reports"
+        ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=['requested_by', '-created_at']),
-            models.Index(fields=['status']),
-            models.Index(fields=['report_type']),
-            models.Index(fields=['expires_at']),
+            models.Index(fields=["requested_by", "-created_at"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["report_type"]),
+            models.Index(fields=["expires_at"]),
         ]
 
     def __str__(self):
-        return f"{self.get_report_type_display()} ({self.get_export_format_display()}) - {self.status}"
+        return (
+            f"{self.get_report_type_display()} ({self.get_export_format_display()}) - {self.status}"
+        )
 
     @property
     def is_expired(self):
@@ -97,21 +101,17 @@ class AnalyticsReport(models.Model):
     @property
     def is_downloadable(self):
         """Check if the report is ready for download."""
-        return (
-            self.status == 'completed' and
-            self.file_path and
-            not self.is_expired
-        )
+        return self.status == "completed" and self.file_path and not self.is_expired
 
     def mark_started(self):
         """Mark the report as started processing."""
-        self.status = 'processing'
+        self.status = "processing"
         self.started_at = timezone.now()
-        self.save(update_fields=['status', 'started_at'])
+        self.save(update_fields=["status", "started_at"])
 
     def mark_completed(self, file_path, file_size=None, data_points=None):
         """Mark the report as completed."""
-        self.status = 'completed'
+        self.status = "completed"
         self.completed_at = timezone.now()
         self.file_path = file_path
         self.file_size = file_size
@@ -119,37 +119,40 @@ class AnalyticsReport(models.Model):
 
         # Calculate generation time
         if self.started_at:
-            self.generation_time_seconds = (
-                self.completed_at - self.started_at
-            ).total_seconds()
+            self.generation_time_seconds = (self.completed_at - self.started_at).total_seconds()
 
         # Set expiration (reports expire after 30 days)
         self.expires_at = timezone.now() + timezone.timedelta(days=30)
 
-        self.save(update_fields=[
-            'status', 'completed_at', 'file_path', 'file_size',
-            'data_points_included', 'generation_time_seconds', 'expires_at'
-        ])
+        self.save(
+            update_fields=[
+                "status",
+                "completed_at",
+                "file_path",
+                "file_size",
+                "data_points_included",
+                "generation_time_seconds",
+                "expires_at",
+            ]
+        )
 
     def mark_failed(self, error_message):
         """Mark the report as failed with error message."""
-        self.status = 'failed'
+        self.status = "failed"
         self.completed_at = timezone.now()
         self.error_message = error_message
 
         if self.started_at:
-            self.generation_time_seconds = (
-                self.completed_at - self.started_at
-            ).total_seconds()
+            self.generation_time_seconds = (self.completed_at - self.started_at).total_seconds()
 
-        self.save(update_fields=[
-            'status', 'completed_at', 'error_message', 'generation_time_seconds'
-        ])
+        self.save(
+            update_fields=["status", "completed_at", "error_message", "generation_time_seconds"]
+        )
 
     def increment_download_count(self):
         """Increment the download counter."""
-        self.download_count = models.F('download_count') + 1
-        self.save(update_fields=['download_count'])
+        self.download_count = models.F("download_count") + 1
+        self.save(update_fields=["download_count"])
 
 
 class DashboardConfiguration(models.Model):
@@ -158,17 +161,17 @@ class DashboardConfiguration(models.Model):
     """
 
     DASHBOARD_TYPES = [
-        ('executive', 'Executive Dashboard'),
-        ('operational', 'Operational Dashboard'),
-        ('compliance', 'Compliance Dashboard'),
-        ('risk', 'Risk Dashboard'),
-        ('vendor', 'Vendor Dashboard'),
-        ('policy', 'Policy Dashboard'),
-        ('training', 'Training Dashboard'),
+        ("executive", "Executive Dashboard"),
+        ("operational", "Operational Dashboard"),
+        ("compliance", "Compliance Dashboard"),
+        ("risk", "Risk Dashboard"),
+        ("vendor", "Vendor Dashboard"),
+        ("policy", "Policy Dashboard"),
+        ("training", "Training Dashboard"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dashboard_configs')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="dashboard_configs")
     dashboard_type = models.CharField(max_length=50, choices=DASHBOARD_TYPES)
 
     # Configuration data
@@ -184,7 +187,7 @@ class DashboardConfiguration(models.Model):
     # Sharing settings
     is_shared = models.BooleanField(default=False)
     shared_with_users = models.ManyToManyField(
-        User, blank=True, related_name='shared_dashboard_configs'
+        User, blank=True, related_name="shared_dashboard_configs"
     )
 
     # Timestamps
@@ -192,12 +195,12 @@ class DashboardConfiguration(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'dashboard_configurations'
-        ordering = ['-created_at']
-        unique_together = [['user', 'dashboard_type', 'name']]
+        db_table = "dashboard_configurations"
+        ordering = ["-created_at"]
+        unique_together = [["user", "dashboard_type", "name"]]
         indexes = [
-            models.Index(fields=['user', 'dashboard_type']),
-            models.Index(fields=['is_shared']),
+            models.Index(fields=["user", "dashboard_type"]),
+            models.Index(fields=["is_shared"]),
         ]
 
     def __str__(self):
@@ -210,12 +213,12 @@ class AnalyticsMetric(models.Model):
     """
 
     METRIC_CATEGORIES = [
-        ('risk', 'Risk Management'),
-        ('compliance', 'Compliance'),
-        ('vendor', 'Vendor Management'),
-        ('policy', 'Policy Management'),
-        ('training', 'Training & Awareness'),
-        ('integrated', 'Integrated Analysis'),
+        ("risk", "Risk Management"),
+        ("compliance", "Compliance"),
+        ("vendor", "Vendor Management"),
+        ("policy", "Policy Management"),
+        ("training", "Training & Awareness"),
+        ("integrated", "Integrated Analysis"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -230,7 +233,9 @@ class AnalyticsMetric(models.Model):
 
     # Metadata
     calculation_time_ms = models.PositiveIntegerField(null=True, blank=True)
-    data_freshness = models.DateTimeField(null=True, blank=True)  # When underlying data was last updated
+    data_freshness = models.DateTimeField(
+        null=True, blank=True
+    )  # When underlying data was last updated
     is_cached = models.BooleanField(default=True)
     cache_expires_at = models.DateTimeField(null=True, blank=True)
 
@@ -239,13 +244,13 @@ class AnalyticsMetric(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'analytics_metrics'
-        ordering = ['-calculation_date']
-        unique_together = [['metric_key', 'calculation_date']]
+        db_table = "analytics_metrics"
+        ordering = ["-calculation_date"]
+        unique_together = [["metric_key", "calculation_date"]]
         indexes = [
-            models.Index(fields=['category', 'metric_key']),
-            models.Index(fields=['calculation_date']),
-            models.Index(fields=['cache_expires_at']),
+            models.Index(fields=["category", "metric_key"]),
+            models.Index(fields=["calculation_date"]),
+            models.Index(fields=["cache_expires_at"]),
         ]
 
     def __str__(self):
@@ -265,12 +270,12 @@ class ReportTemplate(models.Model):
     """
 
     TEMPLATE_TYPES = [
-        ('executive', 'Executive Report'),
-        ('compliance', 'Compliance Report'),
-        ('risk', 'Risk Assessment Report'),
-        ('vendor', 'Vendor Risk Report'),
-        ('audit', 'Audit Report'),
-        ('custom', 'Custom Report'),
+        ("executive", "Executive Report"),
+        ("compliance", "Compliance Report"),
+        ("risk", "Risk Assessment Report"),
+        ("vendor", "Vendor Risk Report"),
+        ("audit", "Audit Report"),
+        ("custom", "Custom Report"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -284,9 +289,9 @@ class ReportTemplate(models.Model):
     styling_config = models.JSONField(default=dict)  # Colors, fonts, logos, etc.
 
     # Access control
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='report_templates')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="report_templates")
     is_public = models.BooleanField(default=False)
-    allowed_users = models.ManyToManyField(User, blank=True, related_name='accessible_templates')
+    allowed_users = models.ManyToManyField(User, blank=True, related_name="accessible_templates")
 
     # Usage tracking
     usage_count = models.PositiveIntegerField(default=0)
@@ -297,12 +302,12 @@ class ReportTemplate(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'report_templates'
-        ordering = ['-created_at']
+        db_table = "report_templates"
+        ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=['created_by', '-created_at']),
-            models.Index(fields=['template_type']),
-            models.Index(fields=['is_public']),
+            models.Index(fields=["created_by", "-created_at"]),
+            models.Index(fields=["template_type"]),
+            models.Index(fields=["is_public"]),
         ]
 
     def __str__(self):
@@ -310,6 +315,6 @@ class ReportTemplate(models.Model):
 
     def increment_usage(self):
         """Increment the usage counter and update last used timestamp."""
-        self.usage_count = models.F('usage_count') + 1
+        self.usage_count = models.F("usage_count") + 1
         self.last_used_at = timezone.now()
-        self.save(update_fields=['usage_count', 'last_used_at'])
+        self.save(update_fields=["usage_count", "last_used_at"])

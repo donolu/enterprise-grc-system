@@ -11,7 +11,7 @@ Organizations conducting compliance assessments need:
 - Automated reminders for upcoming and overdue assessment deadlines
 - Configurable notification preferences per user with flexible timing options
 - Professional email templates with urgency-appropriate styling and messaging
-- Weekly digest summaries of assessment workload and priorities  
+- Weekly digest summaries of assessment workload and priorities
 - Duplicate prevention to avoid notification fatigue
 - Administrative tools for bulk reminder management and troubleshooting
 - Scalable infrastructure supporting high-volume reminder processing
@@ -52,7 +52,7 @@ class AssessmentReminderLog(models.Model):
     days_before_due = models.IntegerField()
     sent_at = models.DateTimeField(auto_now_add=True)
     email_sent = models.BooleanField(default=False)
-    
+
     class Meta:
         unique_together = [('assessment', 'user', 'reminder_type', 'days_before_due')]
 ```
@@ -65,7 +65,7 @@ class AssessmentReminderService:
     @staticmethod
     def send_individual_reminder(assessment, user, reminder_type, days_before_due):
         # Smart reminder logic with configuration checks and duplicate prevention
-        
+
     @staticmethod
     def process_daily_reminders():
         # Main processing function for all daily reminders
@@ -151,7 +151,7 @@ def get_reminder_days(self):
 class AssessmentReminderConfigurationAdmin(admin.ModelAdmin):
     actions = [
         'enable_reminders_bulk',
-        'disable_reminders_bulk', 
+        'disable_reminders_bulk',
         'test_reminder_configuration',
         'send_immediate_digest'
     ]
@@ -285,7 +285,7 @@ class AssessmentReminderServiceTest(APITestCase):
     def test_weekly_digest_generation(self):
     def test_duplicate_prevention(self):
     def test_urgency_classification(self):
-    
+
 class ReminderIntegrationTest(TestCase):
     def test_end_to_end_reminder_workflow(self):
     def test_overdue_reminder_escalation(self):
@@ -335,7 +335,7 @@ class ReminderIntegrationTest(TestCase):
 
 ## References
 - ADR-0012: Assessment Reporting Architecture
-- ADR-0011: Evidence Management Architecture  
+- ADR-0011: Evidence Management Architecture
 - ADR-0009: Control Assessment Architecture
 - ADR-0002: User-Tenant Relationship via Schema Isolation
 - Story 1.1: Framework & Control Catalog Implementation

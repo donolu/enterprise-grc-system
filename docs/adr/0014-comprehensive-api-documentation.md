@@ -36,7 +36,7 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "GRC SaaS API",
     "DESCRIPTION": """
     Comprehensive API for Governance, Risk, and Compliance (GRC) management.
-    
+
     This API provides complete functionality for compliance framework management,
     control assessments, evidence collection, reporting, and automated reminders.
     """,
@@ -79,7 +79,7 @@ SPECTACULAR_SETTINGS = {
 class ControlAssessmentViewSet(viewsets.ModelViewSet):
     """
     **Control Assessment Management**
-    
+
     This ViewSet provides comprehensive management of control assessments including:
     - Full assessment lifecycle management (creation, assignment, completion)
     - Evidence management and linking capabilities
@@ -235,23 +235,23 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "GRC SaaS API",
     "VERSION": "1.0.0",
     "DESCRIPTION": "Comprehensive GRC management API...",
-    
+
     # OpenAPI specification
     "OAS_VERSION": "3.0.3",
     "USE_SESSION_AUTH": True,
     "SCHEMA_PATH_PREFIX": "/api/",
-    
+
     # Documentation enhancement
     "COMPONENT_SPLIT_REQUEST": True,
     "SORT_OPERATIONS": False,
     "SERVE_INCLUDE_SCHEMA": False,
-    
+
     # Security schemes
     "SECURITY": [{"SessionAuth": []}],
-    
+
     # Endpoint organization
     "TAGS": [/* comprehensive tag definitions */],
-    
+
     # Error handling
     "DEFAULT_ERROR_RESPONSE_SCHEMA": "drf_spectacular.openapi.ErrorResponseSerializer",
 }

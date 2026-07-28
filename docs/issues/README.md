@@ -41,11 +41,11 @@ issues/
 ```markdown
 # Issue Title
 
-**Issue ID:** ISSUE-XXXX  
-**Severity:** [Critical|Major|Minor|Enhancement]  
-**Status:** [Open|In Progress|Resolved|Closed]  
-**Created:** YYYY-MM-DD  
-**Component:** [Authentication|API|UI|etc.]  
+**Issue ID:** ISSUE-XXXX
+**Severity:** [Critical|Major|Minor|Enhancement]
+**Status:** [Open|In Progress|Resolved|Closed]
+**Created:** YYYY-MM-DD
+**Component:** [Authentication|API|UI|etc.]
 
 ## Summary
 Brief description of the issue...
@@ -68,7 +68,7 @@ Detailed description...
 
 ### Severity Levels
 - **🔴 Critical**: System down, security vulnerability, data loss
-- **🟠 Major**: Core functionality broken, significant user impact  
+- **🟠 Major**: Core functionality broken, significant user impact
 - **🟡 Minor**: Small functionality issues, UX improvements
 - **🔵 Enhancement**: New features, performance improvements
 
@@ -126,5 +126,5 @@ Detailed description...
 
 ---
 
-*Last Updated: 2025-08-22*  
+*Last Updated: 2025-08-22*
 *For questions about this documentation, contact the Development Team*

@@ -37,33 +37,34 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
     list=extend_schema(
         summary="List subscription plans",
         description="Retrieve all available subscription plans with pricing and feature details.",
-        tags=['Billing'],
+        tags=["Billing"],
     ),
     retrieve=extend_schema(
         summary="Get plan details",
         description="Retrieve detailed information about a specific subscription plan.",
-        tags=['Billing'],
+        tags=["Billing"],
     ),
 )
 class PlanViewSet(viewsets.ReadOnlyModelViewSet):
     """
     **Subscription Plan Management**
-    
+
     This ViewSet provides read-only access to available subscription plans including:
     - Plan pricing and billing intervals
     - Feature limits and capabilities
     - Plan comparison information
-    
+
     **Key Features:**
     - Support for free, basic, and enterprise tiers
     - Feature-based plan differentiation
     - Stripe integration for payment processing
-    
+
     **Common Use Cases:**
     - Display plan options to users
     - Compare plan features and pricing
     - Validate plan availability for upgrades
     """
+
     queryset = Plan.objects.filter(is_active=True)
     serializer_class = PlanSerializer
     permission_classes = [IsAuthenticated]
@@ -72,122 +73,117 @@ class PlanViewSet(viewsets.ReadOnlyModelViewSet):
 class BillingViewSet(viewsets.ViewSet):
     """
     **Billing and Subscription Management**
-    
+
     This ViewSet provides comprehensive billing operations including:
     - Subscription status and management
     - Payment processing with Stripe
     - Billing portal access
     - Plan upgrades and cancellations
-    
+
     **Key Features:**
     - Secure Stripe integration
     - Tenant-aware billing isolation
     - Automated subscription lifecycle management
     - Self-service billing portal
-    
+
     **Common Use Cases:**
     - Check current subscription status
     - Upgrade or downgrade plans
     - Access billing history and invoices
     - Cancel or modify subscriptions
     """
+
     serializer_class = SubscriptionSerializer
     permission_classes = [IsAuthenticated]
-    
+
     @extend_schema(
         summary="Get current subscription",
         description="Retrieve the current tenant's subscription details including plan, status, and billing information.",
         responses={
             200: SubscriptionSerializer,
-            500: OpenApiResponse(description='Failed to fetch subscription'),
+            500: OpenApiResponse(description="Failed to fetch subscription"),
         },
-        tags=['Billing'],
+        tags=["Billing"],
     )
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=["get"])
     def current_subscription(self, request):
         """Get current tenant's subscription details with automatic free plan creation if needed."""
         try:
             with schema_context("public"):
                 tenant = get_public_tenant(request.tenant.schema_name)
-                subscription = getattr(tenant, 'subscription', None)
+                subscription = getattr(tenant, "subscription", None)
 
                 if not subscription:
-                    free_plan = Plan.objects.get(slug='free')
+                    free_plan = Plan.objects.get(slug="free")
                     subscription = Subscription.objects.create(
                         tenant=tenant,
                         plan=free_plan,
-                        status='active',
+                        status="active",
                     )
                     audit_subscription_change(
-                        event='SUBSCRIPTION_CREATED',
+                        event="SUBSCRIPTION_CREATED",
                         subscription=subscription,
                         actor=request.user,
                         request=request,
                         new=snapshot_subscription(subscription),
-                        source={'type': 'api', 'reference': 'billing.current_subscription'},
+                        source={"type": "api", "reference": "billing.current_subscription"},
                     )
                 serializer = SubscriptionSerializer(subscription)
                 return Response(serializer.data)
-                
+
         except Exception as e:
             logger.error(f"Error fetching subscription: {str(e)}")
             return Response(
-                {'error': 'Failed to fetch subscription'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to fetch subscription"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-    
+
     @extend_schema(
         summary="Create checkout session",
         description="Create a Stripe checkout session for subscription upgrade or purchase. Returns URL for payment processing.",
         request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'plan': {
-                        'type': 'string',
-                        'description': 'Plan slug (basic, enterprise, etc.)'
-                    }
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "plan": {"type": "string", "description": "Plan slug (basic, enterprise, etc.)"}
                 },
-                'required': ['plan']
+                "required": ["plan"],
             }
         },
         responses={
             200: OpenApiResponse(
-                description='Checkout session created successfully',
+                description="Checkout session created successfully",
                 examples=[
                     OpenApiExample(
-                        'Checkout Session',
-                        summary='Successful checkout session creation',
+                        "Checkout Session",
+                        summary="Successful checkout session creation",
                         value={
-                            'checkout_url': 'https://checkout.stripe.com/pay/cs_test_123...',
-                            'session_id': 'cs_test_123...'
-                        }
+                            "checkout_url": "https://checkout.stripe.com/pay/cs_test_123...",
+                            "session_id": "cs_test_123...",
+                        },
                     ),
-                ]
+                ],
             ),
-            400: OpenApiResponse(description='Plan is required or not available for purchase'),
-            404: OpenApiResponse(description='Plan not found'),
-            500: OpenApiResponse(description='Failed to create checkout session'),
+            400: OpenApiResponse(description="Plan is required or not available for purchase"),
+            404: OpenApiResponse(description="Plan not found"),
+            500: OpenApiResponse(description="Failed to create checkout session"),
         },
-        tags=['Billing'],
+        tags=["Billing"],
     )
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=["post"])
     def create_checkout_session(self, request):
         """Create Stripe checkout session for subscription upgrade with secure payment processing."""
         try:
-            plan_slug = request.data.get('plan')
+            plan_slug = request.data.get("plan")
             if not plan_slug:
-                return Response(
-                    {'error': 'Plan is required'}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
+                return Response({"error": "Plan is required"}, status=status.HTTP_400_BAD_REQUEST)
+
             with schema_context("public"):
                 plan = Plan.objects.get(slug=plan_slug, is_active=True)
                 if not plan.stripe_price_id:
                     return Response(
-                        {'error': 'Plan not available for purchase'},
-                        status=status.HTTP_400_BAD_REQUEST
+                        {"error": "Plan not available for purchase"},
+                        status=status.HTTP_400_BAD_REQUEST,
                     )
 
                 tenant = get_public_tenant(request.tenant.schema_name)
@@ -197,301 +193,290 @@ class BillingViewSet(viewsets.ViewSet):
                     customer = stripe.Customer.create(
                         email=request.user.email,
                         name=tenant.name,
-                        metadata={'tenant_id': tenant.id}
+                        metadata={"tenant_id": tenant.id},
                     )
                     tenant.stripe_customer_id = customer.id
-                    tenant.save(update_fields=['stripe_customer_id'])
+                    tenant.save(update_fields=["stripe_customer_id"])
 
                 # Create checkout session
                 session = stripe.checkout.Session.create(
                     customer=tenant.stripe_customer_id,
-                    payment_method_types=['card'],
-                    line_items=[{
-                        'price': plan.stripe_price_id,
-                        'quantity': 1,
-                    }],
-                    mode='subscription',
+                    payment_method_types=["card"],
+                    line_items=[
+                        {
+                            "price": plan.stripe_price_id,
+                            "quantity": 1,
+                        }
+                    ],
+                    mode="subscription",
                     success_url=f"{settings.SITE_DOMAIN}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
                     cancel_url=f"{settings.SITE_DOMAIN}/billing/cancel",
-                    metadata={
-                        'tenant_id': tenant.id,
-                        'plan_id': plan.id
-                    }
+                    metadata={"tenant_id": tenant.id, "plan_id": plan.id},
                 )
-            
-            return Response({
-                'checkout_url': session.url,
-                'session_id': session.id
-            })
-            
+
+            return Response({"checkout_url": session.url, "session_id": session.id})
+
         except Plan.DoesNotExist:
-            return Response(
-                {'error': 'Plan not found'}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Plan not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             logger.error(f"Error creating checkout session: {str(e)}")
             return Response(
-                {'error': 'Failed to create checkout session'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to create checkout session"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-    
+
     @extend_schema(
         summary="Cancel current subscription",
         description="Cancel the current tenant subscription at the end of the active billing period.",
         request=None,
         responses={
-            200: OpenApiResponse(description='Subscription cancellation scheduled'),
-            404: OpenApiResponse(description='No active subscription found'),
-            500: OpenApiResponse(description='Failed to cancel subscription'),
+            200: OpenApiResponse(description="Subscription cancellation scheduled"),
+            404: OpenApiResponse(description="No active subscription found"),
+            500: OpenApiResponse(description="Failed to cancel subscription"),
         },
-        tags=['Billing'],
+        tags=["Billing"],
     )
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=["post"])
     def cancel_subscription(self, request):
         """Cancel current subscription."""
         try:
             with schema_context("public"):
                 tenant = get_public_tenant(request.tenant.schema_name)
-                subscription = getattr(tenant, 'subscription', None)
+                subscription = getattr(tenant, "subscription", None)
 
                 if not subscription or not subscription.stripe_subscription_id:
                     return Response(
-                        {'error': 'No active subscription found'},
-                        status=status.HTTP_404_NOT_FOUND
+                        {"error": "No active subscription found"}, status=status.HTTP_404_NOT_FOUND
                     )
 
                 stripe_subscription_id = subscription.stripe_subscription_id
 
             # Cancel subscription in Stripe
-            stripe.Subscription.modify(
-                stripe_subscription_id,
-                cancel_at_period_end=True
-            )
+            stripe.Subscription.modify(stripe_subscription_id, cancel_at_period_end=True)
             audit_subscription_change(
-                event='SUBSCRIPTION_CANCELLATION_REQUESTED',
+                event="SUBSCRIPTION_CANCELLATION_REQUESTED",
                 subscription=subscription,
                 actor=request.user,
                 request=request,
-                new={'cancel_at_period_end': True},
-                source={'type': 'api', 'reference': 'billing.cancel_subscription'},
+                new={"cancel_at_period_end": True},
+                source={"type": "api", "reference": "billing.cancel_subscription"},
             )
 
-            return Response({'message': 'Subscription will be canceled at the end of the current period'})
-            
+            return Response(
+                {"message": "Subscription will be canceled at the end of the current period"}
+            )
+
         except Exception as e:
             logger.error(f"Error canceling subscription: {str(e)}")
             return Response(
-                {'error': 'Failed to cancel subscription'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to cancel subscription"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-    
+
     @extend_schema(
         summary="Create billing portal session",
         description="Create a Stripe customer portal session for billing self-service.",
         responses={
-            200: OpenApiResponse(description='Billing portal session created'),
-            404: OpenApiResponse(description='No billing information found'),
-            500: OpenApiResponse(description='Failed to create billing portal session'),
+            200: OpenApiResponse(description="Billing portal session created"),
+            404: OpenApiResponse(description="No billing information found"),
+            500: OpenApiResponse(description="Failed to create billing portal session"),
         },
-        tags=['Billing'],
+        tags=["Billing"],
     )
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=["get"])
     def billing_portal(self, request):
         """Create Stripe billing portal session."""
         try:
             with schema_context("public"):
                 tenant = get_public_tenant(request.tenant.schema_name)
-            
+
             if not tenant.stripe_customer_id:
                 return Response(
-                    {'error': 'No billing information found'}, 
-                    status=status.HTTP_404_NOT_FOUND
+                    {"error": "No billing information found"}, status=status.HTTP_404_NOT_FOUND
                 )
-            
+
             # Create billing portal session
             session = stripe.billing_portal.Session.create(
-                customer=tenant.stripe_customer_id,
-                return_url=f"{settings.SITE_DOMAIN}/billing/"
+                customer=tenant.stripe_customer_id, return_url=f"{settings.SITE_DOMAIN}/billing/"
             )
-            
-            return Response({'portal_url': session.url})
-            
+
+            return Response({"portal_url": session.url})
+
         except Exception as e:
             logger.error(f"Error creating billing portal: {str(e)}")
             return Response(
-                {'error': 'Failed to create billing portal'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to create billing portal"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @extend_schema(
         summary="Start one-module trial",
         description="Create a one-month trial subscription restricted to a single selected module.",
         request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'module': {'type': 'string', 'description': 'Module key selected for the trial'}
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "module": {"type": "string", "description": "Module key selected for the trial"}
                 },
-                'required': ['module']
+                "required": ["module"],
             }
         },
         responses={
             201: SubscriptionSerializer,
-            400: OpenApiResponse(description='Invalid module or tenant already has a non-trial subscription'),
+            400: OpenApiResponse(
+                description="Invalid module or tenant already has a non-trial subscription"
+            ),
         },
-        tags=['Billing'],
+        tags=["Billing"],
     )
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=["post"])
     def start_trial(self, request):
         """Start a one-month trial restricted to the selected module."""
-        module_key = request.data.get('module')
+        module_key = request.data.get("module")
         if module_key not in MODULE_BY_KEY:
             return Response(
                 {
-                    'error': 'Select a valid module for the trial.',
-                    'code': 'invalid_trial_module',
-                    'valid_modules': list(MODULE_BY_KEY.keys()),
+                    "error": "Select a valid module for the trial.",
+                    "code": "invalid_trial_module",
+                    "valid_modules": list(MODULE_BY_KEY.keys()),
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         with schema_context("public"):
             tenant = get_public_tenant(request.tenant.schema_name)
-            existing_subscription = getattr(tenant, 'subscription', None)
-            if existing_subscription and existing_subscription.status != 'trialing':
+            existing_subscription = getattr(tenant, "subscription", None)
+            if existing_subscription and existing_subscription.status != "trialing":
                 return Response(
                     {
-                        'error': 'This tenant already has a subscription.',
-                        'code': 'subscription_exists',
+                        "error": "This tenant already has a subscription.",
+                        "code": "subscription_exists",
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            previous = snapshot_subscription(existing_subscription) if existing_subscription else None
-            free_plan = Plan.objects.get(slug='free')
+            previous = (
+                snapshot_subscription(existing_subscription) if existing_subscription else None
+            )
+            free_plan = Plan.objects.get(slug="free")
             now = timezone.now()
             subscription, created = Subscription.objects.update_or_create(
                 tenant=tenant,
                 defaults={
-                    'plan': free_plan,
-                    'status': 'trialing',
-                    'trial_start': now,
-                    'trial_end': now + timedelta(days=30),
-                    'trial_module': module_key,
-                    'enabled_modules': [module_key],
+                    "plan": free_plan,
+                    "status": "trialing",
+                    "trial_start": now,
+                    "trial_end": now + timedelta(days=30),
+                    "trial_module": module_key,
+                    "enabled_modules": [module_key],
                 },
             )
             tenant.current_plan = free_plan.slug
-            tenant.save(update_fields=['current_plan'])
+            tenant.save(update_fields=["current_plan"])
             new = snapshot_subscription(subscription)
             if previous:
                 previous_changed, new_changed = billing_changed_values(previous, new)
             else:
                 previous_changed, new_changed = {}, new
             audit_subscription_change(
-                event='SUBSCRIPTION_TRIAL_STARTED' if created else 'SUBSCRIPTION_TRIAL_UPDATED',
+                event="SUBSCRIPTION_TRIAL_STARTED" if created else "SUBSCRIPTION_TRIAL_UPDATED",
                 subscription=subscription,
                 actor=request.user,
                 request=request,
                 previous=previous_changed,
                 new=new_changed,
-                source={'type': 'api', 'reference': 'billing.start_trial'},
-                details={'module_grant': module_key},
+                source={"type": "api", "reference": "billing.start_trial"},
+                details={"module_grant": module_key},
             )
             serializer = SubscriptionSerializer(subscription)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(csrf_exempt, name="dispatch")
 class StripeWebhookView(View):
     """
     Handle Stripe webhook events.
     """
-    
+
     def post(self, request):
         payload = request.body
-        sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+        sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
         webhook_secret = settings.STRIPE_WEBHOOK_SECRET
-        
+
         try:
-            event = stripe.Webhook.construct_event(
-                payload, sig_header, webhook_secret
-            )
+            event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
         except ValueError:
             logger.error("Invalid payload in webhook")
             return HttpResponse(status=400)
         except stripe.error.SignatureVerificationError:  # type: ignore[attr-defined]
             logger.error("Invalid signature in webhook")
             return HttpResponse(status=400)
-        
+
         # Log the event
         billing_event = BillingEvent.objects.create(
-            stripe_event_id=event['id'],
-            event_type=event['type'],
-            data=event['data']
+            stripe_event_id=event["id"], event_type=event["type"], data=event["data"]
         )
-        
+
         try:
-            if event['type'] == 'checkout.session.completed':
-                self._handle_checkout_completed(event['data']['object'], event['id'])
-            
-            elif event['type'] == 'customer.subscription.created':
-                self._handle_subscription_created(event['data']['object'], event['id'])
-            
-            elif event['type'] == 'customer.subscription.updated':
-                self._handle_subscription_updated(event['data']['object'], event['id'])
-            
-            elif event['type'] == 'customer.subscription.deleted':
-                self._handle_subscription_deleted(event['data']['object'], event['id'])
-            
-            elif event['type'] == 'invoice.payment_succeeded':
-                self._handle_payment_succeeded(event['data']['object'], event['id'])
-            
-            elif event['type'] == 'invoice.payment_failed':
-                self._handle_payment_failed(event['data']['object'], event['id'])
-            
+            if event["type"] == "checkout.session.completed":
+                self._handle_checkout_completed(event["data"]["object"], event["id"])
+
+            elif event["type"] == "customer.subscription.created":
+                self._handle_subscription_created(event["data"]["object"], event["id"])
+
+            elif event["type"] == "customer.subscription.updated":
+                self._handle_subscription_updated(event["data"]["object"], event["id"])
+
+            elif event["type"] == "customer.subscription.deleted":
+                self._handle_subscription_deleted(event["data"]["object"], event["id"])
+
+            elif event["type"] == "invoice.payment_succeeded":
+                self._handle_payment_succeeded(event["data"]["object"], event["id"])
+
+            elif event["type"] == "invoice.payment_failed":
+                self._handle_payment_failed(event["data"]["object"], event["id"])
+
             billing_event.processed = True
             billing_event.processed_at = datetime.now()
             billing_event.save()
-            
+
         except Exception as e:
             logger.error(f"Error processing webhook {event['type']}: {str(e)}")
             billing_event.error_message = str(e)
             billing_event.save()
             return HttpResponse(status=500)
-        
+
         return HttpResponse(status=200)
-    
+
     def _handle_checkout_completed(self, session, event_id):
         """Handle successful checkout completion."""
-        tenant_id = session.get('metadata', {}).get('tenant_id')
+        tenant_id = session.get("metadata", {}).get("tenant_id")
         if not tenant_id:
             logger.error("No tenant_id in checkout session metadata")
             return
-        
+
         tenant = Tenant.objects.get(id=tenant_id)
-        
+
         # Get the subscription from Stripe
-        subscription_id = session.get('subscription')
+        subscription_id = session.get("subscription")
         if subscription_id:
             stripe_sub = stripe.Subscription.retrieve(subscription_id)
-            
+
             # Update or create local subscription
             subscription, created = Subscription.objects.get_or_create(
                 tenant=tenant,
                 defaults={
-                    'stripe_subscription_id': subscription_id,
-                    'stripe_customer_id': session.get('customer'),
-                    'status': stripe_sub.status,
-                    'plan': self._get_plan_from_stripe_subscription(stripe_sub)
-                }
+                    "stripe_subscription_id": subscription_id,
+                    "stripe_customer_id": session.get("customer"),
+                    "status": stripe_sub.status,
+                    "plan": self._get_plan_from_stripe_subscription(stripe_sub),
+                },
             )
-            
+
             if not created:
                 previous = snapshot_subscription(subscription)
                 subscription.stripe_subscription_id = subscription_id
-                subscription.stripe_customer_id = session.get('customer')
+                subscription.stripe_customer_id = session.get("customer")
                 subscription.status = stripe_sub.status
                 subscription.plan = self._get_plan_from_stripe_subscription(stripe_sub)
                 subscription.save()
@@ -500,35 +485,35 @@ class StripeWebhookView(View):
             else:
                 previous_changed, new_changed = {}, snapshot_subscription(subscription)
             audit_subscription_change(
-                event='SUBSCRIPTION_CHECKOUT_COMPLETED',
+                event="SUBSCRIPTION_CHECKOUT_COMPLETED",
                 subscription=subscription,
                 previous=previous_changed,
                 new=new_changed,
-                source={'type': 'stripe_webhook', 'reference': event_id},
+                source={"type": "stripe_webhook", "reference": event_id},
             )
-    
+
     def _handle_subscription_created(self, subscription, event_id):
         """Handle subscription creation."""
-        customer_id = subscription.get('customer')
+        customer_id = subscription.get("customer")
         try:
             tenant = Tenant.objects.get(stripe_customer_id=customer_id)
-            
+
             local_subscription, created = Subscription.objects.get_or_create(
                 tenant=tenant,
                 defaults={
-                    'stripe_subscription_id': subscription['id'],
-                    'stripe_customer_id': customer_id,
-                    'status': subscription['status'],
-                    'plan': self._get_plan_from_stripe_subscription(subscription)
-                }
+                    "stripe_subscription_id": subscription["id"],
+                    "stripe_customer_id": customer_id,
+                    "status": subscription["status"],
+                    "plan": self._get_plan_from_stripe_subscription(subscription),
+                },
             )
             if created:
                 previous_changed, new_changed = {}, snapshot_subscription(local_subscription)
             else:
                 previous = snapshot_subscription(local_subscription)
-                local_subscription.stripe_subscription_id = subscription['id']
+                local_subscription.stripe_subscription_id = subscription["id"]
                 local_subscription.stripe_customer_id = customer_id
-                local_subscription.status = subscription['status']
+                local_subscription.status = subscription["status"]
                 local_subscription.plan = self._get_plan_from_stripe_subscription(subscription)
                 local_subscription.save()
                 new = snapshot_subscription(local_subscription)
@@ -537,122 +522,118 @@ class StripeWebhookView(View):
             tenant.current_plan = local_subscription.plan.slug
             tenant.save()
             audit_subscription_change(
-                event='SUBSCRIPTION_CREATED',
+                event="SUBSCRIPTION_CREATED",
                 subscription=local_subscription,
                 previous=previous_changed,
                 new=new_changed,
-                source={'type': 'stripe_webhook', 'reference': event_id},
+                source={"type": "stripe_webhook", "reference": event_id},
             )
-            
+
         except Tenant.DoesNotExist:
             logger.error(f"No tenant found for customer {customer_id}")
-    
+
     def _handle_subscription_updated(self, subscription, event_id):
         """Handle subscription updates."""
         try:
-            local_subscription = Subscription.objects.get(
-                stripe_subscription_id=subscription['id']
-            )
+            local_subscription = Subscription.objects.get(stripe_subscription_id=subscription["id"])
             previous = snapshot_subscription(local_subscription)
-            local_subscription.status = subscription['status']
+            local_subscription.status = subscription["status"]
             local_subscription.plan = self._get_plan_from_stripe_subscription(subscription)
             local_subscription.save()
             new = snapshot_subscription(local_subscription)
-            
+
             local_subscription.tenant.current_plan = local_subscription.plan.slug
             local_subscription.tenant.save()
             previous_changed, new_changed = billing_changed_values(previous, new)
             audit_subscription_change(
-                event='SUBSCRIPTION_UPDATED',
+                event="SUBSCRIPTION_UPDATED",
                 subscription=local_subscription,
                 previous=previous_changed,
                 new=new_changed,
-                source={'type': 'stripe_webhook', 'reference': event_id},
+                source={"type": "stripe_webhook", "reference": event_id},
             )
-            
+
         except Subscription.DoesNotExist:
             logger.error(f"No local subscription found for {subscription['id']}")
-    
+
     def _handle_subscription_deleted(self, subscription, event_id):
         """Handle subscription cancellation."""
         try:
-            local_subscription = Subscription.objects.get(
-                stripe_subscription_id=subscription['id']
-            )
+            local_subscription = Subscription.objects.get(stripe_subscription_id=subscription["id"])
             previous = snapshot_subscription(local_subscription)
-            local_subscription.status = 'canceled'
-            free_plan = Plan.objects.get(slug='free')
+            local_subscription.status = "canceled"
+            free_plan = Plan.objects.get(slug="free")
             local_subscription.plan = free_plan
             local_subscription.save()
             new = snapshot_subscription(local_subscription)
-            
-            local_subscription.tenant.current_plan = 'free'
+
+            local_subscription.tenant.current_plan = "free"
             local_subscription.tenant.save()
             previous_changed, new_changed = billing_changed_values(previous, new)
             audit_subscription_change(
-                event='SUBSCRIPTION_CANCELED',
+                event="SUBSCRIPTION_CANCELED",
                 subscription=local_subscription,
                 previous=previous_changed,
                 new=new_changed,
-                source={'type': 'stripe_webhook', 'reference': event_id},
+                source={"type": "stripe_webhook", "reference": event_id},
             )
-            
+
         except Subscription.DoesNotExist:
             logger.error(f"No local subscription found for {subscription['id']}")
-    
+
     def _handle_payment_succeeded(self, invoice, event_id):
         """Handle successful payment."""
-        subscription_id = invoice.get('subscription')
+        subscription_id = invoice.get("subscription")
         if subscription_id:
             try:
                 local_subscription = Subscription.objects.get(
                     stripe_subscription_id=subscription_id
                 )
                 previous = snapshot_subscription(local_subscription)
-                local_subscription.status = 'active'
+                local_subscription.status = "active"
                 local_subscription.save()
                 new = snapshot_subscription(local_subscription)
                 previous_changed, new_changed = billing_changed_values(previous, new)
                 audit_subscription_change(
-                    event='SUBSCRIPTION_STATUS_CHANGED',
+                    event="SUBSCRIPTION_STATUS_CHANGED",
                     subscription=local_subscription,
                     previous=previous_changed,
                     new=new_changed,
-                    source={'type': 'stripe_webhook', 'reference': event_id},
+                    source={"type": "stripe_webhook", "reference": event_id},
                 )
-                
+
             except Subscription.DoesNotExist:
                 logger.error(f"No local subscription found for {subscription_id}")
-    
+
     def _handle_payment_failed(self, invoice, event_id):
         """Handle failed payment."""
-        subscription_id = invoice.get('subscription')
+        subscription_id = invoice.get("subscription")
         if subscription_id:
             try:
                 local_subscription = Subscription.objects.get(
                     stripe_subscription_id=subscription_id
                 )
                 previous = snapshot_subscription(local_subscription)
-                local_subscription.status = 'past_due'
+                local_subscription.status = "past_due"
                 local_subscription.save()
                 new = snapshot_subscription(local_subscription)
                 previous_changed, new_changed = billing_changed_values(previous, new)
                 audit_subscription_change(
-                    event='SUBSCRIPTION_STATUS_CHANGED',
+                    event="SUBSCRIPTION_STATUS_CHANGED",
                     subscription=local_subscription,
                     previous=previous_changed,
                     new=new_changed,
-                    source={'type': 'stripe_webhook', 'reference': event_id},
+                    source={"type": "stripe_webhook", "reference": event_id},
                 )
-                
+
             except Subscription.DoesNotExist:
                 logger.error(f"No local subscription found for {subscription_id}")
-    
+
     def _get_plan_from_stripe_subscription(self, stripe_subscription):
         """Get local Plan from Stripe subscription."""
-        price_id = stripe_subscription['items']['data'][0]['price']['id']
+        price_id = stripe_subscription["items"]["data"][0]["price"]["id"]
         try:
             return Plan.objects.get(stripe_price_id=price_id)
         except Plan.DoesNotExist:
             logger.error(f"No plan found for Stripe price {price_id}")
-            return Plan.objects.get(slug='free')  # Fallback to free plan
+            return Plan.objects.get(slug="free")  # Fallback to free plan

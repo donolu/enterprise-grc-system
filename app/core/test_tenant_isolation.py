@@ -39,7 +39,13 @@ from core.models import AuditEvent, Document, Domain, Tenant
 from core.storage import TenantAwareBlobStorage
 from exports.models import AssessmentReport, TenantDataExport
 from knowledge.models import KnowledgeArticle, KnowledgeCategory
-from policies.models import Policy, PolicyAcknowledgment, PolicyCategory, PolicyDistribution, PolicyVersion
+from policies.models import (
+    Policy,
+    PolicyAcknowledgment,
+    PolicyCategory,
+    PolicyDistribution,
+    PolicyVersion,
+)
 from risk.models import Risk, RiskAction, RiskActionReminderConfiguration, RiskCategory, RiskMatrix
 from training.models import (
     CampaignDelivery,
@@ -123,9 +129,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/risk/categories/")
-        detail_response = client.get(
-            f"/api/risk/categories/{tenant_b_private_category.pk}/"
-        )
+        detail_response = client.get(f"/api/risk/categories/{tenant_b_private_category.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -150,9 +154,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/risk/matrices/")
-        detail_response = client.get(
-            f"/api/risk/matrices/{tenant_b_private_matrix.pk}/"
-        )
+        detail_response = client.get(f"/api/risk/matrices/{tenant_b_private_matrix.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -185,9 +187,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/risk/actions/")
-        detail_response = client.get(
-            f"/api/risk/actions/{tenant_b_private_action.pk}/"
-        )
+        detail_response = client.get(f"/api/risk/actions/{tenant_b_private_action.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -212,9 +212,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/risk/reminder-config/")
-        detail_response = client.get(
-            f"/api/risk/reminder-config/{tenant_b_private_config.pk}/"
-        )
+        detail_response = client.get(f"/api/risk/reminder-config/{tenant_b_private_config.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -238,9 +236,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/policies/policies/")
-        detail_response = client.get(
-            f"/api/policies/policies/{tenant_b_private_policy.pk}/"
-        )
+        detail_response = client.get(f"/api/policies/policies/{tenant_b_private_policy.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -264,15 +260,11 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/policies/categories/")
-        detail_response = client.get(
-            f"/api/policies/categories/{tenant_b_private_category.pk}/"
-        )
+        detail_response = client.get(f"/api/policies/categories/{tenant_b_private_category.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_names(list_response.json()) == [
-            "Tenant A policy category"
-        ]
+        assert self._response_names(list_response.json()) == ["Tenant A policy category"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_policy_version_list_and_detail_are_scoped_to_request_tenant(self):
@@ -301,9 +293,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/policies/versions/")
-        detail_response = client.get(
-            f"/api/policies/versions/{tenant_b_private_version.pk}/"
-        )
+        detail_response = client.get(f"/api/policies/versions/{tenant_b_private_version.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -342,9 +332,7 @@ class TestTenantIsolation:
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_field(list_response.json(), "policy_title") == [
-            "Tenant A policy"
-        ]
+        assert self._response_field(list_response.json(), "policy_title") == ["Tenant A policy"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_policy_distribution_list_and_detail_are_scoped_to_request_tenant(self):
@@ -380,9 +368,7 @@ class TestTenantIsolation:
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_field(list_response.json(), "policy_title") == [
-            "Tenant A policy"
-        ]
+        assert self._response_field(list_response.json(), "policy_title") == ["Tenant A policy"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_export_report_list_and_detail_are_scoped_to_request_tenant(self):
@@ -469,9 +455,7 @@ class TestTenantIsolation:
 
         list_response = client.get("/api/documents/")
         detail_response = client.get(f"/api/documents/{tenant_b_private_document.pk}/")
-        download_response = client.get(
-            f"/api/documents/{tenant_b_private_document.pk}/download/"
-        )
+        download_response = client.get(f"/api/documents/{tenant_b_private_document.pk}/download/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -513,12 +497,8 @@ class TestTenantIsolation:
 
         client = self._authenticated_client(tenant_a, user_a)
 
-        status_response = client.get(
-            f"/api/exports/assessment-reports/{report_a.pk}/status_check/"
-        )
-        download_response = client.get(
-            f"/api/exports/assessment-reports/{report_a.pk}/download/"
-        )
+        status_response = client.get(f"/api/exports/assessment-reports/{report_a.pk}/status_check/")
+        download_response = client.get(f"/api/exports/assessment-reports/{report_a.pk}/download/")
         cross_status_response = client.get(
             f"/api/exports/assessment-reports/{tenant_b_private_report.pk}/status_check/"
         )
@@ -527,9 +507,7 @@ class TestTenantIsolation:
         )
 
         assert status_response.status_code == status.HTTP_200_OK
-        assert f"/api/documents/{document_a.pk}/download/" in status_response.json()[
-            "download_url"
-        ]
+        assert f"/api/documents/{document_a.pk}/download/" in status_response.json()["download_url"]
         assert download_response.status_code == status.HTTP_200_OK
         assert download_response.json()["download_url"].endswith(
             f"/api/documents/{document_a.pk}/download/"
@@ -578,9 +556,7 @@ class TestTenantIsolation:
         status_response = client.get(
             f"/api/exports/tenant-data-exports/{export_a.pk}/status_check/"
         )
-        download_response = client.get(
-            f"/api/exports/tenant-data-exports/{export_a.pk}/download/"
-        )
+        download_response = client.get(f"/api/exports/tenant-data-exports/{export_a.pk}/download/")
         cross_status_response = client.get(
             f"/api/exports/tenant-data-exports/{tenant_b_private_export.pk}/status_check/"
         )
@@ -589,9 +565,7 @@ class TestTenantIsolation:
         )
 
         assert status_response.status_code == status.HTTP_200_OK
-        assert f"/api/documents/{document_a.pk}/download/" in status_response.json()[
-            "download_url"
-        ]
+        assert f"/api/documents/{document_a.pk}/download/" in status_response.json()["download_url"]
         assert download_response.status_code == status.HTTP_200_OK
         assert download_response.json()["document_id"] == document_a.pk
         assert download_response.json()["download_url"].endswith(
@@ -654,9 +628,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/catalogs/api/clauses/")
-        detail_response = client.get(
-            f"/api/catalogs/api/clauses/{tenant_b_private_clause.pk}/"
-        )
+        detail_response = client.get(f"/api/catalogs/api/clauses/{tenant_b_private_clause.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -698,9 +670,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/catalogs/api/controls/")
-        detail_response = client.get(
-            f"/api/catalogs/api/controls/{tenant_b_private_control.pk}/"
-        )
+        detail_response = client.get(f"/api/catalogs/api/controls/{tenant_b_private_control.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -754,9 +724,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/catalogs/api/evidence/")
-        detail_response = client.get(
-            f"/api/catalogs/api/evidence/{tenant_b_private_evidence.pk}/"
-        )
+        detail_response = client.get(f"/api/catalogs/api/evidence/{tenant_b_private_evidence.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -820,9 +788,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/catalogs/api/mappings/")
-        detail_response = client.get(
-            f"/api/catalogs/api/mappings/{tenant_b_private_mapping.pk}/"
-        )
+        detail_response = client.get(f"/api/catalogs/api/mappings/{tenant_b_private_mapping.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -973,9 +939,7 @@ class TestTenantIsolation:
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_field(list_response.json(), "assessment_id") == [
-            "ASS-A-001"
-        ]
+        assert self._response_field(list_response.json(), "assessment_id") == ["ASS-A-001"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_assessment_evidence_list_and_detail_are_scoped_to_request_tenant(self):
@@ -1099,9 +1063,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/training/videos/")
-        detail_response = client.get(
-            f"/api/training/videos/{tenant_b_private_video.pk}/"
-        )
+        detail_response = client.get(f"/api/training/videos/{tenant_b_private_video.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -1125,15 +1087,11 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/training/categories/")
-        detail_response = client.get(
-            f"/api/training/categories/{tenant_b_private_category.pk}/"
-        )
+        detail_response = client.get(f"/api/training/categories/{tenant_b_private_category.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_names(list_response.json()) == [
-            "Tenant A training category"
-        ]
+        assert self._response_names(list_response.json()) == ["Tenant A training category"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_training_campaign_list_and_detail_are_scoped_to_request_tenant(self):
@@ -1154,9 +1112,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/training/campaigns/")
-        detail_response = client.get(
-            f"/api/training/campaigns/{tenant_b_private_campaign.pk}/"
-        )
+        detail_response = client.get(f"/api/training/campaigns/{tenant_b_private_campaign.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -1187,15 +1143,11 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/training/deliveries/")
-        detail_response = client.get(
-            f"/api/training/deliveries/{tenant_b_private_delivery.pk}/"
-        )
+        detail_response = client.get(f"/api/training/deliveries/{tenant_b_private_delivery.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_field(list_response.json(), "campaign_name") == [
-            "Tenant A campaign"
-        ]
+        assert self._response_field(list_response.json(), "campaign_name") == ["Tenant A campaign"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_video_view_list_and_detail_are_scoped_to_request_tenant(self):
@@ -1218,9 +1170,7 @@ class TestTenantIsolation:
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_field(list_response.json(), "video_title") == [
-            "Tenant A video"
-        ]
+        assert self._response_field(list_response.json(), "video_title") == ["Tenant A video"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_asset_list_and_detail_are_scoped_to_request_tenant(self):
@@ -1281,9 +1231,7 @@ class TestTenantIsolation:
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_field(list_response.json(), "asset_identifier") == [
-            "ASSET-A-001"
-        ]
+        assert self._response_field(list_response.json(), "asset_identifier") == ["ASSET-A-001"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_vendor_list_and_detail_are_scoped_to_request_tenant(self):
@@ -1304,9 +1252,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/vendors/vendors/")
-        detail_response = client.get(
-            f"/api/vendors/vendors/{tenant_b_private_vendor.pk}/"
-        )
+        detail_response = client.get(f"/api/vendors/vendors/{tenant_b_private_vendor.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -1344,9 +1290,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/vendors/tasks/")
-        detail_response = client.get(
-            f"/api/vendors/tasks/{tenant_b_private_task.pk}/"
-        )
+        detail_response = client.get(f"/api/vendors/tasks/{tenant_b_private_task.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -1370,9 +1314,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/vendors/categories/")
-        detail_response = client.get(
-            f"/api/vendors/categories/{tenant_b_private_category.pk}/"
-        )
+        detail_response = client.get(f"/api/vendors/categories/{tenant_b_private_category.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -1399,9 +1341,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/vendors/contacts/")
-        detail_response = client.get(
-            f"/api/vendors/contacts/{tenant_b_private_contact.pk}/"
-        )
+        detail_response = client.get(f"/api/vendors/contacts/{tenant_b_private_contact.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -1428,9 +1368,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/vendors/services/")
-        detail_response = client.get(
-            f"/api/vendors/services/{tenant_b_private_service.pk}/"
-        )
+        detail_response = client.get(f"/api/vendors/services/{tenant_b_private_service.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -1458,9 +1396,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/vendors/notes/")
-        detail_response = client.get(
-            f"/api/vendors/notes/{tenant_b_private_note.pk}/"
-        )
+        detail_response = client.get(f"/api/vendors/notes/{tenant_b_private_note.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -1485,9 +1421,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/compliance/artefacts/")
-        detail_response = client.get(
-            f"/api/compliance/artefacts/{tenant_b_private_artefact.pk}/"
-        )
+        detail_response = client.get(f"/api/compliance/artefacts/{tenant_b_private_artefact.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -1526,9 +1460,7 @@ class TestTenantIsolation:
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_titles(list_response.json()) == [
-            "Tenant A regulatory requirement"
-        ]
+        assert self._response_titles(list_response.json()) == ["Tenant A regulatory requirement"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_nonconformity_list_and_detail_are_scoped_to_request_tenant(self):
@@ -1559,9 +1491,7 @@ class TestTenantIsolation:
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_titles(list_response.json()) == [
-            "Tenant A nonconformity"
-        ]
+        assert self._response_titles(list_response.json()) == ["Tenant A nonconformity"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_management_review_list_and_detail_are_scoped_to_request_tenant(self):
@@ -1592,9 +1522,7 @@ class TestTenantIsolation:
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_titles(list_response.json()) == [
-            "Tenant A management review"
-        ]
+        assert self._response_titles(list_response.json()) == ["Tenant A management review"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_knowledge_article_list_and_detail_are_scoped_to_request_tenant(self):
@@ -1615,9 +1543,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/knowledge/articles/")
-        detail_response = client.get(
-            f"/api/knowledge/articles/{tenant_b_private_article.pk}/"
-        )
+        detail_response = client.get(f"/api/knowledge/articles/{tenant_b_private_article.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -1646,15 +1572,11 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/knowledge/categories/")
-        detail_response = client.get(
-            f"/api/knowledge/categories/{tenant_b_private_category.pk}/"
-        )
+        detail_response = client.get(f"/api/knowledge/categories/{tenant_b_private_category.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_names(list_response.json()) == [
-            "Tenant A knowledge category"
-        ]
+        assert self._response_names(list_response.json()) == ["Tenant A knowledge category"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_calendar_event_list_and_detail_are_scoped_to_request_tenant(self):
@@ -1675,9 +1597,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/calendar/events/")
-        detail_response = client.get(
-            f"/api/calendar/events/{tenant_b_private_event.pk}/"
-        )
+        detail_response = client.get(f"/api/calendar/events/{tenant_b_private_event.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -1732,9 +1652,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/calendar/reminders/")
-        detail_response = client.get(
-            f"/api/calendar/reminders/{tenant_b_private_reminder.pk}/"
-        )
+        detail_response = client.get(f"/api/calendar/reminders/{tenant_b_private_reminder.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -1767,15 +1685,11 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/calendar/audit/")
-        detail_response = client.get(
-            f"/api/calendar/audit/{tenant_b_private_audit.pk}/"
-        )
+        detail_response = client.get(f"/api/calendar/audit/{tenant_b_private_audit.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_field(list_response.json(), "source_id") == [
-            "tenant-a-source"
-        ]
+        assert self._response_field(list_response.json(), "source_id") == ["tenant-a-source"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_vulnerability_target_list_and_detail_are_scoped_to_request_tenant(self):
@@ -1796,9 +1710,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/vuln/targets/")
-        detail_response = client.get(
-            f"/api/vuln/targets/{tenant_b_private_target.pk}/"
-        )
+        detail_response = client.get(f"/api/vuln/targets/{tenant_b_private_target.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -1835,9 +1747,7 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/vuln/schedules/")
-        detail_response = client.get(
-            f"/api/vuln/schedules/{tenant_b_private_schedule.pk}/"
-        )
+        detail_response = client.get(f"/api/vuln/schedules/{tenant_b_private_schedule.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
@@ -1868,9 +1778,7 @@ class TestTenantIsolation:
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_field(list_response.json(), "target_name") == [
-            "Tenant A scan target"
-        ]
+        assert self._response_field(list_response.json(), "target_name") == ["Tenant A scan target"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_vulnerability_finding_list_and_detail_are_scoped_to_request_tenant(self):
@@ -1910,15 +1818,11 @@ class TestTenantIsolation:
         client = self._authenticated_client(tenant_a, user_a)
 
         list_response = client.get("/api/vuln/findings/")
-        detail_response = client.get(
-            f"/api/vuln/findings/{tenant_b_private_finding.pk}/"
-        )
+        detail_response = client.get(f"/api/vuln/findings/{tenant_b_private_finding.pk}/")
 
         assert list_response.status_code == status.HTTP_200_OK
         assert self._response_count(list_response.json()) == 1
-        assert self._response_titles(list_response.json()) == [
-            "Tenant A vulnerability finding"
-        ]
+        assert self._response_titles(list_response.json()) == ["Tenant A vulnerability finding"]
         assert detail_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_audit_event_list_is_staff_only_and_scoped_to_request_tenant(self):

@@ -1,6 +1,11 @@
 from rest_framework import serializers
 
-from .models import CalendarAuditLog, CalendarEvent, CalendarNotificationPreference, CalendarReminderLog
+from .models import (
+    CalendarAuditLog,
+    CalendarEvent,
+    CalendarNotificationPreference,
+    CalendarReminderLog,
+)
 
 
 class CalendarOwnerSerializer(serializers.Serializer):
@@ -24,47 +29,75 @@ class CalendarSourceEventSerializer(serializers.Serializer):
 
 
 class CalendarEventSerializer(serializers.ModelSerializer):
-    owner_email = serializers.EmailField(source='owner.email', read_only=True)
+    owner_email = serializers.EmailField(source="owner.email", read_only=True)
 
     class Meta:
         model = CalendarEvent
         fields = [
-            'id', 'title', 'description', 'event_type', 'due_date', 'owner',
-            'owner_email', 'status', 'source_url', 'metadata', 'created_at',
-            'updated_at',
+            "id",
+            "title",
+            "description",
+            "event_type",
+            "due_date",
+            "owner",
+            "owner_email",
+            "status",
+            "source_url",
+            "metadata",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ["id", "created_at", "updated_at"]
 
 
 class CalendarNotificationPreferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = CalendarNotificationPreference
         fields = [
-            'email_enabled', 'advance_reminder_days', 'due_date_enabled',
-            'overdue_enabled', 'updated_at',
+            "email_enabled",
+            "advance_reminder_days",
+            "due_date_enabled",
+            "overdue_enabled",
+            "updated_at",
         ]
-        read_only_fields = ['updated_at']
+        read_only_fields = ["updated_at"]
 
 
 class CalendarReminderLogSerializer(serializers.ModelSerializer):
-    recipient_email = serializers.EmailField(source='recipient.email', read_only=True)
+    recipient_email = serializers.EmailField(source="recipient.email", read_only=True)
 
     class Meta:
         model = CalendarReminderLog
         fields = [
-            'id', 'source_type', 'source_id', 'title', 'due_date', 'recipient',
-            'recipient_email', 'reminder_type', 'sent_at', 'email_sent', 'metadata',
+            "id",
+            "source_type",
+            "source_id",
+            "title",
+            "due_date",
+            "recipient",
+            "recipient_email",
+            "reminder_type",
+            "sent_at",
+            "email_sent",
+            "metadata",
         ]
         read_only_fields = fields
 
 
 class CalendarAuditLogSerializer(serializers.ModelSerializer):
-    actor_email = serializers.EmailField(source='actor.email', read_only=True)
+    actor_email = serializers.EmailField(source="actor.email", read_only=True)
 
     class Meta:
         model = CalendarAuditLog
         fields = [
-            'id', 'action', 'event', 'source_type', 'source_id', 'actor',
-            'actor_email', 'details', 'created_at',
+            "id",
+            "action",
+            "event",
+            "source_type",
+            "source_id",
+            "actor",
+            "actor_email",
+            "details",
+            "created_at",
         ]
         read_only_fields = fields

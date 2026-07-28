@@ -30,12 +30,10 @@ def test_observability_middleware_records_http_request_metrics():
     assert response.status_code == 202
     metrics = render_prometheus_metrics()
     assert (
-        'grc_http_requests_total{method="GET",route="/observability-test/",'
-        'status="202"} 1'
+        'grc_http_requests_total{method="GET",route="/observability-test/",status="202"} 1'
     ) in metrics
     assert (
-        'grc_http_request_duration_seconds_count{method="GET",'
-        'route="/observability-test/"} 1'
+        'grc_http_request_duration_seconds_count{method="GET",route="/observability-test/"} 1'
     ) in metrics
 
 
@@ -45,9 +43,7 @@ def test_metrics_endpoint_can_require_bearer_token():
 
     with override_settings(METRICS_ENABLED=True, METRICS_BEARER_TOKEN="secret"):
         unauthenticated = view(factory.get("/metrics/"))
-        authenticated = view(
-            factory.get("/metrics/", HTTP_AUTHORIZATION="Bearer secret")
-        )
+        authenticated = view(factory.get("/metrics/", HTTP_AUTHORIZATION="Bearer secret"))
 
     assert unauthenticated.status_code == 401
     assert authenticated.status_code == 200
@@ -70,8 +66,7 @@ def test_celery_task_metrics_are_rendered():
     metrics = render_prometheus_metrics()
 
     assert (
-        'grc_celery_tasks_total{task="risk.tasks.send_reminders",'
-        'status="success"} 1'
+        'grc_celery_tasks_total{task="risk.tasks.send_reminders",status="success"} 1'
     ) in metrics
     assert (
         'grc_celery_task_duration_seconds_count{task="risk.tasks.send_reminders",'

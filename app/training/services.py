@@ -18,18 +18,14 @@ class TrainingAnalyticsService:
     def executive_summary():
         total_views = VideoView.objects.count()
         completed_views = VideoView.objects.filter(completed=True).count()
-        completion_rate = (
-            round((completed_views / total_views) * 100, 1) if total_views > 0 else 0
-        )
+        completion_rate = round((completed_views / total_views) * 100, 1) if total_views > 0 else 0
 
         return {
             "total_videos": TrainingVideo.objects.count(),
             "total_views": total_views,
             "unique_viewers": VideoView.objects.values("user").distinct().count(),
             "completion_rate": completion_rate,
-            "active_campaigns": SecurityAwarenessCampaign.objects.filter(
-                is_active=True
-            ).count(),
+            "active_campaigns": SecurityAwarenessCampaign.objects.filter(is_active=True).count(),
         }
 
     @staticmethod
@@ -39,9 +35,9 @@ class TrainingAnalyticsService:
             "total_videos": TrainingVideo.objects.count(),
             "total_views": VideoView.objects.count(),
             "unique_viewers": VideoView.objects.values("user").distinct().count(),
-            "total_watch_time": VideoView.objects.aggregate(
-                total_minutes=Sum("duration_watched")
-            )["total_minutes"]
+            "total_watch_time": VideoView.objects.aggregate(total_minutes=Sum("duration_watched"))[
+                "total_minutes"
+            ]
             or 0,
             "avg_completion_rate": VideoView.objects.aggregate(
                 avg_completion=Avg("completion_percentage")

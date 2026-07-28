@@ -58,7 +58,7 @@
         <p style="color: #666; font-size: 10pt; margin-bottom: 1em;">
             Integrated risk management data providing comprehensive security posture insights alongside compliance status.
         </p>
-        
+
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="number">{{ risk_analytics.overview.total_risks|default:0 }}</div>
@@ -85,7 +85,7 @@
                 <div class="label">Action Completion</div>
             </div>
         </div>
-        
+
         {% if risk_analytics.compliance_correlation.integration_insights %}
         <div style="margin-top: 1em; padding: 1em; background-color: #f8f9fa; border-left: 4px solid #0066cc;">
             <h4 style="margin-top: 0; color: #0066cc;">Risk-Compliance Integration Insights</h4>

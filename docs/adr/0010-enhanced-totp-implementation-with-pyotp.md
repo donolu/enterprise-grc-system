@@ -15,7 +15,7 @@ This error occurred in the `/api/auth/2fa/setup-totp/` endpoint when attempting 
 
 ### Impact Assessment
 - **Functionality Impact:** High - TOTP setup was completely broken for QR code scanning
-- **User Experience Impact:** Critical - Users couldn't easily set up 2FA 
+- **User Experience Impact:** Critical - Users couldn't easily set up 2FA
 - **Security Impact:** Medium - Reduced 2FA adoption due to poor UX
 - **Business Impact:** High - Core security feature unusable
 
@@ -35,13 +35,13 @@ We decided to implement an enhanced TOTP service using the `pyotp` library along
 ```python
 class TOTPService:
     """Enhanced TOTP service using pyotp for reliable QR code generation."""
-    
+
     @staticmethod
     def generate_secret() -> str:
         """Generate secure random secret using pyotp."""
         return pyotp.random_base32()
-    
-    @staticmethod 
+
+    @staticmethod
     def generate_qr_code(provisioning_uri: str) -> str:
         """Generate QR code as clean base64 data URL."""
         # Implementation details...
@@ -55,7 +55,7 @@ def generate_qr_code(provisioning_uri: str) -> str:
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L)
     qr.add_data(provisioning_uri)
     qr_image = qr.make_image(fill_color="black", back_color="white")
-    
+
     buffer = BytesIO()
     qr_image.save(buffer, format='PNG')
     qr_base64 = base64.b64encode(buffer.getvalue()).decode()
@@ -149,7 +149,7 @@ def post(self, request):
         password=password,
         device_name=f'Authenticator App - {user.username}'
     )
-    
+
     # Return clean JSON response
     return Response({
         'qr_code': setup_data['qr_code'],          # No Unicode issues

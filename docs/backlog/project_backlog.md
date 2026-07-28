@@ -8,7 +8,7 @@
 - Comprehensive evidence management and automated reminder system
 - Professional PDF reporting with async generation
 
-**🎯 EPIC 0: Foundations & Core Setup - COMPLETED** ✅  
+**🎯 EPIC 0: Foundations & Core Setup - COMPLETED** ✅
 - Multi-tenant architecture with complete data isolation
 - Comprehensive authentication with advanced 2FA (email, TOTP, push)
 - Enterprise SSO integration with SAML 2.0 and OAuth 2.0/OIDC support

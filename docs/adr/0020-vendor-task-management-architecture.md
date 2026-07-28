@@ -40,27 +40,27 @@ class VendorTask(models.Model):
     task_type = models.CharField(max_length=30, choices=TASK_TYPE_CHOICES)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    
+
     # Scheduling and status
     due_date = models.DateField()
     start_date = models.DateField(null=True, blank=True)
     completed_date = models.DateTimeField(null=True, blank=True)
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES)
     status = models.CharField(max_length=15, choices=STATUS_CHOICES)
-    
+
     # Assignment and ownership
     assigned_to = models.ForeignKey(User, related_name='assigned_vendor_tasks')
     created_by = models.ForeignKey(User, related_name='created_vendor_tasks')
-    
+
     # Reminder system
     reminder_days = models.JSONField(default=lambda: [30, 14, 7, 1])
     last_reminder_sent = models.DateTimeField(null=True, blank=True)
     reminder_recipients = models.JSONField(default=list, blank=True)
-    
+
     # Integration with existing systems
     related_contract_number = models.CharField(max_length=100, blank=True)
     service_reference = models.ForeignKey('VendorService', null=True, blank=True)
-    
+
     # Automation and recurrence
     auto_generated = models.BooleanField(default=False)
     generation_source = models.CharField(max_length=50, blank=True)
@@ -87,7 +87,7 @@ def generate_contract_renewal_tasks(self):
     for vendor in vendors_with_contracts:
         notice_days = vendor.renewal_notice_days or 90
         task_due_date = vendor.contract_end_date - timedelta(days=notice_days)
-        
+
         VendorTask.objects.create(
             vendor=vendor,
             task_type='contract_renewal',
@@ -102,7 +102,7 @@ def generate_contract_renewal_tasks(self):
 def generate_security_review_tasks(self):
     review_frequencies = {
         'critical': 90,    # Every 3 months
-        'high': 180,       # Every 6 months  
+        'high': 180,       # Every 6 months
         'medium': 365,     # Annually
         'low': 730,        # Every 2 years
     }
@@ -130,11 +130,11 @@ def send_task_reminder(self, task):
         'is_overdue': task.is_overdue,
         'dashboard_url': self._get_dashboard_url(),
     }
-    
+
     # Send reminder with appropriate urgency
     subject = self._generate_reminder_subject(task)
     content = self._render_reminder_text(context)
-    
+
     # Update reminder tracking
     task.last_reminder_sent = timezone.now()
     task.save()
@@ -142,10 +142,10 @@ def send_task_reminder(self, task):
 # Batch reminder processing
 def send_daily_task_reminders():
     tasks_needing_reminders = [
-        task for task in active_tasks 
+        task for task in active_tasks
         if task.should_send_reminder
     ]
-    
+
     results = notification_service.send_batch_reminders(tasks_needing_reminders)
     return results
 ```
@@ -169,13 +169,13 @@ class VendorTaskAdmin(admin.ModelAdmin):
         'colored_status', 'colored_priority', 'due_date_display',
         'assigned_to_name', 'days_until_due_display', 'auto_generated_indicator'
     ]
-    
+
     # Comprehensive filtering and search
     list_filter = [
         'task_type', 'status', 'priority', 'auto_generated', 'is_recurring',
         'vendor__status', 'vendor__risk_level', 'due_date', 'created_at'
     ]
-    
+
     # Bulk operations for efficiency
     actions = [
         'mark_as_completed', 'mark_as_in_progress', 'assign_to_me',
@@ -199,23 +199,23 @@ class VendorTaskAdmin(admin.ModelAdmin):
 @action(detail=False, methods=['get'])
 def summary(self, request):
     """Comprehensive task analytics and statistics."""
-    
-@action(detail=True, methods=['post'])  
+
+@action(detail=True, methods=['post'])
 def update_status(self, request, pk=None):
     """Update task status with automatic notifications."""
-    
+
 @action(detail=False, methods=['post'])
 def bulk_action(self, request):
     """Perform bulk operations on multiple tasks."""
-    
+
 @action(detail=False, methods=['post'])
 def send_reminders(self, request):
     """Send manual reminders for specified tasks."""
-    
+
 @action(detail=False, methods=['get'])
 def upcoming(self, request):
     """Get tasks due within specified timeframe."""
-    
+
 @action(detail=False, methods=['post'])
 def generate_tasks(self, request):
     """Trigger automatic task generation."""
@@ -240,11 +240,11 @@ class VendorTaskFilter(django_filters.FilterSet):
     due_this_month = django_filters.BooleanFilter(method='filter_due_this_month')
     overdue = django_filters.BooleanFilter(method='filter_overdue')
     due_soon = django_filters.NumberFilter(method='filter_due_soon')
-    
+
     # Performance and completion analysis
     completed_on_time = django_filters.BooleanFilter(method='filter_completed_on_time')
     completed_late = django_filters.BooleanFilter(method='filter_completed_late')
-    
+
     # User-centric filtering
     assigned_to_me = django_filters.BooleanFilter(method='filter_assigned_to_me')
     created_by_me = django_filters.BooleanFilter(method='filter_created_by_me')
@@ -423,7 +423,7 @@ class VendorTaskFilter(django_filters.FilterSet):
 
 ---
 
-**Decision Made By**: Development Team  
-**Date**: August 23, 2025  
-**Reviewed By**: Architecture Review Board  
+**Decision Made By**: Development Team
+**Date**: August 23, 2025
+**Reviewed By**: Architecture Review Board
 **Next Review**: February 2026 (6 months)

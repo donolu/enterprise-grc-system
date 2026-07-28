@@ -29,20 +29,12 @@ def client():
 def test_tenant(db):
     """Create a test tenant for testing."""
     with schema_context("public"):
-        tenant = Tenant(
-            name="Test Company",
-            slug="test",
-            schema_name="test"
-        )
+        tenant = Tenant(name="Test Company", slug="test", schema_name="test")
         tenant.save()
 
-        domain = Domain(
-            domain="test.localhost",
-            tenant=tenant,
-            is_primary=True
-        )
+        domain = Domain(domain="test.localhost", tenant=tenant, is_primary=True)
         domain.save()
-    
+
     return tenant
 
 
@@ -51,9 +43,7 @@ def test_user(test_tenant):
     """Create a test user within tenant context."""
     with tenant_context(test_tenant):
         user = User.objects.create_user(
-            username="testuser",
-            email="test@example.com",
-            password="testpass123"
+            username="testuser", email="test@example.com", password="testpass123"
         )
         return user
 
@@ -63,9 +53,7 @@ def admin_user(test_tenant):
     """Create an admin user within tenant context."""
     with tenant_context(test_tenant):
         user = User.objects.create_superuser(
-            username="admin",
-            email="admin@example.com",
-            password="adminpass123"
+            username="admin", email="admin@example.com", password="adminpass123"
         )
         return user
 
@@ -129,9 +117,7 @@ def test_subscription(test_tenant, free_plan):
     """Create a test subscription."""
     with schema_context("public"):
         subscription = Subscription.objects.create(
-            tenant=test_tenant,
-            plan=free_plan,
-            status="active"
+            tenant=test_tenant, plan=free_plan, status="active"
         )
     return subscription
 
@@ -140,20 +126,20 @@ def test_subscription(test_tenant, free_plan):
 def tenant_client(api_client, test_tenant):
     """Provide an API client with tenant context."""
     # Set tenant in the client's context
-    api_client.defaults['HTTP_HOST'] = f"{test_tenant.schema_name}.localhost"
+    api_client.defaults["HTTP_HOST"] = f"{test_tenant.schema_name}.localhost"
     return api_client
 
 
 class TenantAPITestCase(TenantTestCase):
     """Base test case for tenant-aware API testing."""
-    
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.tenant = cls.tenant
-        
+
     def setUp(self):
         super().setUp()
         self.api_client = APIClient()
         # Ensure we're in the right tenant context
-        self.api_client.defaults['HTTP_HOST'] = f"{self.tenant.schema_name}.localhost"
+        self.api_client.defaults["HTTP_HOST"] = f"{self.tenant.schema_name}.localhost"

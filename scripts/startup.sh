@@ -16,7 +16,7 @@ cd /workspace/app
 run_migrations() {
     echo "📋 Running database migrations..."
     migration_database_url="${DIRECT_DATABASE_URL:-${DATABASE_URL:-}}"
-    
+
     # First, run shared schema migrations
     echo "Running shared schema migrations..."
     if [[ -n "$migration_database_url" ]]; then
@@ -24,7 +24,7 @@ run_migrations() {
     else
         python manage.py migrate_schemas --shared
     fi
-    
+
     # Check if we have any existing tenants and run their migrations
     echo "Running tenant schema migrations..."
     if [[ -n "$migration_database_url" ]]; then
@@ -32,7 +32,7 @@ run_migrations() {
     else
         python manage.py migrate_schemas --tenant
     fi
-    
+
     echo "✅ Migrations completed successfully"
 }
 
@@ -95,23 +95,23 @@ try:
         schema_name=tenant_schema,
         defaults={'name': tenant_name, 'slug': tenant_slug}
     )
-    
+
     if created:
         print(f"✅ Created tenant: {tenant_name}")
     else:
         print(f"ℹ️ Tenant already exists: {tenant_name}")
-    
+
     # Create domain
     domain, created = Domain.objects.get_or_create(
         domain=domain_name,
         defaults={'tenant': tenant, 'is_primary': True}
     )
-    
+
     if created:
         print(f"✅ Created domain: {domain_name}")
     else:
         print(f"ℹ️ Domain already exists: {domain_name}")
-        
+
 except Exception as e:
     print(f"❌ Error creating tenant: {e}")
 EOF
@@ -122,7 +122,7 @@ EOF
 setup_initial_data() {
     if [[ "${SETUP_INITIAL_DATA}" == "true" ]]; then
         echo "🔧 Setting up initial data..."
-        
+
         # Create subscription plans
         python manage.py shell << EOF
 from core.models import Plan
@@ -176,7 +176,7 @@ for plan_data in plans_data:
     else:
         print(f"ℹ️ Plan already exists: {plan.name}")
 EOF
-        
+
         echo "✅ Initial data setup completed"
     fi
 }
@@ -184,7 +184,7 @@ EOF
 # Function to validate environment
 validate_environment() {
     echo "🔍 Validating environment..."
-    
+
     if [[ -n "${DATABASE_URL}" ]]; then
         required_vars=("SECRET_KEY" "DATABASE_URL")
     else
@@ -203,7 +203,7 @@ validate_environment() {
             exit 1
         fi
     done
-    
+
     # Test database connection
     echo "Testing database connection..."
     python manage.py dbshell --command="SELECT 1;" > /dev/null 2>&1
@@ -218,46 +218,46 @@ validate_environment() {
 # Function to run health checks
 run_health_checks() {
     echo "🏥 Running health checks..."
-    
+
     # Django system check
     echo "Running Django system checks..."
     python manage.py check --deploy
-    
+
     echo "✅ Health checks completed"
 }
 
 # Main execution flow
 main() {
     echo "Starting deployment sequence..."
-    
+
     # Always validate environment first
     validate_environment
-    
+
     # Run migrations if specified or if RUN_MIGRATIONS is true
     if [[ "${RUN_MIGRATIONS}" == "true" ]] || [[ "$1" == "--migrate" ]]; then
         run_migrations
     else
         echo "⏭️ Skipping migrations (set RUN_MIGRATIONS=true to enable)"
     fi
-    
+
     # Collect static files for production
     collect_static
-    
+
     # Create superuser if specified
     create_superuser
-    
+
     # Create default tenant if specified
     create_default_tenant
-    
+
     # Setup initial data if specified
     setup_initial_data
-    
+
     # Run health checks
     run_health_checks
-    
+
     echo "✅ Startup sequence completed successfully!"
     echo "🚀 Ready to start server..."
-    
+
     # If this script is run directly (not sourced), start the server
     if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         echo "Starting Gunicorn server..."

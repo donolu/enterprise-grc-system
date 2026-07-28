@@ -96,4 +96,3 @@ Retention should be configurable by deployment, but enterprise defaults should r
 ## Consequences
 
 The platform gets a consistent audit contract without forcing every module into the same persistence model. High-risk governed content keeps immutable versions, while routine actions use audit events. This keeps storage growth manageable and gives tenant administrators, operators and auditors a clearer evidence trail.
-

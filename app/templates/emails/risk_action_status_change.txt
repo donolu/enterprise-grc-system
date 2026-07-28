@@ -42,7 +42,7 @@ Great job on completing this risk action! The risk mitigation efforts are now in
 {% elif new_status == 'in_progress' %}NEXT STEPS:
 ===========
 • Continue working on the required tasks
-• Update progress percentage regularly  
+• Update progress percentage regularly
 • Add notes to track your work
 • Upload evidence as tasks are completed
 
