@@ -1,6 +1,14 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from core.models import Plan, Subscription
 from .entitlements import get_module_catalog
+
+
+class ModuleCatalogItemSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    name = serializers.CharField()
+    description = serializers.CharField()
+    enabled = serializers.BooleanField(required=False)
 
 
 class PlanSerializer(serializers.ModelSerializer):
@@ -16,6 +24,7 @@ class PlanSerializer(serializers.ModelSerializer):
             'included_modules', 'module_catalog',
         ]
 
+    @extend_schema_field(ModuleCatalogItemSerializer(many=True))
     def get_module_catalog(self, obj):
         return get_module_catalog(obj.get_included_modules())
 
@@ -41,8 +50,10 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'is_grandfathered', 'created_at', 'updated_at'
         ]
 
+    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
     def get_enabled_module_keys(self, obj):
         return obj.get_enabled_modules()
 
+    @extend_schema_field(ModuleCatalogItemSerializer(many=True))
     def get_module_catalog(self, obj):
         return get_module_catalog(obj.get_enabled_modules())

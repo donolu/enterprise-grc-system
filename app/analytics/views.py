@@ -20,6 +20,8 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 import logging
 import mimetypes
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 
 from .services import CrossModuleAnalyticsService, AnalyticsReportGenerator
 from .models import AnalyticsReport, DashboardConfiguration
@@ -40,6 +42,15 @@ def _is_operator(user, tenant):
     )
 
 
+@extend_schema(
+    summary="Operator usage dashboard",
+    parameters=[
+        OpenApiParameter('days', OpenApiTypes.INT, OpenApiParameter.QUERY),
+        OpenApiParameter('export', OpenApiTypes.STR, OpenApiParameter.QUERY),
+    ],
+    responses={200: OpenApiTypes.OBJECT, 403: OpenApiResponse(description='Operator access required')},
+    tags=['Analytics'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def operator_usage_dashboard(request):
@@ -74,6 +85,11 @@ def operator_usage_dashboard(request):
     return Response(dashboard)
 
 
+@extend_schema(
+    summary="Executive analytics dashboard",
+    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate executive dashboard')},
+    tags=['Analytics'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @cache_page(60 * 15)  # Cache for 15 minutes
@@ -95,6 +111,11 @@ def executive_dashboard(request):
         )
 
 
+@extend_schema(
+    summary="Compliance analytics dashboard",
+    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate compliance dashboard')},
+    tags=['Analytics'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @cache_page(60 * 10)  # Cache for 10 minutes
@@ -116,6 +137,11 @@ def compliance_dashboard(request):
         )
 
 
+@extend_schema(
+    summary="Vendor risk analytics dashboard",
+    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate vendor dashboard')},
+    tags=['Analytics'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @cache_page(60 * 10)  # Cache for 10 minutes
@@ -137,6 +163,11 @@ def vendor_risk_dashboard(request):
         )
 
 
+@extend_schema(
+    summary="Policy management analytics dashboard",
+    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate policy dashboard')},
+    tags=['Analytics'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @cache_page(60 * 10)  # Cache for 10 minutes
@@ -158,6 +189,11 @@ def policy_management_dashboard(request):
         )
 
 
+@extend_schema(
+    summary="Training effectiveness analytics dashboard",
+    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate training dashboard')},
+    tags=['Analytics'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @cache_page(60 * 10)  # Cache for 10 minutes
@@ -179,6 +215,11 @@ def training_effectiveness_dashboard(request):
         )
 
 
+@extend_schema(
+    summary="Integrated risk posture analytics",
+    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate integrated risk analysis')},
+    tags=['Analytics'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @require_advanced_reporting  # Premium feature
@@ -202,6 +243,11 @@ def integrated_risk_posture(request):
         )
 
 
+@extend_schema(
+    summary="Executive report analytics data",
+    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate executive report')},
+    tags=['Analytics'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @require_advanced_reporting  # Premium feature
@@ -225,6 +271,11 @@ def executive_report_data(request):
         )
 
 
+@extend_schema(
+    summary="Operational analytics dashboard",
+    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate operational dashboard')},
+    tags=['Analytics'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @cache_page(60 * 5)  # Cache for 5 minutes
@@ -246,6 +297,11 @@ def operational_dashboard(request):
         )
 
 
+@extend_schema(
+    summary="Analytics health check",
+    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Analytics service unavailable')},
+    tags=['Analytics'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def analytics_health_check(request):
@@ -287,6 +343,16 @@ def analytics_health_check(request):
         )
 
 
+@extend_schema(
+    summary="Create analytics report export",
+    request=OpenApiTypes.OBJECT,
+    responses={
+        202: OpenApiTypes.OBJECT,
+        400: OpenApiResponse(description='Invalid report export request'),
+        500: OpenApiResponse(description='Failed to create export job'),
+    },
+    tags=['Analytics'],
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def export_report(request):
@@ -356,6 +422,11 @@ def export_report(request):
         )
 
 
+@extend_schema(
+    summary="Get analytics report status",
+    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to check report status')},
+    tags=['Analytics'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def report_status(request, report_id):
@@ -409,6 +480,17 @@ def report_status(request, report_id):
         )
 
 
+@extend_schema(
+    summary="Download analytics report",
+    responses={
+        200: OpenApiResponse(description='Generated report file'),
+        400: OpenApiResponse(description='Report is not ready'),
+        404: OpenApiResponse(description='Report file not found'),
+        410: OpenApiResponse(description='Report has expired'),
+        500: OpenApiResponse(description='Failed to download report'),
+    },
+    tags=['Analytics'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def download_report(request, report_id):
@@ -487,6 +569,12 @@ def download_report(request, report_id):
         )
 
 
+@extend_schema(
+    summary="List my analytics reports",
+    parameters=[OpenApiParameter('page', OpenApiTypes.INT, OpenApiParameter.QUERY)],
+    responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to fetch reports')},
+    tags=['Analytics'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_reports(request):
@@ -551,6 +639,12 @@ def my_reports(request):
         )
 
 
+@extend_schema(
+    summary="Delete analytics report",
+    request=None,
+    responses={200: OpenApiResponse(description='Report deleted successfully'), 500: OpenApiResponse(description='Failed to delete report')},
+    tags=['Analytics'],
+)
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_report(request, report_id):
@@ -588,6 +682,12 @@ def delete_report(request, report_id):
         )
 
 
+@extend_schema(
+    summary="Refresh analytics cache",
+    request=None,
+    responses={202: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to refresh cache')},
+    tags=['Analytics'],
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @require_advanced_reporting  # Premium feature

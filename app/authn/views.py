@@ -187,7 +187,14 @@ class LoginView(APIView):
 
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    
+
+    @extend_schema(
+        summary="Logout current user",
+        description="End the current authenticated session.",
+        request=None,
+        responses={200: OpenApiResponse(description='Logout successful')},
+        tags=['Authentication'],
+    )
     def post(self, request):
         logout(request)
         return Response({
@@ -196,11 +203,22 @@ class LogoutView(APIView):
 
 class ProfileView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    
+
+    @extend_schema(
+        summary="Get authenticated user profile",
+        responses={200: UserProfileSerializer},
+        tags=['Authentication'],
+    )
     def get(self, request):
         serializer = UserProfileSerializer(request.user)
         return Response(serializer.data)
-    
+
+    @extend_schema(
+        summary="Update authenticated user profile",
+        request=UserProfileSerializer,
+        responses={200: UserProfileSerializer, 400: OpenApiResponse(description='Validation errors')},
+        tags=['Authentication'],
+    )
     def patch(self, request):
         serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
@@ -210,7 +228,16 @@ class ProfileView(APIView):
 
 class ChangePasswordView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    
+
+    @extend_schema(
+        summary="Change authenticated user password",
+        request=ChangePasswordSerializer,
+        responses={
+            200: OpenApiResponse(description='Password changed successfully'),
+            400: OpenApiResponse(description='Validation errors'),
+        },
+        tags=['Authentication'],
+    )
     def post(self, request):
         serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
@@ -240,7 +267,12 @@ def me(request):
 
 class TwoFactorStatusView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    
+
+    @extend_schema(
+        summary="Get two-factor authentication status",
+        responses={200: TwoFactorStatusSerializer},
+        tags=['Authentication'],
+    )
     def get(self, request):
         """Get comprehensive 2FA status for current user"""
         user = request.user
@@ -286,7 +318,16 @@ class TwoFactorStatusView(APIView):
 class EnableTwoFactorView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     throttle_scope = "two_factor"
-    
+
+    @extend_schema(
+        summary="Enable two-factor authentication",
+        request=EnableTwoFactorSerializer,
+        responses={
+            200: OpenApiResponse(description='Two-factor authentication method enabled'),
+            400: OpenApiResponse(description='Validation errors'),
+        },
+        tags=['Authentication'],
+    )
     def post(self, request):
         """Enable 2FA for current user - supports email, TOTP, and push"""
         serializer = EnableTwoFactorSerializer(data=request.data, context={'request': request})
@@ -363,7 +404,16 @@ class EnableTwoFactorView(APIView):
 class DisableTwoFactorView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     throttle_scope = "two_factor"
-    
+
+    @extend_schema(
+        summary="Disable two-factor authentication",
+        request=DisableTwoFactorSerializer,
+        responses={
+            200: OpenApiResponse(description='Two-factor authentication method disabled'),
+            400: OpenApiResponse(description='Validation errors'),
+        },
+        tags=['Authentication'],
+    )
     def post(self, request):
         """Disable 2FA methods for current user"""
         serializer = DisableTwoFactorSerializer(data=request.data, context={'request': request})
@@ -443,7 +493,17 @@ class VerifyOTPView(APIView):
 class SetupTOTPView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     throttle_scope = "two_factor"
-    
+
+    @extend_schema(
+        summary="Set up TOTP two-factor authentication",
+        request=SetupTOTPSerializer,
+        responses={
+            200: OpenApiResponse(description='TOTP setup data returned'),
+            400: OpenApiResponse(description='Validation errors'),
+            500: OpenApiResponse(description='Failed to set up TOTP device'),
+        },
+        tags=['Authentication'],
+    )
     def post(self, request):
         """Generate QR code for TOTP setup using enhanced pyotp service"""
         serializer = SetupTOTPSerializer(data=request.data, context={'request': request})
@@ -481,7 +541,16 @@ class SetupTOTPView(APIView):
 class ConfirmTOTPView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     throttle_scope = "two_factor"
-    
+
+    @extend_schema(
+        summary="Confirm TOTP setup",
+        request=ConfirmTOTPSerializer,
+        responses={
+            200: OpenApiResponse(description='TOTP two-factor authentication enabled'),
+            400: OpenApiResponse(description='Invalid verification code or validation errors'),
+        },
+        tags=['Authentication'],
+    )
     def post(self, request):
         """Confirm TOTP setup with verification code using enhanced service"""
         serializer = ConfirmTOTPSerializer(data=request.data)
@@ -508,7 +577,16 @@ class ConfirmTOTPView(APIView):
 class RegisterPushDeviceView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     throttle_scope = "two_factor"
-    
+
+    @extend_schema(
+        summary="Register push notification device",
+        request=RegisterPushDeviceSerializer,
+        responses={
+            201: OpenApiResponse(description='Push notification device registered'),
+            400: OpenApiResponse(description='Validation errors'),
+        },
+        tags=['Authentication'],
+    )
     def post(self, request):
         """Register a new push notification device"""
         serializer = RegisterPushDeviceSerializer(data=request.data)
@@ -538,7 +616,16 @@ class RegisterPushDeviceView(APIView):
 class ApprovePushChallengeView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_scope = "two_factor"
-    
+
+    @extend_schema(
+        summary="Approve or deny push challenge",
+        request=ApprovePushChallengeSerializer,
+        responses={
+            200: OpenApiResponse(description='Push challenge decision accepted'),
+            400: OpenApiResponse(description='Validation errors'),
+        },
+        tags=['Authentication'],
+    )
     def post(self, request):
         """Approve or deny a push notification challenge"""
         serializer = ApprovePushChallengeSerializer(data=request.data)
@@ -560,7 +647,12 @@ class ApprovePushChallengeView(APIView):
 
 class UserPreferencesView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    
+
+    @extend_schema(
+        summary="Get two-factor preferences",
+        responses={200: UserPreferencesSerializer},
+        tags=['Authentication'],
+    )
     def get(self, request):
         """Get user 2FA preferences"""
         try:
@@ -575,7 +667,16 @@ class UserPreferencesView(APIView):
                 'require_2fa_for_sensitive_actions': True,
                 'remember_device_days': 30
             })
-    
+
+    @extend_schema(
+        summary="Update two-factor preferences",
+        request=UserPreferencesSerializer,
+        responses={
+            200: OpenApiResponse(description='Preferences updated successfully'),
+            400: OpenApiResponse(description='Validation errors'),
+        },
+        tags=['Authentication'],
+    )
     def post(self, request):
         """Update user 2FA preferences"""
         preferences, created = UserDevicePreference.objects.get_or_create(

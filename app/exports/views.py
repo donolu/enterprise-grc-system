@@ -117,6 +117,8 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return reports for the current user's tenant."""
+        if getattr(self, 'swagger_fake_view', False):
+            return AssessmentReport.objects.none()
         return AssessmentReport.objects.filter(
             requested_by=self.request.user
         ).select_related('framework', 'requested_by', 'generated_file')
@@ -472,6 +474,8 @@ class TenantDataExportViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'delete', 'head', 'options']
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return TenantDataExport.objects.none()
         return TenantDataExport.objects.filter(
             requested_by=self.request.user
         ).select_related('requested_by', 'generated_file')

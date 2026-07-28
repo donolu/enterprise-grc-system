@@ -56,7 +56,7 @@ class RegulatoryRequirementSerializer(serializers.ModelSerializer):
 class NonConformitySerializer(serializers.ModelSerializer):
     owner_username = serializers.CharField(source='owner.username', read_only=True)
     raised_by_username = serializers.CharField(source='raised_by.username', read_only=True)
-    is_overdue = serializers.ReadOnlyField()
+    is_overdue = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = NonConformity

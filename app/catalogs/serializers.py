@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import (
     Framework, Clause, Control, ControlEvidence, FrameworkMapping,
     ControlAssessment, AssessmentEvidence, TemplateDocument
@@ -10,9 +11,9 @@ User = get_user_model()
 
 class FrameworkListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for framework listings."""
-    clause_count = serializers.ReadOnlyField()
-    control_count = serializers.ReadOnlyField()
-    is_active = serializers.ReadOnlyField()
+    clause_count = serializers.IntegerField(read_only=True)
+    control_count = serializers.IntegerField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = Framework
@@ -25,9 +26,9 @@ class FrameworkListSerializer(serializers.ModelSerializer):
 
 class FrameworkDetailSerializer(serializers.ModelSerializer):
     """Detailed framework serializer with full information."""
-    clause_count = serializers.ReadOnlyField()
-    control_count = serializers.ReadOnlyField()
-    is_active = serializers.ReadOnlyField()
+    clause_count = serializers.IntegerField(read_only=True)
+    control_count = serializers.IntegerField(read_only=True)
+    is_active = serializers.BooleanField(read_only=True)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
     
     class Meta:
@@ -50,8 +51,8 @@ class ClauseListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for clause listings."""
     framework_name = serializers.CharField(source='framework.name', read_only=True)
     framework_short_name = serializers.CharField(source='framework.short_name', read_only=True)
-    control_count = serializers.ReadOnlyField()
-    full_clause_id = serializers.ReadOnlyField()
+    control_count = serializers.IntegerField(read_only=True)
+    full_clause_id = serializers.CharField(read_only=True)
     
     class Meta:
         model = Clause
@@ -66,8 +67,8 @@ class ClauseDetailSerializer(serializers.ModelSerializer):
     """Detailed clause serializer with full information."""
     framework_name = serializers.CharField(source='framework.name', read_only=True)
     framework_short_name = serializers.CharField(source='framework.short_name', read_only=True)
-    control_count = serializers.ReadOnlyField()
-    full_clause_id = serializers.ReadOnlyField()
+    control_count = serializers.IntegerField(read_only=True)
+    full_clause_id = serializers.CharField(read_only=True)
     parent_clause_id = serializers.CharField(source='parent_clause.clause_id', read_only=True)
     subclauses = serializers.SerializerMethodField()
     
@@ -86,9 +87,16 @@ class ClauseDetailSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
     
+    @extend_schema_field(ClauseListSerializer(many=True))
     def get_subclauses(self, obj):
         subclauses = obj.subclauses.all()
         return ClauseListSerializer(subclauses, many=True).data
+
+
+class FrameworkCoverageItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    short_name = serializers.CharField()
+    name = serializers.CharField()
 
 
 class ControlEvidenceSerializer(serializers.ModelSerializer):
@@ -162,8 +170,8 @@ class ControlListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for control listings."""
     control_owner_name = serializers.CharField(source='control_owner.get_full_name', read_only=True)
     framework_coverage = serializers.SerializerMethodField()
-    is_active = serializers.ReadOnlyField()
-    needs_testing = serializers.ReadOnlyField()
+    is_active = serializers.BooleanField(read_only=True)
+    needs_testing = serializers.BooleanField(read_only=True)
     clause_count = serializers.SerializerMethodField()
     
     class Meta:
@@ -175,11 +183,12 @@ class ControlListSerializer(serializers.ModelSerializer):
             'framework_coverage', 'clause_count', 'version'
         ]
     
+    @extend_schema_field(FrameworkCoverageItemSerializer(many=True))
     def get_framework_coverage(self, obj):
         frameworks = obj.framework_coverage
         return [{'id': f.id, 'short_name': f.short_name, 'name': f.name} for f in frameworks]
     
-    def get_clause_count(self, obj):
+    def get_clause_count(self, obj) -> int:
         return obj.clauses.count()
 
 
@@ -188,8 +197,8 @@ class ControlDetailSerializer(serializers.ModelSerializer):
     control_owner_name = serializers.CharField(source='control_owner.get_full_name', read_only=True)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
     framework_coverage = serializers.SerializerMethodField()
-    is_active = serializers.ReadOnlyField()
-    needs_testing = serializers.ReadOnlyField()
+    is_active = serializers.BooleanField(read_only=True)
+    needs_testing = serializers.BooleanField(read_only=True)
     evidence = ControlEvidenceSerializer(many=True, read_only=True)
     clauses_detail = ClauseListSerializer(source='clauses', many=True, read_only=True)
     template_documents = TemplateDocumentSummarySerializer(many=True, read_only=True)
@@ -211,6 +220,7 @@ class ControlDetailSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
     
+    @extend_schema_field(FrameworkCoverageItemSerializer(many=True))
     def get_framework_coverage(self, obj):
         frameworks = obj.framework_coverage
         return [{'id': f.id, 'short_name': f.short_name, 'name': f.name} for f in frameworks]
@@ -321,26 +331,26 @@ class ControlAssessmentListSerializer(serializers.ModelSerializer):
     framework_version = serializers.SerializerMethodField()
     assigned_to_name = serializers.CharField(source='assigned_to.get_full_name', read_only=True)
     reviewer_name = serializers.CharField(source='reviewer.get_full_name', read_only=True)
-    is_overdue = serializers.ReadOnlyField()
-    is_complete = serializers.ReadOnlyField()
-    completion_percentage = serializers.ReadOnlyField()
-    days_until_due = serializers.ReadOnlyField()
+    is_overdue = serializers.BooleanField(read_only=True)
+    is_complete = serializers.BooleanField(read_only=True)
+    completion_percentage = serializers.FloatField(read_only=True)
+    days_until_due = serializers.IntegerField(read_only=True, allow_null=True)
     evidence_count = serializers.SerializerMethodField()
     has_primary_evidence = serializers.SerializerMethodField()
     
-    def get_evidence_count(self, obj):
+    def get_evidence_count(self, obj) -> int:
         """Get count of evidence linked to this assessment."""
         return obj.evidence_links.count()
     
-    def get_has_primary_evidence(self, obj):
+    def get_has_primary_evidence(self, obj) -> bool:
         """Check if assessment has primary evidence."""
         return obj.evidence_links.filter(is_primary_evidence=True).exists()
 
-    def get_framework_name(self, obj):
+    def get_framework_name(self, obj) -> str:
         framework = obj.framework or self._first_control_framework(obj)
         return framework.name if framework else ''
 
-    def get_framework_version(self, obj):
+    def get_framework_version(self, obj) -> str:
         framework = obj.framework or self._first_control_framework(obj)
         return framework.version if framework else ''
 
@@ -371,10 +381,10 @@ class ControlAssessmentDetailSerializer(serializers.ModelSerializer):
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
     
     # Computed properties
-    is_overdue = serializers.ReadOnlyField()
-    is_complete = serializers.ReadOnlyField()
-    completion_percentage = serializers.ReadOnlyField()
-    days_until_due = serializers.ReadOnlyField()
+    is_overdue = serializers.BooleanField(read_only=True)
+    is_complete = serializers.BooleanField(read_only=True)
+    completion_percentage = serializers.FloatField(read_only=True)
+    days_until_due = serializers.IntegerField(read_only=True, allow_null=True)
     
     # Related evidence
     evidence_count = serializers.SerializerMethodField()
@@ -402,9 +412,10 @@ class ControlAssessmentDetailSerializer(serializers.ModelSerializer):
             'change_log', 'created_at', 'updated_at'
         ]
     
-    def get_evidence_count(self, obj):
+    def get_evidence_count(self, obj) -> int:
         return obj.evidence_links.count()
     
+    @extend_schema_field(ControlEvidenceSerializer(allow_null=True))
     def get_primary_evidence(self, obj):
         primary_evidence = obj.evidence_links.filter(is_primary_evidence=True)
         if primary_evidence.exists():

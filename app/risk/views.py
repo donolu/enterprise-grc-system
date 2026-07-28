@@ -1273,11 +1273,12 @@ class RiskActionReminderConfigurationViewSet(viewsets.ModelViewSet):
 
 
 @extend_schema_view(
-    list=extend_schema(
+    dashboard=extend_schema(
         summary="Risk Analytics Dashboard",
         description="Access comprehensive risk analytics, trends, and reporting data for management dashboards and executive reporting.",
         responses={
             200: OpenApiResponse(
+                response=OpenApiTypes.OBJECT,
                 description="Risk analytics data",
                 examples=[
                     OpenApiExample(
@@ -1328,9 +1329,9 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
     All endpoints return comprehensive analytics optimized for dashboard consumption
     with real-time calculations and historical trend analysis.
     """
-    
+    serializer_class = RiskSummarySerializer
     permission_classes = [permissions.IsAuthenticated]
-    
+
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
         """
@@ -1351,7 +1352,12 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
                 {'error': f'Failed to generate dashboard data: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
+    @extend_schema(
+        summary="Risk overview analytics",
+        responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate risk overview')},
+        tags=['Risk Analytics'],
+    )
     @action(detail=False, methods=['get'])
     def risk_overview(self, request):
         """
@@ -1371,7 +1377,12 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
                 {'error': f'Failed to generate risk overview: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
+    @extend_schema(
+        summary="Risk action overview analytics",
+        responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate action overview')},
+        tags=['Risk Analytics'],
+    )
     @action(detail=False, methods=['get'])
     def action_overview(self, request):
         """
@@ -1391,7 +1402,12 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
                 {'error': f'Failed to generate action overview: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
+    @extend_schema(
+        summary="Risk heat map analytics",
+        responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate heat map')},
+        tags=['Risk Analytics'],
+    )
     @action(detail=False, methods=['get'])
     def heat_map(self, request):
         """
@@ -1411,7 +1427,17 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
                 {'error': f'Failed to generate heat map: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
+    @extend_schema(
+        summary="Risk trend analytics",
+        parameters=[OpenApiParameter('days', OpenApiTypes.INT, OpenApiParameter.QUERY)],
+        responses={
+            200: OpenApiTypes.OBJECT,
+            400: OpenApiResponse(description='Invalid days parameter'),
+            500: OpenApiResponse(description='Failed to generate trend analysis'),
+        },
+        tags=['Risk Analytics'],
+    )
     @action(detail=False, methods=['get'])
     def trends(self, request):
         """
@@ -1442,7 +1468,12 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
                 {'error': f'Failed to generate trend analysis: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
+    @extend_schema(
+        summary="Risk action progress analytics",
+        responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate progress analysis')},
+        tags=['Risk Analytics'],
+    )
     @action(detail=False, methods=['get'])
     def action_progress(self, request):
         """
@@ -1462,7 +1493,12 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
                 {'error': f'Failed to generate progress analysis: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
+    @extend_schema(
+        summary="Executive risk summary analytics",
+        responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate executive summary')},
+        tags=['Risk Analytics'],
+    )
     @action(detail=False, methods=['get'])
     def executive_summary(self, request):
         """
@@ -1483,7 +1519,12 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
                 {'error': f'Failed to generate executive summary: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
+    @extend_schema(
+        summary="Risk-control integration analytics",
+        responses={200: OpenApiTypes.OBJECT, 500: OpenApiResponse(description='Failed to generate control integration analysis')},
+        tags=['Risk Analytics'],
+    )
     @action(detail=False, methods=['get'])
     def control_integration(self, request):
         """
@@ -1504,7 +1545,17 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
                 {'error': f'Failed to generate control integration analysis: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
+    @extend_schema(
+        summary="Risk category analytics",
+        parameters=[OpenApiParameter('category_id', OpenApiTypes.INT, OpenApiParameter.QUERY)],
+        responses={
+            200: OpenApiTypes.OBJECT,
+            400: OpenApiResponse(description='Invalid category_id parameter'),
+            500: OpenApiResponse(description='Failed to generate category analysis'),
+        },
+        tags=['Risk Analytics'],
+    )
     @action(detail=False, methods=['get'])
     def category_analysis(self, request):
         """
