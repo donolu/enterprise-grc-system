@@ -43,7 +43,7 @@ We will implement a comprehensive enterprise SSO integration supporting both SAM
 
 ### Technology Stack
 - **SAML**: `python3-saml` (OneLogin SAML library) for robust SAML 2.0 support
-- **OAuth/OIDC**: `social-auth-app-django` with custom backend implementation
+- **OAuth/OIDC**: Custom OAuth/OIDC backend implementation
 - **JWT**: `PyJWT` for token validation and processing
 - **XML Security**: `xmlsec` for SAML signature validation and encryption
 - **Session Management**: Django sessions with custom SSO session tracking

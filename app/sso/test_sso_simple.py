@@ -235,7 +235,6 @@ def run_all_tests():
     print("8. Testing SSO dependencies:")
     dependencies = [
         ("onelogin.saml2.auth", "python3-saml"),
-        ("social_django", "social-auth-app-django"),
         ("jwt", "PyJWT"),
         ("cryptography", "cryptography"),
     ]
