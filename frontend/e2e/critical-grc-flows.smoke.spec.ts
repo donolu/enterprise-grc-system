@@ -13,7 +13,9 @@ async function chooseSelectOption(page: Page, fieldId: string, option: string) {
   await page.locator(`#${fieldId}`).click({ force: true });
   const dropdown = page.locator(".ant-select-dropdown:not(.ant-select-dropdown-hidden)").last();
   await expect(dropdown).toBeVisible();
-  await dropdown.locator(".ant-select-item-option", { hasText: option }).click();
+  await dropdown
+    .locator(".ant-select-item-option", { hasText: option })
+    .evaluate((element) => (element as HTMLElement).click());
 }
 
 test("users can acknowledge assigned policies", async ({ page }) => {
