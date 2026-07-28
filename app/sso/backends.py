@@ -40,13 +40,10 @@ class SAMLBackend(BaseBackend):
                 return None
 
             sso_provider = SSOProvider.objects.get(
-                id=saml_provider_id,
-                tenant=tenant,
-                is_active=True,
-                provider_type='saml'
+                id=saml_provider_id, tenant=tenant, is_active=True, provider_type="saml"
             )
 
-            if not hasattr(sso_provider, 'saml_config'):
+            if not hasattr(sso_provider, "saml_config"):
                 logger.error(f"SAML config not found for provider {sso_provider.name}")
                 return None
 
@@ -62,12 +59,12 @@ class SAMLBackend(BaseBackend):
                 errors = saml_auth.get_errors()
                 logger.error(f"SAML authentication failed: {errors}")
                 SSOAuditLog.log_event(
-                    'login_failure',
+                    "login_failure",
                     f"SAML authentication failed: {', '.join(errors)}",
                     sso_provider=sso_provider,
                     request=request,
                     success=False,
-                    error_message=str(errors)
+                    error_message=str(errors),
                 )
                 return None
 
@@ -77,9 +74,7 @@ class SAMLBackend(BaseBackend):
             session_index = saml_auth.get_session_index()
 
             # Get or create user
-            user = self._get_or_create_user(
-                sso_provider, attributes, name_id, request
-            )
+            user = self._get_or_create_user(sso_provider, attributes, name_id, request)
 
             if user:
                 # Create SSO session
@@ -89,25 +84,25 @@ class SAMLBackend(BaseBackend):
                     sso_session_id=session_index,
                     sso_name_id=name_id,
                     ip_address=SSOAuditLog.get_client_ip(request),
-                    user_agent=request.META.get('HTTP_USER_AGENT', '')
+                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
                 )
 
                 # Log successful authentication
                 SSOAuditLog.log_event(
-                    'login_success',
+                    "login_success",
                     f"User {user.email} authenticated via SAML",
                     sso_provider=sso_provider,
                     user=user,
                     request=request,
                     details={
-                        'name_id': name_id,
-                        'session_index': session_index,
-                        'attributes': attributes
-                    }
+                        "name_id": name_id,
+                        "session_index": session_index,
+                        "attributes": attributes,
+                    },
                 )
 
                 # Store SSO session in Django session
-                request.session['sso_session_id'] = str(sso_session.id)
+                request.session["sso_session_id"] = str(sso_session.id)
 
                 return user
 
@@ -116,11 +111,11 @@ class SAMLBackend(BaseBackend):
         except Exception as e:
             logger.error(f"SAML authentication error: {str(e)}")
             SSOAuditLog.log_event(
-                'error',
+                "error",
                 f"SAML authentication error: {str(e)}",
                 request=request,
                 success=False,
-                error_message=str(e)
+                error_message=str(e),
             )
 
         return None
@@ -135,40 +130,40 @@ class SAMLBackend(BaseBackend):
 
             # Build SAML settings
             settings_data = {
-                'sp': {
-                    'entityId': saml_config.sp_entity_id,
-                    'assertionConsumerService': {
-                        'url': saml_config.sp_acs_url,
-                        'binding': 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST'
+                "sp": {
+                    "entityId": saml_config.sp_entity_id,
+                    "assertionConsumerService": {
+                        "url": saml_config.sp_acs_url,
+                        "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST",
                     },
-                    'singleLogoutService': {
-                        'url': saml_config.sp_sls_url,
-                        'binding': 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect'
+                    "singleLogoutService": {
+                        "url": saml_config.sp_sls_url,
+                        "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
                     },
-                    'NameIDFormat': 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress',
-                    'x509cert': saml_config.sp_x509_cert,
-                    'privateKey': saml_config.sp_private_key
+                    "NameIDFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+                    "x509cert": saml_config.sp_x509_cert,
+                    "privateKey": saml_config.sp_private_key,
                 },
-                'idp': {
-                    'entityId': saml_config.sso_provider.entity_id,
-                    'singleSignOnService': {
-                        'url': saml_config.idp_sso_url,
-                        'binding': 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect'
+                "idp": {
+                    "entityId": saml_config.sso_provider.entity_id,
+                    "singleSignOnService": {
+                        "url": saml_config.idp_sso_url,
+                        "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
                     },
-                    'singleLogoutService': {
-                        'url': saml_config.idp_sls_url,
-                        'binding': 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect'
+                    "singleLogoutService": {
+                        "url": saml_config.idp_sls_url,
+                        "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
                     },
-                    'x509cert': saml_config.idp_x509_cert
+                    "x509cert": saml_config.idp_x509_cert,
                 },
-                'security': {
-                    'nameIdEncrypted': saml_config.want_name_id_encrypted,
-                    'authnRequestsSigned': saml_config.authn_requests_signed,
-                    'logoutRequestSigned': saml_config.logout_requests_signed,
-                    'wantAssertionsSigned': saml_config.want_assertions_signed,
-                    'signatureAlgorithm': f'http://www.w3.org/2001/04/xmldsig-more#{saml_config.signature_algorithm.lower()}',
-                    'digestAlgorithm': f'http://www.w3.org/2001/04/xmlenc#{saml_config.digest_algorithm.lower()}'
-                }
+                "security": {
+                    "nameIdEncrypted": saml_config.want_name_id_encrypted,
+                    "authnRequestsSigned": saml_config.authn_requests_signed,
+                    "logoutRequestSigned": saml_config.logout_requests_signed,
+                    "wantAssertionsSigned": saml_config.want_assertions_signed,
+                    "signatureAlgorithm": f"http://www.w3.org/2001/04/xmldsig-more#{saml_config.signature_algorithm.lower()}",
+                    "digestAlgorithm": f"http://www.w3.org/2001/04/xmlenc#{saml_config.digest_algorithm.lower()}",
+                },
             }
 
             saml_auth_class = get_saml_auth_class()
@@ -183,12 +178,12 @@ class SAMLBackend(BaseBackend):
         Convert Django request to OneLogin format.
         """
         return {
-            'https': 'on' if request.is_secure() else 'off',
-            'http_host': request.META['HTTP_HOST'],
-            'server_port': request.META['SERVER_PORT'],
-            'script_name': request.path,
-            'get_data': request.GET.copy(),
-            'post_data': request.POST.copy()
+            "https": "on" if request.is_secure() else "off",
+            "http_host": request.META["HTTP_HOST"],
+            "server_port": request.META["SERVER_PORT"],
+            "script_name": request.path,
+            "get_data": request.GET.copy(),
+            "post_data": request.POST.copy(),
         }
 
     def _get_or_create_user(self, sso_provider, attributes, name_id, request):
@@ -196,7 +191,7 @@ class SAMLBackend(BaseBackend):
         Get existing user or create via JIT provisioning.
         """
         # Try to find existing user by email from attributes
-        email = self._get_mapped_attribute(sso_provider, attributes, 'email')
+        email = self._get_mapped_attribute(sso_provider, attributes, "email")
         if not email:
             email = name_id  # Fallback to name_id
 
@@ -215,9 +210,7 @@ class SAMLBackend(BaseBackend):
         except User.DoesNotExist:
             # Create new user via JIT provisioning
             if sso_provider.enable_jit_provisioning:
-                return provision_user_from_sso(
-                    sso_provider, attributes, name_id, request
-                )
+                return provision_user_from_sso(sso_provider, attributes, name_id, request)
             else:
                 logger.warning(f"JIT provisioning disabled for {email}")
                 return None
@@ -227,10 +220,7 @@ class SAMLBackend(BaseBackend):
         Get attribute value based on mapping configuration.
         """
         try:
-            mapping = AttributeMapping.objects.get(
-                sso_provider=sso_provider,
-                user_field=field_name
-            )
+            mapping = AttributeMapping.objects.get(sso_provider=sso_provider, user_field=field_name)
 
             # Get attribute value
             sso_attr = mapping.sso_attribute
@@ -243,7 +233,7 @@ class SAMLBackend(BaseBackend):
             if mapping.transform_expression and value:
                 try:
                     # Safe evaluation of transform expression
-                    local_vars = {'value': value, 'attributes': attributes}
+                    local_vars = {"value": value, "attributes": attributes}
                     value = eval(mapping.transform_expression, {"__builtins__": {}}, local_vars)
                 except Exception as e:
                     logger.error(f"Transform expression error: {str(e)}")
@@ -253,9 +243,9 @@ class SAMLBackend(BaseBackend):
         except AttributeMapping.DoesNotExist:
             # Use default attribute names
             default_mappings = {
-                'email': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
-                'first_name': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname',
-                'last_name': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'
+                "email": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+                "first_name": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname",
+                "last_name": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname",
             }
 
             if field_name in default_mappings:
@@ -272,7 +262,7 @@ class SAMLBackend(BaseBackend):
             updated = False
 
             # Update basic fields
-            for field in ['first_name', 'last_name']:
+            for field in ["first_name", "last_name"]:
                 value = self._get_mapped_attribute(sso_provider, attributes, field)
                 if value and getattr(user, field) != value:
                     setattr(user, field, value)

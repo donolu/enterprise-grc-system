@@ -28,28 +28,28 @@ Successfully implemented comprehensive API documentation using drf-spectacular w
   - Complete CRUD operations with detailed parameter documentation
   - Custom actions: clauses, controls, stats with filtering options
   - Response examples and error handling specifications
-  
+
 - **ControlAssessmentViewSet** (catalogs/views.py):
   - Full assessment lifecycle management documentation
   - Bulk operations: bulk_create, bulk_upload_evidence
   - Evidence management: upload_evidence, link_evidence, remove_evidence
   - Progress reporting and status tracking endpoints
-  
+
 - **Authentication Views** (authn/views.py):
   - User registration and login with 2FA support
   - Multiple 2FA methods: email, TOTP, push notifications
   - Session management and profile operations
-  
+
 - **Document Management** (core/views.py):
   - File upload with multipart form data specifications
   - Azure Blob Storage integration documentation
   - Plan-based limits and access control explanation
-  
+
 - **Report Generation** (exports/views.py):
   - Async PDF generation with status tracking
   - Report configuration and download management
   - Quick generation workflow documentation
-  
+
 - **Billing Integration** (billing/views.py):
   - Stripe payment processing documentation
   - Subscription management and billing portal access

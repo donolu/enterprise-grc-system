@@ -45,7 +45,7 @@ Risk Owner: {{ risk.risk_owner.get_full_name|default:risk.risk_owner.username|de
 GETTING STARTED:
 ================
 • Review the requirements - Understand what needs to be accomplished
-• Check the success criteria - Know what defines completion  
+• Check the success criteria - Know what defines completion
 • Review dependencies - Identify any prerequisites or blockers
 • Update status to "In Progress" - When you begin working
 • Track your progress - Update percentage completion regularly

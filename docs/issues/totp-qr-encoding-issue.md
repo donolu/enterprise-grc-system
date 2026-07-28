@@ -1,15 +1,15 @@
 # TOTP QR Code Generation Issue
 
-**Issue ID:** ISSUE-0001  
-**Severity:** Minor  
-**Status:** Resolved ✅  
-**Created:** 2025-08-22  
-**Resolved:** 2025-08-22  
-**Assignee:** Development Team  
-**Reporter:** System Testing  
-**Component:** Authentication (2FA TOTP)  
-**Labels:** bug, authentication, 2fa, unicode, qr-code  
-**Resolution Time:** Same day  
+**Issue ID:** ISSUE-0001
+**Severity:** Minor
+**Status:** Resolved ✅
+**Created:** 2025-08-22
+**Resolved:** 2025-08-22
+**Assignee:** Development Team
+**Reporter:** System Testing
+**Component:** Authentication (2FA TOTP)
+**Labels:** bug, authentication, 2fa, unicode, qr-code
+**Resolution Time:** Same day
 
 ## Summary
 
@@ -87,7 +87,7 @@ The core TOTP functionality is operational; only the QR code generation response
 
 ## Resolution
 
-**Resolved Date:** 2025-08-22  
+**Resolved Date:** 2025-08-22
 **Resolution Method:** Enhanced TOTP implementation using pyotp library
 
 ### Solution Implemented
@@ -154,7 +154,7 @@ This issue emerged during comprehensive 2FA implementation. Email and Push 2FA m
 
 **Test Results Summary:**
 - ✅ Secret generation: PASSED
-- ✅ Provisioning URI creation: PASSED  
+- ✅ Provisioning URI creation: PASSED
 - ✅ QR code generation: PASSED (no Unicode errors)
 - ✅ JSON serialization: PASSED (resolved the core issue)
 - ✅ Token verification: PASSED

@@ -14,7 +14,7 @@ We decided to implement user-tenant relationship through **schema isolation** ra
 ### Approach Taken:
 
 1. **Schema-Based Isolation:** Users exist within tenant schemas, automatically providing tenant association
-2. **No Foreign Key:** Removed explicit `tenant` foreign key from User model  
+2. **No Foreign Key:** Removed explicit `tenant` foreign key from User model
 3. **Implicit Association:** User-tenant relationship is implicit through the schema they exist in
 4. **Automatic Isolation:** Django-tenants middleware handles tenant resolution and data isolation
 
@@ -31,7 +31,7 @@ We decided to implement user-tenant relationship through **schema isolation** ra
 ### Alternative Considered:
 
 - **Foreign Key Approach:** User model with `tenant_id` foreign key
-- **Rejected because:** 
+- **Rejected because:**
   - Requires manual tenant filtering on every query
   - Risk of data leakage if filtering is missed
   - Performance overhead of additional JOIN conditions

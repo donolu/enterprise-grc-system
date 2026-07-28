@@ -29,9 +29,9 @@ Closes #(issue number)
 - [ ] All existing tests pass
 
 ### Testing Steps
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## 📸 Screenshots (if applicable)
 <!-- Add screenshots for UI changes -->

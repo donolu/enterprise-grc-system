@@ -34,7 +34,7 @@ jobs:
     name: Backend Quality
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    
+
     services:
       postgres:
         image: postgres:16
@@ -121,7 +121,10 @@ jobs:
       run: |
         echo "Running Ruff linter..."
         ruff check .
-        
+
+        echo "Checking Ruff formatting..."
+        ruff format --check .
+
         echo "Django system check..."
         python manage.py check
 

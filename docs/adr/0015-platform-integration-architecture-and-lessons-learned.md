@@ -35,21 +35,21 @@ class AssessmentWorkflowService:
         with transaction.atomic():
             # Core assessment update (catalogs module)
             assessment = ControlAssessment.objects.get(id=assessment_id)
-            
+
             # Evidence processing (catalogs + core modules)
             for evidence_file in evidence_files:
                 document = DocumentService.create_document(evidence_file)
                 evidence = EvidenceService.create_evidence(assessment.control, document)
                 AssessmentEvidenceService.link_evidence(assessment, evidence)
-            
+
             # Status update and notifications (catalogs + authn modules)
             assessment.update_status('complete')
             NotificationService.send_completion_notification(assessment)
-            
+
             # Automatic report generation trigger (exports module)
             if assessment.should_auto_generate_report():
                 ReportService.schedule_assessment_report(assessment)
-                
+
         return assessment
 ```
 
@@ -67,10 +67,10 @@ def handle_assessment_status_change(sender, instance, created, **kwargs):
     if not created and instance.status == 'complete':
         # Trigger reminder cleanup (catalogs module)
         ReminderService.cleanup_assessment_reminders(instance)
-        
+
         # Update framework progress (catalogs module)
         FrameworkProgressService.recalculate_progress(instance.control.framework)
-        
+
         # Schedule report generation (exports module)
         if instance.should_generate_completion_report():
             generate_assessment_report_task.delay(instance.id)
@@ -82,7 +82,7 @@ def handle_assessment_status_change(sender, instance, created, **kwargs):
 ```python
 class TenantAwareServiceMixin:
     """Base mixin for tenant-aware service operations"""
-    
+
     def get_tenant_context(self, user):
         """Get tenant context for service operations"""
         return {
@@ -90,7 +90,7 @@ class TenantAwareServiceMixin:
             'schema_name': user.tenant.schema_name,
             'user_id': user.id
         }
-    
+
     def execute_tenant_aware_task(self, task_func, tenant_context, *args, **kwargs):
         """Execute async task with proper tenant context"""
         return task_func.delay(tenant_context, *args, **kwargs)
@@ -112,13 +112,13 @@ class AssessmentReportService(TenantAwareServiceMixin):
 ```python
 class BulkOperationService:
     """Standardized bulk operation handling across modules"""
-    
+
     @staticmethod
     def execute_bulk_operation(operation_func, items, batch_size=100):
         """Execute bulk operations with proper error handling and progress tracking"""
         results = []
         errors = []
-        
+
         for batch in chunked(items, batch_size):
             try:
                 with transaction.atomic():
@@ -130,7 +130,7 @@ class BulkOperationService:
                     'error': str(e),
                     'items_affected': len(batch)
                 })
-        
+
         return {
             'successful_count': len(results),
             'error_count': len(errors),
@@ -154,19 +154,19 @@ class BulkAssessmentCreateService(BulkOperationService):
 ```python
 class FileOperationService:
     """Coordinated file handling across document, evidence, and report modules"""
-    
+
     @staticmethod
     def upload_evidence_with_assessment_link(assessment, file_data, user):
         """Coordinate file upload across core, catalogs, and evidence modules"""
         try:
             # Document creation (core module)
             document = DocumentService.create_from_upload(
-                file_data, 
+                file_data,
                 user,
                 title=file_data.get('title'),
                 description=file_data.get('description')
             )
-            
+
             # Evidence creation (catalogs module)
             evidence = ControlEvidence.objects.create(
                 control=assessment.control,
@@ -175,7 +175,7 @@ class FileOperationService:
                 evidence_type=file_data.get('evidence_type', 'document'),
                 collected_by=user
             )
-            
+
             # Assessment linking (catalogs module)
             assessment_evidence = AssessmentEvidence.objects.create(
                 assessment=assessment,
@@ -183,13 +183,13 @@ class FileOperationService:
                 evidence_purpose=file_data.get('purpose', 'Assessment evidence'),
                 created_by=user
             )
-            
+
             return {
                 'document': document,
                 'evidence': evidence,
                 'assessment_link': assessment_evidence
             }
-            
+
         except Exception as e:
             # Cleanup on failure
             if 'document' in locals():
@@ -270,7 +270,7 @@ Database architecture ensures:
 
 #### 1. **Query Optimization**
 - **Select Related Usage**: Eliminated N+1 queries across all ViewSets
-- **Prefetch Related**: Optimized related object loading for complex relationships  
+- **Prefetch Related**: Optimized related object loading for complex relationships
 - **Database Indexing**: Strategic indexes on filtering and ordering fields
 - **Query Count Monitoring**: Consistent query optimization across all endpoints
 
@@ -295,7 +295,7 @@ Database architecture ensures:
 **Result**: Enabled complex cross-module operations while maintaining clean separation
 **Lesson**: Service layer abstraction is essential for coordinated operations across modules
 
-#### 2. **Signal-Based Integration**  
+#### 2. **Signal-Based Integration**
 **Decision**: Use Django signals for cross-module coordination
 **Result**: Loose coupling between modules with proper event-driven architecture
 **Lesson**: Signals provide excellent decoupling for module integration when used judiciously

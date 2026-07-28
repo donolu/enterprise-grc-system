@@ -175,7 +175,7 @@ def get_risk_trend_analysis(days=90):
 # Executive summary components
 executive_summary = {
     'risk_overview': high_level_counts_and_percentages,
-    'top_risks': highest_scored_risks_with_details, 
+    'top_risks': highest_scored_risks_with_details,
     'treatment_progress': action_completion_and_effectiveness,
     'compliance_status': regulatory_alignment_metrics,
     'trends': key_trend_indicators_and_changes
@@ -324,7 +324,7 @@ executive_summary = {
 - Memory usage monitoring for large data aggregations
 - Cache hit ratio monitoring (when implemented)
 
-### Migration Strategy  
+### Migration Strategy
 - Analytics services deployed without affecting existing functionality
 - Gradual feature rollout enables user training and system validation
 - Backward compatibility maintained with existing risk management features
@@ -360,7 +360,7 @@ executive_summary = {
 
 ---
 
-**Decision Made By**: Development Team  
-**Date**: August 23, 2025  
-**Reviewed By**: Architecture Review Board  
+**Decision Made By**: Development Team
+**Date**: August 23, 2025
+**Reviewed By**: Architecture Review Board
 **Next Review**: February 2026 (6 months)

@@ -174,4 +174,3 @@ The product must support adding further frameworks without major code changes.
 - Full inline Office editing until the document editing architecture decision is made.
 - Live vulnerability scanning until scanner architecture and security boundaries are approved.
 - Native mobile applications.
-

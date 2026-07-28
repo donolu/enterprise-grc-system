@@ -133,8 +133,13 @@ skips = ["B101", "B601"]  # Skip assert_used_in_tests, shell_injection_process
 
 [tool.mypy]
 python_version = "3.12"
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
 check_untyped_defs = true
 ignore_missing_imports = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
+exclude = ["migrations/"]
+
+[tool.django-stubs]
+django_settings_module = "app.settings.test"

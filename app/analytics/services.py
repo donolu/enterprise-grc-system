@@ -125,9 +125,7 @@ class CrossModuleAnalyticsService:
                 "treatment_coverage": round(
                     RiskDomainAnalyticsService.treatment_coverage_percentage(), 1
                 ),
-                "automation_rate": round(
-                    CatalogueAnalyticsService.automation_rate_percentage(), 1
-                ),
+                "automation_rate": round(CatalogueAnalyticsService.automation_rate_percentage(), 1),
                 "acknowledgment_rate": round(
                     PolicyAnalyticsService.acknowledgment_rate_percentage(), 1
                 ),

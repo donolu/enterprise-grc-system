@@ -11,55 +11,55 @@ from core.audit import log_audit_event
 
 
 FRAMEWORK_FIELDS = (
-    'name',
-    'short_name',
-    'version',
-    'framework_type',
-    'status',
-    'effective_date',
-    'expiry_date',
-    'is_mandatory',
+    "name",
+    "short_name",
+    "version",
+    "framework_type",
+    "status",
+    "effective_date",
+    "expiry_date",
+    "is_mandatory",
 )
 CLAUSE_FIELDS = (
-    'framework_id',
-    'clause_id',
-    'title',
-    'clause_type',
-    'criticality',
-    'is_testable',
-    'parent_clause_id',
-    'sort_order',
+    "framework_id",
+    "clause_id",
+    "title",
+    "clause_type",
+    "criticality",
+    "is_testable",
+    "parent_clause_id",
+    "sort_order",
 )
 CONTROL_FIELDS = (
-    'control_id',
-    'name',
-    'control_type',
-    'automation_level',
-    'status',
-    'control_owner_id',
-    'business_owner',
-    'effectiveness_rating',
-    'risk_rating',
-    'version',
+    "control_id",
+    "name",
+    "control_type",
+    "automation_level",
+    "status",
+    "control_owner_id",
+    "business_owner",
+    "effectiveness_rating",
+    "risk_rating",
+    "version",
 )
 ASSESSMENT_FIELDS = (
-    'framework_id',
-    'control_id',
-    'applicability',
-    'status',
-    'implementation_status',
-    'assigned_to_id',
-    'reviewer_id',
-    'due_date',
-    'risk_rating',
-    'compliance_score',
-    'remediation_owner_id',
+    "framework_id",
+    "control_id",
+    "applicability",
+    "status",
+    "implementation_status",
+    "assigned_to_id",
+    "reviewer_id",
+    "due_date",
+    "risk_rating",
+    "compliance_score",
+    "remediation_owner_id",
 )
 ASSESSMENT_EVIDENCE_FIELDS = (
-    'assessment_id',
-    'evidence_id',
-    'evidence_purpose',
-    'is_primary_evidence',
+    "assessment_id",
+    "evidence_id",
+    "evidence_purpose",
+    "is_primary_evidence",
 )
 
 
@@ -70,13 +70,13 @@ def snapshot_model(instance: Model, fields: Iterable[str]) -> dict[str, Any]:
 def snapshot_control(instance) -> dict[str, Any]:
     payload = snapshot_model(instance, CONTROL_FIELDS)
     if instance.pk:
-        payload['clause_ids'] = [
-            str(pk) for pk in instance.clauses.order_by('pk').values_list('pk', flat=True)
+        payload["clause_ids"] = [
+            str(pk) for pk in instance.clauses.order_by("pk").values_list("pk", flat=True)
         ]
-        payload['framework_ids'] = [
+        payload["framework_ids"] = [
             str(pk)
-            for pk in instance.clauses.order_by('framework_id')
-            .values_list('framework_id', flat=True)
+            for pk in instance.clauses.order_by("framework_id")
+            .values_list("framework_id", flat=True)
             .distinct()
         ]
     return payload
@@ -106,7 +106,7 @@ def audit_catalogue_change(
     request=None,
     previous: Mapping[str, Any] | None = None,
     new: Mapping[str, Any] | None = None,
-    reason: str = '',
+    reason: str = "",
     source: Mapping[str, Any] | None = None,
     details: Mapping[str, Any] | None = None,
 ):
@@ -119,17 +119,17 @@ def audit_catalogue_change(
         new=new,
         reason=reason,
         request=request,
-        source=source or {'type': 'api', 'reference': ''},
+        source=source or {"type": "api", "reference": ""},
         details=details,
     )
 
 
 def framework_display(framework) -> str:
-    return f'{framework.short_name or framework.name} v{framework.version}'
+    return f"{framework.short_name or framework.name} v{framework.version}"
 
 
 def clause_display(clause) -> str:
-    return f'{clause.framework.short_name} {clause.clause_id}'
+    return f"{clause.framework.short_name} {clause.clause_id}"
 
 
 def control_display(control) -> str:
@@ -141,7 +141,7 @@ def assessment_display(assessment) -> str:
 
 
 def assessment_evidence_display(link) -> str:
-    return f'{link.assessment.assessment_id}:{link.evidence_id}'
+    return f"{link.assessment.assessment_id}:{link.evidence_id}"
 
 
 def _serialise(value):

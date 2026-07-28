@@ -30,7 +30,7 @@ class IsStaffOrReadPublished(permissions.BasePermission):
         if request.user.is_staff or request.user.is_superuser:
             return True
         if isinstance(obj, KnowledgeArticle):
-            return obj.status == 'published'
+            return obj.status == "published"
         if isinstance(obj, KnowledgeCategory):
             return obj.is_active
         return request.method in permissions.SAFE_METHODS
@@ -38,7 +38,7 @@ class IsStaffOrReadPublished(permissions.BasePermission):
 
 class KnowledgePagination(PageNumberPagination):
     page_size = 20
-    page_size_query_param = 'page_size'
+    page_size_query_param = "page_size"
     max_page_size = 100
 
 
@@ -47,14 +47,14 @@ class KnowledgeCategoryViewSet(viewsets.ModelViewSet):
     serializer_class = KnowledgeCategorySerializer
     pagination_class = KnowledgePagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['module_key', 'is_active']
-    search_fields = ['name', 'description']
-    ordering_fields = ['name', 'sort_order', 'updated_at']
-    ordering = ['sort_order', 'name']
+    filterset_fields = ["module_key", "is_active"]
+    search_fields = ["name", "description"]
+    ordering_fields = ["name", "sort_order", "updated_at"]
+    ordering = ["sort_order", "name"]
 
     def get_queryset(self):
         queryset = KnowledgeCategory.objects.annotate(
-            article_count=Count('articles', filter=Q(articles__status='published'))
+            article_count=Count("articles", filter=Q(articles__status="published"))
         )
         if not (self.request.user.is_staff or self.request.user.is_superuser):
             queryset = queryset.filter(is_active=True)
@@ -67,21 +67,21 @@ class KnowledgeCategoryViewSet(viewsets.ModelViewSet):
 class KnowledgeArticleViewSet(viewsets.ModelViewSet):
     permission_classes = [IsStaffOrReadPublished]
     pagination_class = KnowledgePagination
-    lookup_field = 'slug'
+    lookup_field = "slug"
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['category', 'module_key', 'workflow_key', 'status', 'content_scope']
-    search_fields = ['title', 'summary', 'body', 'tags']
-    ordering_fields = ['title', 'sort_order', 'published_at', 'updated_at']
-    ordering = ['sort_order', 'title']
+    filterset_fields = ["category", "module_key", "workflow_key", "status", "content_scope"]
+    search_fields = ["title", "summary", "body", "tags"]
+    ordering_fields = ["title", "sort_order", "published_at", "updated_at"]
+    ordering = ["sort_order", "title"]
 
     def get_queryset(self):
-        queryset = KnowledgeArticle.objects.select_related('category', 'created_by', 'updated_by')
+        queryset = KnowledgeArticle.objects.select_related("category", "created_by", "updated_by")
         if self.request.user.is_staff or self.request.user.is_superuser:
             return queryset
-        return queryset.filter(status='published', category__is_active=True)
+        return queryset.filter(status="published", category__is_active=True)
 
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action == "list":
             return KnowledgeArticleListSerializer
         return KnowledgeArticleDetailSerializer
 
@@ -93,33 +93,33 @@ class KnowledgeArticleViewSet(viewsets.ModelViewSet):
         article = serializer.save(updated_by=self.request.user)
         self._record_revision(article)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=["get"])
     def contextual(self, request):
         """Return published guidance for a module and optional workflow key."""
-        module_key = request.query_params.get('module_key', '')
-        workflow_key = request.query_params.get('workflow_key', '')
+        module_key = request.query_params.get("module_key", "")
+        workflow_key = request.query_params.get("workflow_key", "")
         if not module_key:
             return Response(
-                {'module_key': ['This query parameter is required.']},
+                {"module_key": ["This query parameter is required."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         queryset = self.get_queryset().filter(module_key=module_key)
         if workflow_key:
-            queryset = queryset.filter(Q(workflow_key=workflow_key) | Q(workflow_key=''))
+            queryset = queryset.filter(Q(workflow_key=workflow_key) | Q(workflow_key=""))
         serializer = KnowledgeArticleListSerializer(queryset[:10], many=True)
-        return Response({'results': serializer.data})
+        return Response({"results": serializer.data})
 
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=["get"])
     def revisions(self, request, slug=None):
         article = self.get_object()
         if not (request.user.is_staff or request.user.is_superuser):
             return Response(
-                {'detail': 'Only staff users can view article revisions.'},
+                {"detail": "Only staff users can view article revisions."},
                 status=status.HTTP_403_FORBIDDEN,
             )
         serializer = KnowledgeArticleRevisionSerializer(article.revisions.all(), many=True)
-        return Response({'results': serializer.data})
+        return Response({"results": serializer.data})
 
     def _record_revision(self, article):
         KnowledgeArticleRevision.objects.create(

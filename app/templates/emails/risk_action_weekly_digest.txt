@@ -68,7 +68,7 @@ Great news! You have no active risk actions assigned at this time.
 QUICK TIPS:
 ===========
 • Focus on overdue items first - These need immediate attention
-• Update progress regularly - Keep stakeholders informed of your progress  
+• Update progress regularly - Keep stakeholders informed of your progress
 • Upload evidence early - Don't wait until the due date to provide documentation
 • Communicate blockers - Add notes if you're facing challenges
 • Plan ahead - Review items due next week to avoid last-minute rushes

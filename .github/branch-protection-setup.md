@@ -119,7 +119,7 @@ Add these in **Settings** → **Secrets and variables** → **Actions**:
 ```
 # Azure Staging
 AZURE_CREDENTIALS_STAGING
-AZURE_RESOURCE_GROUP_STAGING  
+AZURE_RESOURCE_GROUP_STAGING
 AZURE_WEBAPP_NAME_STAGING
 
 # Azure Production
@@ -149,7 +149,7 @@ Ensure you have a `.github/CODEOWNERS` file:
 /app/ @backend-team
 /requirements.txt @backend-team
 
-# Frontend specific  
+# Frontend specific
 /frontend/ @frontend-team
 
 # Infrastructure

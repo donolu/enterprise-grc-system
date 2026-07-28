@@ -20,7 +20,7 @@
     {% for assessment in assessments %}
     <div class="section {% if not forloop.first %}page-break{% endif %}">
         <h2>{{ assessment.control.control_id }}: {{ assessment.control.name }}</h2>
-        
+
         <div class="assessment-details">
             <table style="width: 100%; margin-bottom: 1em;">
                 <tr>

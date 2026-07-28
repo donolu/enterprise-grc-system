@@ -8,14 +8,14 @@ from .views import (
     PolicyViewSet,
     PolicyVersionViewSet,
     PolicyAcknowledgmentViewSet,
-    PolicyDistributionViewSet
+    PolicyDistributionViewSet,
 )
 
 router = DefaultRouter()
-router.register(r'categories', PolicyCategoryViewSet)
-router.register(r'policies', PolicyViewSet, basename='policy')
-router.register(r'versions', PolicyVersionViewSet, basename='policyversion')
-router.register(r'acknowledgments', PolicyAcknowledgmentViewSet, basename='policyacknowledgment')
-router.register(r'distributions', PolicyDistributionViewSet, basename='policydistribution')
+router.register(r"categories", PolicyCategoryViewSet)
+router.register(r"policies", PolicyViewSet, basename="policy")
+router.register(r"versions", PolicyVersionViewSet, basename="policyversion")
+router.register(r"acknowledgments", PolicyAcknowledgmentViewSet, basename="policyacknowledgment")
+router.register(r"distributions", PolicyDistributionViewSet, basename="policydistribution")
 
 urlpatterns = router.urls

@@ -20,67 +20,69 @@ logger = logging.getLogger(__name__)
 def generate_assessment_report_task(self, report_id):
     """
     Celery task to generate assessment reports asynchronously.
-    
+
     Args:
         report_id (int): ID of the AssessmentReport to generate
-        
+
     Returns:
         dict: Generation result with status and details
     """
     try:
         report = AssessmentReport.objects.get(id=report_id)
         logger.info(f"Starting report generation for report {report_id}")
-        
+
         # Update status to processing if not already set
-        if report.status == 'pending':
-            report.status = 'processing'
+        if report.status == "pending":
+            report.status = "processing"
             report.generation_started_at = timezone.now()
             report.save()
-        
+
         # Generate the report
         generator = AssessmentReportGenerator(report)
         document = generator.generate_report()
-        
+
         logger.info(f"Report {report_id} generated successfully: {document.file.name}")
-        
+
         return {
-            'status': 'success',
-            'report_id': report_id,
-            'document_id': document.id,
-            'filename': document.file.name,
-            'message': 'Report generated successfully'
+            "status": "success",
+            "report_id": report_id,
+            "document_id": document.id,
+            "filename": document.file.name,
+            "message": "Report generated successfully",
         }
-        
+
     except AssessmentReport.DoesNotExist:
         logger.error(f"Report {report_id} not found")
         return {
-            'status': 'error',
-            'report_id': report_id,
-            'message': f'Report {report_id} not found'
+            "status": "error",
+            "report_id": report_id,
+            "message": f"Report {report_id} not found",
         }
-        
+
     except Exception as e:
         logger.error(f"Error generating report {report_id}: {str(e)}")
-        
+
         # Update report status on failure
         try:
             report = AssessmentReport.objects.get(id=report_id)
-            report.status = 'failed'
+            report.status = "failed"
             report.error_message = str(e)
             report.generation_completed_at = timezone.now()
             report.save()
         except AssessmentReport.DoesNotExist:
             pass
-        
+
         # Retry the task if retries are available
         if self.request.retries < self.max_retries:
-            logger.info(f"Retrying report generation for {report_id} (attempt {self.request.retries + 1})")
+            logger.info(
+                f"Retrying report generation for {report_id} (attempt {self.request.retries + 1})"
+            )
             raise self.retry(exc=e)
-        
+
         return {
-            'status': 'error',
-            'report_id': report_id,
-            'message': f'Report generation failed after {self.max_retries + 1} attempts: {str(e)}'
+            "status": "error",
+            "report_id": report_id,
+            "message": f"Report generation failed after {self.max_retries + 1} attempts: {str(e)}",
         }
 
 
@@ -88,26 +90,25 @@ def generate_assessment_report_task(self, report_id):
 def cleanup_old_reports(days_old=30):
     """
     Clean up old generated reports to save storage space.
-    
+
     Args:
         days_old (int): Delete reports older than this many days
-        
+
     Returns:
         dict: Cleanup results
     """
     from datetime import timedelta
-    
+
     cutoff_date = timezone.now() - timedelta(days=days_old)
-    
+
     # Find old reports
     old_reports = AssessmentReport.objects.filter(
-        requested_at__lt=cutoff_date,
-        status='completed'
-    ).select_related('generated_file')
-    
+        requested_at__lt=cutoff_date, status="completed"
+    ).select_related("generated_file")
+
     deleted_count = 0
     storage_saved = 0
-    
+
     for report in old_reports:
         try:
             previous = snapshot_assessment_report(report)
@@ -115,32 +116,32 @@ def cleanup_old_reports(days_old=30):
                 # Track storage saved
                 if report.generated_file.file_size:
                     storage_saved += report.generated_file.file_size
-                
+
                 # Delete the file and document
                 report.generated_file.delete()
-            
+
             audit_export_change(
-                event='ASSESSMENT_REPORT_EXPIRED',
+                event="ASSESSMENT_REPORT_EXPIRED",
                 actor=report.requested_by,
                 target=report,
                 object_display=assessment_report_display(report),
                 previous=previous,
-                source={'type': 'worker', 'reference': 'cleanup_old_reports'},
+                source={"type": "worker", "reference": "cleanup_old_reports"},
             )
             # Delete the report record
             report.delete()
             deleted_count += 1
-            
+
         except Exception as e:
             logger.error(f"Error deleting old report {report.id}: {str(e)}")
-    
+
     logger.info(f"Cleaned up {deleted_count} old reports, saved {storage_saved} bytes of storage")
-    
+
     return {
-        'status': 'success',
-        'deleted_count': deleted_count,
-        'storage_saved_bytes': storage_saved,
-        'message': f'Cleaned up {deleted_count} reports older than {days_old} days'
+        "status": "success",
+        "deleted_count": deleted_count,
+        "storage_saved_bytes": storage_saved,
+        "message": f"Cleaned up {deleted_count} reports older than {days_old} days",
     }
 
 
@@ -154,8 +155,8 @@ def cleanup_old_tenant_data_exports(days_old=30):
     cutoff_date = timezone.now() - timedelta(days=days_old)
     old_exports = TenantDataExport.objects.filter(
         requested_at__lt=cutoff_date,
-        status='completed',
-    ).select_related('generated_file', 'requested_by')
+        status="completed",
+    ).select_related("generated_file", "requested_by")
 
     deleted_count = 0
     storage_saved = 0
@@ -168,12 +169,12 @@ def cleanup_old_tenant_data_exports(days_old=30):
                 data_export.generated_file.delete()
 
             audit_export_change(
-                event='TENANT_DATA_EXPORT_EXPIRED',
+                event="TENANT_DATA_EXPORT_EXPIRED",
                 actor=data_export.requested_by,
                 target=data_export,
                 object_display=tenant_data_export_display(data_export),
                 previous=previous,
-                source={'type': 'worker', 'reference': 'cleanup_old_tenant_data_exports'},
+                source={"type": "worker", "reference": "cleanup_old_tenant_data_exports"},
             )
             data_export.delete()
             deleted_count += 1
@@ -186,10 +187,10 @@ def cleanup_old_tenant_data_exports(days_old=30):
         storage_saved,
     )
     return {
-        'status': 'success',
-        'deleted_count': deleted_count,
-        'storage_saved_bytes': storage_saved,
-        'message': f'Cleaned up {deleted_count} tenant data exports older than {days_old} days',
+        "status": "success",
+        "deleted_count": deleted_count,
+        "storage_saved_bytes": storage_saved,
+        "message": f"Cleaned up {deleted_count} tenant data exports older than {days_old} days",
     }
 
 
@@ -204,12 +205,9 @@ def generate_scheduled_reports():
     # - Monthly gap analysis reports
     # - Quarterly compliance dashboards
     # - Custom scheduled reports per tenant
-    
+
     logger.info("Scheduled report generation not yet implemented")
-    return {
-        'status': 'success',
-        'message': 'Scheduled report generation placeholder executed'
-    }
+    return {"status": "success", "message": "Scheduled report generation placeholder executed"}
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=300)
@@ -223,30 +221,32 @@ def generate_tenant_data_export_task(self, export_id):
 
         document = TenantDataExportGenerator(data_export).generate_export()
 
-        logger.info("Tenant data export %s generated successfully: %s", export_id, document.file.name)
+        logger.info(
+            "Tenant data export %s generated successfully: %s", export_id, document.file.name
+        )
         return {
-            'status': 'success',
-            'export_id': export_id,
-            'document_id': document.id,
-            'filename': document.file.name,
-            'message': 'Tenant data export generated successfully',
+            "status": "success",
+            "export_id": export_id,
+            "document_id": document.id,
+            "filename": document.file.name,
+            "message": "Tenant data export generated successfully",
         }
     except TenantDataExport.DoesNotExist:
         logger.error("Tenant data export %s not found", export_id)
         return {
-            'status': 'error',
-            'export_id': export_id,
-            'message': f'Tenant data export {export_id} not found',
+            "status": "error",
+            "export_id": export_id,
+            "message": f"Tenant data export {export_id} not found",
         }
     except Exception as exc:
         logger.error("Error generating tenant data export %s: %s", export_id, str(exc))
 
         try:
             data_export = TenantDataExport.objects.get(id=export_id)
-            data_export.status = 'failed'
+            data_export.status = "failed"
             data_export.error_message = str(exc)
             data_export.generation_completed_at = timezone.now()
-            data_export.save(update_fields=['status', 'error_message', 'generation_completed_at'])
+            data_export.save(update_fields=["status", "error_message", "generation_completed_at"])
         except TenantDataExport.DoesNotExist:
             pass
 
@@ -259,7 +259,7 @@ def generate_tenant_data_export_task(self, export_id):
             raise self.retry(exc=exc)
 
         return {
-            'status': 'error',
-            'export_id': export_id,
-            'message': f'Tenant data export failed after {self.max_retries + 1} attempts: {str(exc)}',
+            "status": "error",
+            "export_id": export_id,
+            "message": f"Tenant data export failed after {self.max_retries + 1} attempts: {str(exc)}",
         }

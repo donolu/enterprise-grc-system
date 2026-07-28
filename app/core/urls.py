@@ -13,21 +13,20 @@ from .health import (
     StartupCheckView,
 )
 
-app_name = 'core'
+app_name = "core"
 
 # API Router
 router = DefaultRouter()
-router.register('documents', DocumentViewSet, basename='documents')
-router.register('audit-events', AuditEventViewSet, basename='audit-events')
+router.register("documents", DocumentViewSet, basename="documents")
+router.register("audit-events", AuditEventViewSet, basename="audit-events")
 
 urlpatterns = [
     # API endpoints
-    path('api/', include(router.urls)),
-    
+    path("api/", include(router.urls)),
     # Health check endpoints
-    path('health/', HealthCheckView.as_view(), name='health_check'),
-    path('health/ready/', ReadinessCheckView.as_view(), name='readiness_check'),
-    path('health/live/', LivenessCheckView.as_view(), name='liveness_check'),
-    path('health/startup/', StartupCheckView.as_view(), name='startup_check'),
-    path('metrics/', MetricsView.as_view(), name='metrics'),
+    path("health/", HealthCheckView.as_view(), name="health_check"),
+    path("health/ready/", ReadinessCheckView.as_view(), name="readiness_check"),
+    path("health/live/", LivenessCheckView.as_view(), name="liveness_check"),
+    path("health/startup/", StartupCheckView.as_view(), name="startup_check"),
+    path("metrics/", MetricsView.as_view(), name="metrics"),
 ]

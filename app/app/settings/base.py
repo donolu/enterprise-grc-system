@@ -16,7 +16,7 @@ DEBUG = bool(int(os.environ.get("DEBUG", "0")))
 ALLOWED_HOSTS = ["*"]
 
 SHARED_APPS = [
-    "django_tenants", # Must be first
+    "django_tenants",  # Must be first
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -27,7 +27,7 @@ SHARED_APPS = [
     "django_filters",
     "drf_spectacular",
     "corsheaders",
-    "core", # Needed here for Tenant and Domain models
+    "core",  # Needed here for Tenant and Domain models
 ]
 
 TENANT_APPS = [
@@ -61,9 +61,7 @@ TENANT_APPS = [
     "api",
 ]
 
-INSTALLED_APPS = list(SHARED_APPS) + list(
-    [app for app in TENANT_APPS if app not in SHARED_APPS]
-)
+INSTALLED_APPS = list(SHARED_APPS) + list([app for app in TENANT_APPS if app not in SHARED_APPS])
 
 AUTH_USER_MODEL = "core.User"
 
@@ -88,6 +86,7 @@ ASGI_APPLICATION = "app.asgi.application"
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "static"
+
 
 def _truthy_env(name, default="0"):
     return os.environ.get(name, default).lower() in {"1", "true", "yes", "on"}
@@ -165,15 +164,15 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
@@ -256,13 +255,11 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX": "/api/",
     "COMPONENT_SPLIT_REQUEST": True,
     "SORT_OPERATIONS": False,
-
     # Enhanced documentation
     "SERVE_INCLUDE_SCHEMA": False,
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": None,
     "REDOC_DIST": "SIDECAR",
-
     # Security schemes
     "APPEND_COMPONENTS": {
         "securitySchemes": {
@@ -270,58 +267,34 @@ SPECTACULAR_SETTINGS = {
                 "type": "apiKey",
                 "in": "cookie",
                 "name": "sessionid",
-                "description": "Django session authentication"
+                "description": "Django session authentication",
             }
         }
     },
     "SECURITY": [{"SessionAuth": []}],
-
     # Tags for organizing endpoints
     "TAGS": [
-        {
-            "name": "Authentication",
-            "description": "User authentication and session management"
-        },
+        {"name": "Authentication", "description": "User authentication and session management"},
         {
             "name": "Frameworks",
-            "description": "Compliance framework management (ISO 27001, NIST CSF, SOC 2, etc.)"
+            "description": "Compliance framework management (ISO 27001, NIST CSF, SOC 2, etc.)",
         },
-        {
-            "name": "Clauses",
-            "description": "Framework clause management and hierarchy"
-        },
-        {
-            "name": "Controls",
-            "description": "Control definition and management"
-        },
+        {"name": "Clauses", "description": "Framework clause management and hierarchy"},
+        {"name": "Controls", "description": "Control definition and management"},
         {
             "name": "Assessments",
-            "description": "Control assessment workflow and lifecycle management"
+            "description": "Control assessment workflow and lifecycle management",
         },
-        {
-            "name": "Evidence",
-            "description": "Evidence collection, management, and linking"
-        },
-        {
-            "name": "Reports",
-            "description": "Assessment reporting and PDF generation"
-        },
-        {
-            "name": "Documents",
-            "description": "File upload and document management"
-        },
-        {
-            "name": "Billing",
-            "description": "Subscription and billing management"
-        }
+        {"name": "Evidence", "description": "Evidence collection, management, and linking"},
+        {"name": "Reports", "description": "Assessment reporting and PDF generation"},
+        {"name": "Documents", "description": "File upload and document management"},
+        {"name": "Billing", "description": "Subscription and billing management"},
     ],
-
     # Custom preprocessing for better documentation
     "PREPROCESSING_HOOKS": [],
     "POSTPROCESSING_HOOKS": [
         "drf_spectacular.hooks.postprocess_schema_enums",
     ],
-
     # Enum choices handling
     "ENUM_NAME_OVERRIDES": {
         "AnalyticsExportStatusEnum": "exports.models.AssessmentReport.REPORT_STATUS",
@@ -358,7 +331,6 @@ SPECTACULAR_SETTINGS = {
         "VendorTaskPriorityEnum": "vendors.models.VendorTask.PRIORITY_CHOICES",
         "VendorTaskStatusEnum": "vendors.models.VendorTask.STATUS_CHOICES",
     },
-
     # Error response schemas
     "DEFAULT_ERROR_RESPONSE_SCHEMA": "drf_spectacular.openapi.ErrorResponseSerializer",
 }
@@ -367,11 +339,11 @@ CELERY_BROKER_URL = os.environ["CELERY_BROKER_URL"]
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.environ.get("EMAIL_HOST","localhost")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT","1025"))
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL","noreply@example.com")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "1025"))
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@example.com")
 
-SITE_DOMAIN = os.environ.get("SITE_DOMAIN","localhost:8000")
+SITE_DOMAIN = os.environ.get("SITE_DOMAIN", "localhost:8000")
 
 CELERY_BEAT_SCHEDULE = {
     "assessments_due_reminders_daily": {
@@ -394,36 +366,38 @@ STRIPE_PRICE_ENTERPRISE = os.environ.get("STRIPE_PRICE_ENTERPRISE")
 
 # Limit Override Approval Settings
 LIMIT_OVERRIDE_APPROVER_EMAILS = [
-    email.strip() for email in os.environ.get("LIMIT_OVERRIDE_APPROVER_EMAILS", "admin@example.com").split(",")
+    email.strip()
+    for email in os.environ.get("LIMIT_OVERRIDE_APPROVER_EMAILS", "admin@example.com").split(",")
     if email.strip()
 ]
 ADMIN_NOTIFICATION_EMAILS = [
-    email.strip() for email in os.environ.get("ADMIN_NOTIFICATION_EMAILS", "admin@example.com").split(",")
+    email.strip()
+    for email in os.environ.get("ADMIN_NOTIFICATION_EMAILS", "admin@example.com").split(",")
     if email.strip()
 ]
 
 # Internationalization
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        'OPTIONS': {
-            'min_length': 8,
-        }
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {
+            "min_length": 8,
+        },
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -431,12 +405,12 @@ AUTH_PASSWORD_VALIDATORS = [
 SESSION_COOKIE_AGE = 86400  # 24 hours
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = "Lax"
 
 # CSRF settings
 CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = "Lax"
 
 # Django-tenants settings
 DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
@@ -447,106 +421,96 @@ PUBLIC_SCHEMA_URLCONF = "app.public_urls"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Celery Configuration
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
 # Celery Beat Schedule - Periodic Tasks
 CELERY_BEAT_SCHEDULE = {
     # Policy acknowledgment reminders - daily at 9:00 AM
-    'send-policy-acknowledgment-reminders': {
-        'task': 'policies.tasks.send_policy_acknowledgment_reminders',
-        'schedule': crontab(hour=9, minute=0),
-        'options': {'queue': 'default'}
+    "send-policy-acknowledgment-reminders": {
+        "task": "policies.tasks.send_policy_acknowledgment_reminders",
+        "schedule": crontab(hour=9, minute=0),
+        "options": {"queue": "default"},
     },
-
     # Overdue policy notifications - weekly on Monday at 10:00 AM
-    'send-overdue-policy-notifications': {
-        'task': 'policies.tasks.send_overdue_policy_notifications',
-        'schedule': crontab(day_of_week=1, hour=10, minute=0),
-        'options': {'queue': 'default'}
+    "send-overdue-policy-notifications": {
+        "task": "policies.tasks.send_overdue_policy_notifications",
+        "schedule": crontab(day_of_week=1, hour=10, minute=0),
+        "options": {"queue": "default"},
     },
-
     # Weekly acknowledgment report - Friday at 5:00 PM
-    'generate-acknowledgment-report': {
-        'task': 'policies.tasks.generate_acknowledgment_report',
-        'schedule': crontab(day_of_week=5, hour=17, minute=0),
-        'options': {'queue': 'default'}
+    "generate-acknowledgment-report": {
+        "task": "policies.tasks.generate_acknowledgment_report",
+        "schedule": crontab(day_of_week=5, hour=17, minute=0),
+        "options": {"queue": "default"},
     },
-
     # Clean up expired acknowledgments - daily at midnight
-    'cleanup-expired-acknowledgments': {
-        'task': 'policies.tasks.cleanup_expired_acknowledgments',
-        'schedule': crontab(hour=0, minute=0),
-        'options': {'queue': 'default'}
+    "cleanup-expired-acknowledgments": {
+        "task": "policies.tasks.cleanup_expired_acknowledgments",
+        "schedule": crontab(hour=0, minute=0),
+        "options": {"queue": "default"},
     },
-
     # Training module tasks
     # Send scheduled awareness campaigns - every hour
-    'send-scheduled-awareness-campaigns': {
-        'task': 'training.tasks.send_scheduled_awareness_campaigns',
-        'schedule': crontab(minute=0),  # Every hour at minute 0
-        'options': {'queue': 'default'}
+    "send-scheduled-awareness-campaigns": {
+        "task": "training.tasks.send_scheduled_awareness_campaigns",
+        "schedule": crontab(minute=0),  # Every hour at minute 0
+        "options": {"queue": "default"},
     },
-
     # Clean up old campaign deliveries - weekly on Sunday at 1:00 AM
-    'cleanup-old-campaign-deliveries': {
-        'task': 'training.tasks.cleanup_old_campaign_deliveries',
-        'schedule': crontab(day_of_week=0, hour=1, minute=0),
-        'options': {'queue': 'default'}
+    "cleanup-old-campaign-deliveries": {
+        "task": "training.tasks.cleanup_old_campaign_deliveries",
+        "schedule": crontab(day_of_week=0, hour=1, minute=0),
+        "options": {"queue": "default"},
     },
-
     # Generate training analytics report - weekly on Saturday at 6:00 PM
-    'generate-training-analytics-report': {
-        'task': 'training.tasks.generate_training_analytics_report',
-        'schedule': crontab(day_of_week=6, hour=18, minute=0),
-        'options': {'queue': 'default'}
+    "generate-training-analytics-report": {
+        "task": "training.tasks.generate_training_analytics_report",
+        "schedule": crontab(day_of_week=6, hour=18, minute=0),
+        "options": {"queue": "default"},
     },
-
     # Update video view counts - daily at 2:00 AM
-    'update-video-view-counts': {
-        'task': 'training.tasks.update_video_view_counts',
-        'schedule': crontab(hour=2, minute=0),
-        'options': {'queue': 'default'}
+    "update-video-view-counts": {
+        "task": "training.tasks.update_video_view_counts",
+        "schedule": crontab(hour=2, minute=0),
+        "options": {"queue": "default"},
     },
-
     # Asset review reminders - daily at 9:30 AM
-    'send-asset-review-reminders': {
-        'task': 'assets.tasks.send_asset_review_reminders',
-        'schedule': crontab(hour=9, minute=30),
-        'options': {'queue': 'default'}
+    "send-asset-review-reminders": {
+        "task": "assets.tasks.send_asset_review_reminders",
+        "schedule": crontab(hour=9, minute=30),
+        "options": {"queue": "default"},
     },
-
     # Cross-module calendar and deadline reminders - daily at 8:30 AM
-    'send-calendar-deadline-reminders': {
-        'task': 'calendarhub.tasks.send_calendar_deadline_reminders',
-        'schedule': crontab(hour=8, minute=30),
-        'options': {'queue': 'default'}
+    "send-calendar-deadline-reminders": {
+        "task": "calendarhub.tasks.send_calendar_deadline_reminders",
+        "schedule": crontab(hour=8, minute=30),
+        "options": {"queue": "default"},
     },
-
     # Vulnerability scan schedule dispatcher - hourly
-    'run-due-vulnerability-scan-schedules': {
-        'task': 'vuln.tasks.run_due_scan_schedules',
-        'schedule': crontab(minute=15),
-        'options': {'queue': 'default'}
-    }
+    "run-due-vulnerability-scan-schedules": {
+        "task": "vuln.tasks.run_due_scan_schedules",
+        "schedule": crontab(minute=15),
+        "options": {"queue": "default"},
+    },
 }
 
-VULN_SCANNER_ENABLED = bool(int(os.environ.get('VULN_SCANNER_ENABLED', '0')))
-NUCLEI_BINARY = os.environ.get('NUCLEI_BINARY', 'nuclei')
-VULN_SCANNER_TIMEOUT_SECONDS = int(os.environ.get('VULN_SCANNER_TIMEOUT_SECONDS', '900'))
-VULN_ALLOW_PRIVATE_TARGETS = bool(int(os.environ.get('VULN_ALLOW_PRIVATE_TARGETS', '0')))
+VULN_SCANNER_ENABLED = bool(int(os.environ.get("VULN_SCANNER_ENABLED", "0")))
+NUCLEI_BINARY = os.environ.get("NUCLEI_BINARY", "nuclei")
+VULN_SCANNER_TIMEOUT_SECONDS = int(os.environ.get("VULN_SCANNER_TIMEOUT_SECONDS", "900"))
+VULN_ALLOW_PRIVATE_TARGETS = bool(int(os.environ.get("VULN_ALLOW_PRIVATE_TARGETS", "0")))
 VULN_ALLOWED_TARGET_SUFFIXES = [
-    suffix.strip().lstrip('.')
-    for suffix in os.environ.get('VULN_ALLOWED_TARGET_SUFFIXES', '').split(',')
+    suffix.strip().lstrip(".")
+    for suffix in os.environ.get("VULN_ALLOWED_TARGET_SUFFIXES", "").split(",")
     if suffix.strip()
 ]
 
 # Observability
-METRICS_ENABLED = bool(int(os.environ.get('METRICS_ENABLED', '1')))
-METRICS_BEARER_TOKEN = os.environ.get('METRICS_BEARER_TOKEN', '')
+METRICS_ENABLED = bool(int(os.environ.get("METRICS_ENABLED", "1")))
+METRICS_BEARER_TOKEN = os.environ.get("METRICS_BEARER_TOKEN", "")
 
 SENTRY_ENABLED = configure_sentry()

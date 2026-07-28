@@ -144,7 +144,7 @@ def send_risk_action_due_reminders(self):
 
 ### Weekly Digest Generation
 ```python
-@shared_task(bind=True, max_retries=3) 
+@shared_task(bind=True, max_retries=3)
 def send_risk_action_weekly_digests(self):
     """Send weekly action summaries to users."""
 ```
@@ -300,7 +300,7 @@ The implementation follows Django best practices, includes comprehensive testing
 
 ---
 
-**Implementation Status**: ✅ Complete  
-**Story**: 2.2 - Implement Risk Treatment & Notifications  
-**Date**: August 2025  
+**Implementation Status**: ✅ Complete
+**Story**: 2.2 - Implement Risk Treatment & Notifications
+**Date**: August 2025
 **Components**: Models, API, Notifications, Tasks, Admin, Tests

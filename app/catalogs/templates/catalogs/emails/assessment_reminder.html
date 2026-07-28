@@ -131,7 +131,7 @@
             <div class="assessment-title">
                 {{ control.control_id }}: {{ control.title }}
             </div>
-            
+
             <div class="assessment-details">
                 <div class="detail-item">
                     <span class="detail-label">Framework</span>
@@ -140,12 +140,12 @@
                         {{ framework.name }}
                     </span>
                 </div>
-                
+
                 <div class="detail-item">
                     <span class="detail-label">Current Status</span>
                     <span class="detail-value">{{ assessment.get_status_display }}</span>
                 </div>
-                
+
                 <div class="detail-item">
                     <span class="detail-label">Due Date</span>
                     <span class="detail-value">
@@ -163,7 +163,7 @@
                         {% endif %}
                     </span>
                 </div>
-                
+
                 <div class="detail-item">
                     <span class="detail-label">Implementation Status</span>
                     <span class="detail-value">{{ assessment.get_implementation_status_display }}</span>

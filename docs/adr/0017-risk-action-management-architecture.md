@@ -33,7 +33,7 @@ We decided to implement a comprehensive **Risk Action Management System** with t
 ```python
 # Core action management
 RiskAction: Complete treatment action with workflow, progress, and metadata
-RiskActionNote: Progress tracking and status update notes with user attribution  
+RiskActionNote: Progress tracking and status update notes with user attribution
 RiskActionEvidence: Evidence management with validation and approval workflow
 
 # Notification system
@@ -84,7 +84,7 @@ RiskActionNotificationService:
     - Status change notifications with context
     - Evidence upload notifications to stakeholders
 
-# Scheduled reminders  
+# Scheduled reminders
 RiskActionReminderService:
     - Configurable advance warnings (default 7 days)
     - Due today notifications with high priority styling
@@ -151,7 +151,7 @@ RiskActionEvidence:
 # Enhanced admin classes with visual indicators
 RiskActionAdmin:
     - Progress bars with color-coded completion status
-    - Due date warnings with overdue indicators  
+    - Due date warnings with overdue indicators
     - Bulk operations for common administrative tasks
     - Rich display with clickable risk owner links
 ```
@@ -300,13 +300,13 @@ RiskActionAdmin:
 
 **Architecture Evolution**
 - Notification channel expansion (SMS, Slack, Teams)
-- Advanced workflow engine for complex approval processes  
+- Advanced workflow engine for complex approval processes
 - Integration with external project management tools
 - Real-time collaboration features for action planning
 
 ---
 
-**Decision Made By**: Development Team  
-**Date**: August 23, 2025  
-**Reviewed By**: Architecture Review Board  
+**Decision Made By**: Development Team
+**Date**: August 23, 2025
+**Reviewed By**: Architecture Review Board
 **Next Review**: February 2026 (6 months)

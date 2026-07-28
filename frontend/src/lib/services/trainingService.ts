@@ -173,7 +173,7 @@ export const trainingService = {
   async getTrainingVideos(filters: TrainingFilters = {}): Promise<PaginatedResponse<TrainingVideo>> {
     try {
       const params = new URLSearchParams()
-      
+
       if (filters.category?.length) {
         params.append('category', filters.category.join(','))
       }
@@ -200,7 +200,7 @@ export const trainingService = {
       return response.data
     } catch (error) {
       console.error('Error fetching training videos:', error)
-      
+
       // Return mock data as fallback
       return {
         results: [
@@ -319,7 +319,7 @@ export const trainingService = {
   async getCampaigns(filters: CampaignFilters = {}): Promise<PaginatedResponse<SecurityAwarenessCampaign>> {
     try {
       const params = new URLSearchParams()
-      
+
       if (filters.status?.length) {
         params.append('status', filters.status.join(','))
       }
@@ -346,7 +346,7 @@ export const trainingService = {
       return response.data
     } catch (error) {
       console.error('Error fetching campaigns:', error)
-      
+
       return {
         results: [],
         count: 0,
@@ -388,7 +388,7 @@ export const trainingService = {
       return response.data
     } catch (error) {
       console.error('Error fetching training dashboard:', error)
-      
+
       return {
         summary_metrics: {
           total_videos: 24,

@@ -4,17 +4,17 @@ from django.utils import timezone
 
 
 MODULE_CHOICES = [
-    ('dashboard', 'Dashboard'),
-    ('frameworks', 'Frameworks and assessments'),
-    ('risk', 'Risk'),
-    ('assets', 'Assets'),
-    ('vendors', 'Vendors'),
-    ('policies', 'Policies'),
-    ('training', 'Training'),
-    ('analytics', 'Analytics'),
-    ('vulnerability_scanning', 'Vulnerability scanning'),
-    ('exports', 'Exports'),
-    ('administration', 'Administration'),
+    ("dashboard", "Dashboard"),
+    ("frameworks", "Frameworks and assessments"),
+    ("risk", "Risk"),
+    ("assets", "Assets"),
+    ("vendors", "Vendors"),
+    ("policies", "Policies"),
+    ("training", "Training"),
+    ("analytics", "Analytics"),
+    ("vulnerability_scanning", "Vulnerability scanning"),
+    ("exports", "Exports"),
+    ("administration", "Administration"),
 ]
 
 
@@ -34,17 +34,17 @@ class KnowledgeCategory(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='created_knowledge_categories',
+        related_name="created_knowledge_categories",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['sort_order', 'name']
-        verbose_name_plural = 'Knowledge categories'
+        ordering = ["sort_order", "name"]
+        verbose_name_plural = "Knowledge categories"
         indexes = [
-            models.Index(fields=['is_active', 'module_key']),
-            models.Index(fields=['slug']),
+            models.Index(fields=["is_active", "module_key"]),
+            models.Index(fields=["slug"]),
         ]
 
     def __str__(self):
@@ -57,14 +57,14 @@ class KnowledgeArticle(models.Model):
     """
 
     STATUS_CHOICES = [
-        ('draft', 'Draft'),
-        ('published', 'Published'),
-        ('archived', 'Archived'),
+        ("draft", "Draft"),
+        ("published", "Published"),
+        ("archived", "Archived"),
     ]
 
     CONTENT_SCOPE_CHOICES = [
-        ('tenant', 'Tenant'),
-        ('global', 'Axim-managed global'),
+        ("tenant", "Tenant"),
+        ("global", "Axim-managed global"),
     ]
 
     title = models.CharField(max_length=220)
@@ -76,13 +76,13 @@ class KnowledgeArticle(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='articles',
+        related_name="articles",
     )
     module_key = models.CharField(max_length=50, choices=MODULE_CHOICES, blank=True)
     workflow_key = models.CharField(max_length=80, blank=True)
     tags = models.JSONField(default=list, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
-    content_scope = models.CharField(max_length=20, choices=CONTENT_SCOPE_CHOICES, default='tenant')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    content_scope = models.CharField(max_length=20, choices=CONTENT_SCOPE_CHOICES, default="tenant")
     sort_order = models.PositiveIntegerField(default=0)
     published_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(
@@ -90,25 +90,25 @@ class KnowledgeArticle(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='created_knowledge_articles',
+        related_name="created_knowledge_articles",
     )
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='updated_knowledge_articles',
+        related_name="updated_knowledge_articles",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['sort_order', 'title']
+        ordering = ["sort_order", "title"]
         indexes = [
-            models.Index(fields=['status', 'module_key']),
-            models.Index(fields=['content_scope', 'status']),
-            models.Index(fields=['slug']),
-            models.Index(fields=['workflow_key']),
+            models.Index(fields=["status", "module_key"]),
+            models.Index(fields=["content_scope", "status"]),
+            models.Index(fields=["slug"]),
+            models.Index(fields=["workflow_key"]),
         ]
 
     def __str__(self):
@@ -116,12 +116,12 @@ class KnowledgeArticle(models.Model):
 
     @property
     def is_published(self):
-        return self.status == 'published'
+        return self.status == "published"
 
     def save(self, *args, **kwargs):
-        if self.status == 'published' and not self.published_at:
+        if self.status == "published" and not self.published_at:
             self.published_at = timezone.now()
-        if self.status != 'published':
+        if self.status != "published":
             self.published_at = None
         super().save(*args, **kwargs)
 
@@ -134,7 +134,7 @@ class KnowledgeArticleRevision(models.Model):
     article = models.ForeignKey(
         KnowledgeArticle,
         on_delete=models.CASCADE,
-        related_name='revisions',
+        related_name="revisions",
     )
     title = models.CharField(max_length=220)
     summary = models.TextField(blank=True)
@@ -145,15 +145,15 @@ class KnowledgeArticleRevision(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='knowledge_article_revisions',
+        related_name="knowledge_article_revisions",
     )
     changed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-changed_at']
+        ordering = ["-changed_at"]
         indexes = [
-            models.Index(fields=['article', '-changed_at']),
+            models.Index(fields=["article", "-changed_at"]),
         ]
 
     def __str__(self):
-        return f'{self.article.title} revision at {self.changed_at:%Y-%m-%d %H:%M}'
+        return f"{self.article.title} revision at {self.changed_at:%Y-%m-%d %H:%M}"

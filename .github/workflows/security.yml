@@ -36,7 +36,7 @@ jobs:
       run: |
         echo "Checking Python dependencies for known vulnerabilities..."
         safety check --file requirements.txt --output json > safety-report.json || true
-        
+
         # Also create human-readable report
         safety check --file requirements.txt || echo "Some vulnerabilities found - check JSON report"
 
@@ -79,7 +79,7 @@ jobs:
           --severity-level medium \
           --confidence-level medium \
           || true
-        
+
         # Also create human-readable report
         bandit -r app/ -f txt || echo "Security issues found - check JSON report"
 
@@ -162,7 +162,7 @@ jobs:
         echo "Generating license report..."
         pip-licenses --format json --output-file licenses-report.json
         pip-licenses --format markdown --output-file licenses-report.md
-        
+
         # Check for restrictive licenses
         echo "Checking for restrictive licenses..."
         pip-licenses --format csv | grep -E "(GPL|AGPL|LGPL)" || echo "No restrictive licenses found"
@@ -284,7 +284,7 @@ jobs:
         script: |
           const fs = require('fs');
           const summary = fs.readFileSync('security-summary.md', 'utf8');
-          
+
           github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,

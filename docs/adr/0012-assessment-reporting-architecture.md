@@ -93,7 +93,7 @@ POST /api/exports/assessment-reports/quick_generate/   # Create + generate
 - **Content**: Statistics, completion percentages, overdue items
 - **Use Case**: Board presentations, management dashboards
 
-#### Detailed Assessment Report  
+#### Detailed Assessment Report
 - **Purpose**: Comprehensive assessment documentation
 - **Content**: Full assessment details, evidence, implementation notes
 - **Use Case**: Audit documentation, detailed compliance reviews
@@ -242,7 +242,7 @@ class AssessmentReportAPITest(APITestCase):
     def test_generate_report(self):
     def test_status_check(self):
     def test_quick_generate(self):
-    
+
 class AssessmentReportGeneratorTest(TestCase):
     def test_generate_assessment_summary(self):
     def test_generate_compliance_gap(self):

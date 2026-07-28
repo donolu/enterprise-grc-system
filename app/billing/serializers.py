@@ -13,15 +13,25 @@ class ModuleCatalogItemSerializer(serializers.Serializer):
 
 class PlanSerializer(serializers.ModelSerializer):
     """Serializer for subscription plans."""
+
     module_catalog = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Plan
         fields = [
-            'id', 'name', 'slug', 'description', 'price_monthly',
-            'max_users', 'max_documents', 'max_frameworks',
-            'has_api_access', 'has_advanced_reporting', 'has_priority_support',
-            'included_modules', 'module_catalog',
+            "id",
+            "name",
+            "slug",
+            "description",
+            "price_monthly",
+            "max_users",
+            "max_documents",
+            "max_frameworks",
+            "has_api_access",
+            "has_advanced_reporting",
+            "has_priority_support",
+            "included_modules",
+            "module_catalog",
         ]
 
     @extend_schema_field(ModuleCatalogItemSerializer(many=True))
@@ -31,23 +41,35 @@ class PlanSerializer(serializers.ModelSerializer):
 
 class SubscriptionSerializer(serializers.ModelSerializer):
     """Serializer for subscriptions."""
-    
+
     plan = PlanSerializer(read_only=True)
     effective_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     is_active = serializers.BooleanField(read_only=True)
     is_trial_active = serializers.BooleanField(read_only=True)
     enabled_module_keys = serializers.SerializerMethodField()
     module_catalog = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Subscription
         fields = [
-            'id', 'plan', 'status', 'effective_price', 'is_active',
-            'is_trial_active', 'enabled_modules', 'enabled_module_keys',
-            'trial_module', 'module_catalog',
-            'current_period_start', 'current_period_end',
-            'trial_start', 'trial_end', 'seats_included',
-            'is_grandfathered', 'created_at', 'updated_at'
+            "id",
+            "plan",
+            "status",
+            "effective_price",
+            "is_active",
+            "is_trial_active",
+            "enabled_modules",
+            "enabled_module_keys",
+            "trial_module",
+            "module_catalog",
+            "current_period_start",
+            "current_period_end",
+            "trial_start",
+            "trial_end",
+            "seats_included",
+            "is_grandfathered",
+            "created_at",
+            "updated_at",
         ]
 
     @extend_schema_field(serializers.ListField(child=serializers.CharField()))
