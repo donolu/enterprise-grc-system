@@ -75,6 +75,18 @@ class AssetDetailSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
+class AssetImportRequestSerializer(serializers.Serializer):
+    file = serializers.FileField()
+    dry_run = serializers.BooleanField(required=False, default=False)
+
+
+class AssetImportSampleSerializer(serializers.Serializer):
+    asset_id = serializers.CharField()
+    name = serializers.CharField()
+    asset_type = serializers.CharField()
+    source_sheet = serializers.CharField()
+
+
 class AssetImportSummarySerializer(serializers.Serializer):
     dry_run = serializers.BooleanField()
     importable_count = serializers.IntegerField(required=False)
@@ -82,7 +94,7 @@ class AssetImportSummarySerializer(serializers.Serializer):
     updated_count = serializers.IntegerField(required=False)
     skipped_count = serializers.IntegerField()
     sheets = serializers.DictField(child=serializers.IntegerField())
-    samples = serializers.ListField(required=False)
+    samples = AssetImportSampleSerializer(many=True, required=False)
 
 
 class AssetReviewReminderLogSerializer(serializers.ModelSerializer):

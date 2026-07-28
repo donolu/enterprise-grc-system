@@ -583,10 +583,114 @@ paths:
           description: ''
   /api/assets/assets/due_for_review/:
     get:
-      operationId: assets_assets_due_for_review_retrieve
+      operationId: assets_assets_due_for_review_list
       description: List assets with reviews due today or overdue.
+      summary: List assets due for review
+      parameters:
+      - in: query
+        name: asset_type
+        schema:
+          type: string
+          enum:
+          - application
+          - database
+          - document
+          - infrastructure
+          - mobile_device
+          - monitor
+          - other
+          - printer
+          - server
+          - workstation
+        description: |-
+          * `server` - Server
+          * `workstation` - Workstation
+          * `monitor` - Monitor
+          * `mobile_device` - Mobile Device
+          * `printer` - Printer
+          * `infrastructure` - Infrastructure
+          * `application` - Application
+          * `database` - Database
+          * `document` - Document
+          * `other` - Other
+      - in: query
+        name: classification
+        schema:
+          type: string
+          enum:
+          - confidential
+          - internal
+          - public
+          - restricted
+        description: |-
+          * `public` - Public
+          * `internal` - Internal
+          * `confidential` - Confidential
+          * `restricted` - Restricted
+      - in: query
+        name: criticality
+        schema:
+          type: string
+          enum:
+          - critical
+          - high
+          - low
+          - medium
+        description: |-
+          * `low` - Low
+          * `medium` - Medium
+          * `high` - High
+          * `critical` - Critical
+      - in: query
+        name: lifecycle_status
+        schema:
+          type: string
+          enum:
+          - active
+          - disposed
+          - maintenance
+          - planned
+          - retired
+        description: |-
+          * `planned` - Planned
+          * `active` - Active
+          * `maintenance` - Maintenance
+          * `retired` - Retired
+          * `disposed` - Disposed
+      - in: query
+        name: location
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: query
+        name: owner
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
       tags:
-      - assets
+      - Assets
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -595,22 +699,24 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AssetDetail'
+                $ref: '#/components/schemas/PaginatedAssetListList'
           description: ''
   /api/assets/assets/import-register/:
     post:
       operationId: assets_assets_import_register_create
-      description: Import an asset register spreadsheet from the admin web interface.
+      description: Import or preview an asset register spreadsheet from the admin
+        web interface.
+      summary: Import asset register
       tags:
-      - assets
+      - Assets
       requestBody:
         content:
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/AssetDetailRequest'
+              $ref: '#/components/schemas/AssetImportRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/AssetDetailRequest'
+              $ref: '#/components/schemas/AssetImportRequestRequest'
         required: true
       security:
       - cookieAuth: []
@@ -620,43 +726,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AssetDetail'
+                $ref: '#/components/schemas/AssetImportSummary'
           description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetImportSummary'
+          description: ''
+        '400':
+          description: Missing or invalid asset register spreadsheet
+        '403':
+          description: Staff administrator access required
   /api/assets/assets/{id}/:
-    put:
-      operationId: assets_assets_update
-      description: CRUD API for information assets.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this asset.
-        required: true
-      tags:
-      - assets
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AssetDetailRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/AssetDetailRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/AssetDetailRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AssetDetail'
-          description: ''
     patch:
       operationId: assets_assets_partial_update
       description: CRUD API for information assets.
@@ -720,6 +802,40 @@ paths:
         required: true
       tags:
       - assets
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetDetail'
+          description: ''
+    put:
+      operationId: assets_assets_update
+      description: CRUD API for information assets.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this asset.
+        required: true
+      tags:
+      - assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetDetailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssetDetailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssetDetailRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -905,40 +1021,6 @@ paths:
                 $ref: '#/components/schemas/CalendarEvent'
           description: ''
   /api/calendar/events/{id}/:
-    put:
-      operationId: calendar_events_update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this calendar event.
-        required: true
-      tags:
-      - calendar
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CalendarEventRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/CalendarEventRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/CalendarEventRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CalendarEvent'
-          description: ''
     patch:
       operationId: calendar_events_partial_update
       parameters:
@@ -1002,6 +1084,40 @@ paths:
         required: true
       tags:
       - calendar
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarEvent'
+          description: ''
+    put:
+      operationId: calendar_events_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this calendar event.
+        required: true
+      tags:
+      - calendar
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalendarEventRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CalendarEventRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CalendarEventRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -1280,41 +1396,6 @@ paths:
                   description: Example of filtering for active ISO 27001 frameworks
           description: ''
   /api/catalogs/api/frameworks/{id}/:
-    put:
-      operationId: catalogs_api_frameworks_update
-      description: Update an existing compliance framework. Requires all fields.
-      summary: Update framework
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this framework.
-        required: true
-      tags:
-      - Frameworks
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FrameworkDetailRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/FrameworkDetailRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/FrameworkDetailRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FrameworkDetail'
-          description: ''
     patch:
       operationId: catalogs_api_frameworks_partial_update
       description: Update specific fields of an existing compliance framework.
@@ -1383,6 +1464,41 @@ paths:
         required: true
       tags:
       - Frameworks
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrameworkDetail'
+          description: ''
+    put:
+      operationId: catalogs_api_frameworks_update
+      description: Update an existing compliance framework. Requires all fields.
+      summary: Update framework
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this framework.
+        required: true
+      tags:
+      - Frameworks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FrameworkDetailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FrameworkDetailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FrameworkDetailRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -1689,42 +1805,6 @@ paths:
                   $ref: '#/components/schemas/ClauseList'
           description: ''
   /api/catalogs/api/clauses/{id}/:
-    put:
-      operationId: catalogs_api_clauses_update
-      description: |-
-        ViewSet for managing framework clauses.
-        Provides CRUD operations and clause-specific endpoints.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this clause.
-        required: true
-      tags:
-      - catalogs
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ClauseDetailRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ClauseDetailRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ClauseDetailRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ClauseDetail'
-          description: ''
     patch:
       operationId: catalogs_api_clauses_partial_update
       description: |-
@@ -1794,6 +1874,42 @@ paths:
         required: true
       tags:
       - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClauseDetail'
+          description: ''
+    put:
+      operationId: catalogs_api_clauses_update
+      description: |-
+        ViewSet for managing framework clauses.
+        Provides CRUD operations and clause-specific endpoints.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this clause.
+        required: true
+      tags:
+      - catalogs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClauseDetailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClauseDetailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClauseDetailRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -2074,42 +2190,6 @@ paths:
                 $ref: '#/components/schemas/ControlDetail'
           description: ''
   /api/catalogs/api/controls/{id}/:
-    put:
-      operationId: catalogs_api_controls_update
-      description: |-
-        ViewSet for managing controls.
-        Provides CRUD operations and control-specific endpoints.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this control.
-        required: true
-      tags:
-      - catalogs
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ControlCreateUpdateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ControlCreateUpdateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ControlCreateUpdateRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ControlCreateUpdate'
-          description: ''
     patch:
       operationId: catalogs_api_controls_partial_update
       description: |-
@@ -2188,6 +2268,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ControlDetail'
+          description: ''
+    put:
+      operationId: catalogs_api_controls_update
+      description: |-
+        ViewSet for managing controls.
+        Provides CRUD operations and control-specific endpoints.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this control.
+        required: true
+      tags:
+      - catalogs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ControlCreateUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ControlCreateUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ControlCreateUpdateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ControlCreateUpdate'
           description: ''
   /api/catalogs/api/controls/{id}/evidence/:
     get:
@@ -2365,40 +2481,6 @@ paths:
                   $ref: '#/components/schemas/ControlEvidence'
           description: ''
   /api/catalogs/api/evidence/{id}/:
-    put:
-      operationId: catalogs_api_evidence_update
-      description: ViewSet for managing control evidence.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this control evidence.
-        required: true
-      tags:
-      - catalogs
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ControlEvidenceRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ControlEvidenceRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ControlEvidenceRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ControlEvidence'
-          description: ''
     patch:
       operationId: catalogs_api_evidence_partial_update
       description: ViewSet for managing control evidence.
@@ -2462,6 +2544,40 @@ paths:
         required: true
       tags:
       - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ControlEvidence'
+          description: ''
+    put:
+      operationId: catalogs_api_evidence_update
+      description: ViewSet for managing control evidence.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this control evidence.
+        required: true
+      tags:
+      - catalogs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ControlEvidenceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ControlEvidenceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ControlEvidenceRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -2624,17 +2740,19 @@ paths:
   /api/catalogs/api/template-documents/import-library/:
     post:
       operationId: catalogs_api_template_documents_import_library_create
-      description: Import a ZIP template library from the admin web interface.
+      description: Import or preview a ZIP archive or single template file from the
+        admin web interface.
+      summary: Import template library
       tags:
-      - catalogs
+      - Template Documents
       requestBody:
         content:
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TemplateDocumentRequest'
+              $ref: '#/components/schemas/TemplateImportRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TemplateDocumentRequest'
+              $ref: '#/components/schemas/TemplateImportRequestRequest'
         required: true
       security:
       - cookieAuth: []
@@ -2644,8 +2762,18 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TemplateDocument'
+                $ref: '#/components/schemas/TemplateImportSummary'
           description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateImportSummary'
+          description: ''
+        '400':
+          description: Missing or invalid template library upload
+        '403':
+          description: Staff administrator access required
   /api/catalogs/api/template-documents/{id}/:
     get:
       operationId: catalogs_api_template_documents_retrieve
@@ -2750,40 +2878,6 @@ paths:
                   $ref: '#/components/schemas/FrameworkMapping'
           description: ''
   /api/catalogs/api/mappings/{id}/:
-    put:
-      operationId: catalogs_api_mappings_update
-      description: ViewSet for managing framework mappings.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this framework mapping.
-        required: true
-      tags:
-      - catalogs
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FrameworkMappingRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/FrameworkMappingRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/FrameworkMappingRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FrameworkMapping'
-          description: ''
     patch:
       operationId: catalogs_api_mappings_partial_update
       description: ViewSet for managing framework mappings.
@@ -2847,6 +2941,40 @@ paths:
         required: true
       tags:
       - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrameworkMapping'
+          description: ''
+    put:
+      operationId: catalogs_api_mappings_update
+      description: ViewSet for managing framework mappings.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this framework mapping.
+        required: true
+      tags:
+      - catalogs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FrameworkMappingRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FrameworkMappingRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FrameworkMappingRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -3114,41 +3242,6 @@ paths:
                   description: Comprehensive progress report with statistics and breakdowns
           description: ''
   /api/catalogs/api/assessments/{id}/:
-    put:
-      operationId: catalogs_api_assessments_update
-      description: Update an existing control assessment. Requires all fields.
-      summary: Update assessment
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this control assessment.
-        required: true
-      tags:
-      - Assessments
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ControlAssessmentCreateUpdateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ControlAssessmentCreateUpdateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ControlAssessmentCreateUpdateRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ControlAssessmentCreateUpdate'
-          description: ''
     patch:
       operationId: catalogs_api_assessments_partial_update
       description: Update specific fields of an existing control assessment.
@@ -3225,6 +3318,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ControlAssessmentDetail'
+          description: ''
+    put:
+      operationId: catalogs_api_assessments_update
+      description: Update an existing control assessment. Requires all fields.
+      summary: Update assessment
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this control assessment.
+        required: true
+      tags:
+      - Assessments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ControlAssessmentCreateUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ControlAssessmentCreateUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ControlAssessmentCreateUpdateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ControlAssessmentCreateUpdate'
           description: ''
   /api/catalogs/api/assessments/{id}/bulk_upload_evidence/:
     post:
@@ -3503,40 +3631,6 @@ paths:
                   $ref: '#/components/schemas/AssessmentEvidence'
           description: ''
   /api/catalogs/api/assessment-evidence/{id}/:
-    put:
-      operationId: catalogs_api_assessment_evidence_update
-      description: ViewSet for managing assessment evidence links.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this assessment evidence.
-        required: true
-      tags:
-      - catalogs
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AssessmentEvidenceRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/AssessmentEvidenceRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/AssessmentEvidenceRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AssessmentEvidence'
-          description: ''
     patch:
       operationId: catalogs_api_assessment_evidence_partial_update
       description: ViewSet for managing assessment evidence links.
@@ -3600,6 +3694,40 @@ paths:
         required: true
       tags:
       - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentEvidence'
+          description: ''
+    put:
+      operationId: catalogs_api_assessment_evidence_update
+      description: ViewSet for managing assessment evidence links.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this assessment evidence.
+        required: true
+      tags:
+      - catalogs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentEvidenceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssessmentEvidenceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssessmentEvidenceRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -3723,39 +3851,6 @@ paths:
                 $ref: '#/components/schemas/PaginatedGovernanceArtefactList'
           description: ''
   /api/compliance/artefacts/{id}/:
-    put:
-      operationId: compliance_artefacts_update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this governance artefact.
-        required: true
-      tags:
-      - compliance
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GovernanceArtefactRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/GovernanceArtefactRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/GovernanceArtefactRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GovernanceArtefact'
-          description: ''
     patch:
       operationId: compliance_artefacts_partial_update
       parameters:
@@ -3816,6 +3911,39 @@ paths:
         required: true
       tags:
       - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GovernanceArtefact'
+          description: ''
+    put:
+      operationId: compliance_artefacts_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this governance artefact.
+        required: true
+      tags:
+      - compliance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GovernanceArtefactRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GovernanceArtefactRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GovernanceArtefactRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -3963,39 +4091,6 @@ paths:
                 $ref: '#/components/schemas/PaginatedRegulatoryRequirementList'
           description: ''
   /api/compliance/regulatory-requirements/{id}/:
-    put:
-      operationId: compliance_regulatory_requirements_update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this regulatory requirement.
-        required: true
-      tags:
-      - compliance
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegulatoryRequirementRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/RegulatoryRequirementRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/RegulatoryRequirementRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RegulatoryRequirement'
-          description: ''
     patch:
       operationId: compliance_regulatory_requirements_partial_update
       parameters:
@@ -4056,6 +4151,39 @@ paths:
         required: true
       tags:
       - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegulatoryRequirement'
+          description: ''
+    put:
+      operationId: compliance_regulatory_requirements_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this regulatory requirement.
+        required: true
+      tags:
+      - compliance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegulatoryRequirementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegulatoryRequirementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RegulatoryRequirementRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -4191,39 +4319,6 @@ paths:
                 $ref: '#/components/schemas/PaginatedNonConformityList'
           description: ''
   /api/compliance/non-conformities/{id}/:
-    put:
-      operationId: compliance_non_conformities_update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this non conformity.
-        required: true
-      tags:
-      - compliance
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NonConformityRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/NonConformityRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/NonConformityRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NonConformity'
-          description: ''
     patch:
       operationId: compliance_non_conformities_partial_update
       parameters:
@@ -4284,6 +4379,39 @@ paths:
         required: true
       tags:
       - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NonConformity'
+          description: ''
+    put:
+      operationId: compliance_non_conformities_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this non conformity.
+        required: true
+      tags:
+      - compliance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NonConformityRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NonConformityRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NonConformityRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -4397,39 +4525,6 @@ paths:
                 $ref: '#/components/schemas/PaginatedManagementReviewList'
           description: ''
   /api/compliance/management-reviews/{id}/:
-    put:
-      operationId: compliance_management_reviews_update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this management review.
-        required: true
-      tags:
-      - compliance
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ManagementReviewRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ManagementReviewRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ManagementReviewRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ManagementReview'
-          description: ''
     patch:
       operationId: compliance_management_reviews_partial_update
       parameters:
@@ -4490,6 +4585,39 @@ paths:
         required: true
       tags:
       - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManagementReview'
+          description: ''
+    put:
+      operationId: compliance_management_reviews_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this management review.
+        required: true
+      tags:
+      - compliance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagementReviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ManagementReviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ManagementReviewRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -4628,42 +4756,6 @@ paths:
         '500':
           description: Failed to start generation
   /api/exports/assessment-reports/{id}/:
-    put:
-      operationId: exports_assessment_reports_update
-      description: Update an existing assessment report configuration. Cannot update
-        reports that are processing or completed.
-      summary: Update report
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this assessment report.
-        required: true
-      tags:
-      - Reports
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AssessmentReportRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/AssessmentReportRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/AssessmentReportRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AssessmentReport'
-          description: ''
     patch:
       operationId: exports_assessment_reports_partial_update
       description: |-
@@ -4756,6 +4848,42 @@ paths:
         required: true
       tags:
       - Reports
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentReport'
+          description: ''
+    put:
+      operationId: exports_assessment_reports_update
+      description: Update an existing assessment report configuration. Cannot update
+        reports that are processing or completed.
+      summary: Update report
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this assessment report.
+        required: true
+      tags:
+      - Reports
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentReportRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssessmentReportRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssessmentReportRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -5318,42 +5446,6 @@ paths:
                 $ref: '#/components/schemas/RiskSummary'
           description: ''
   /api/risk/risks/{id}/:
-    put:
-      operationId: risk_risks_update
-      description: Update an existing risk entry. Risk level will be automatically
-        recalculated.
-      summary: Update risk
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk.
-        required: true
-      tags:
-      - Risk Management
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RiskCreateUpdateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/RiskCreateUpdateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/RiskCreateUpdateRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RiskCreateUpdate'
-          description: ''
     patch:
       operationId: risk_risks_partial_update
       description: Update specific fields of an existing risk entry.
@@ -5430,6 +5522,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RiskDetail'
+          description: ''
+    put:
+      operationId: risk_risks_update
+      description: Update an existing risk entry. Risk level will be automatically
+        recalculated.
+      summary: Update risk
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk.
+        required: true
+      tags:
+      - Risk Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RiskCreateUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RiskCreateUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RiskCreateUpdateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskCreateUpdate'
           description: ''
   /api/risk/risks/{id}/add_note/:
     post:
@@ -5566,41 +5694,6 @@ paths:
                   $ref: '#/components/schemas/RiskCategory'
           description: ''
   /api/risk/categories/{id}/:
-    put:
-      operationId: risk_categories_update
-      description: Update an existing risk category.
-      summary: Update risk category
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk category.
-        required: true
-      tags:
-      - Risk Management
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RiskCategoryRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/RiskCategoryRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/RiskCategoryRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RiskCategory'
-          description: ''
     patch:
       operationId: risk_categories_partial_update
       description: |-
@@ -5680,6 +5773,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskCategory'
           description: ''
+    put:
+      operationId: risk_categories_update
+      description: Update an existing risk category.
+      summary: Update risk category
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk category.
+        required: true
+      tags:
+      - Risk Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RiskCategoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RiskCategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RiskCategoryRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskCategory'
+          description: ''
   /api/risk/matrices/:
     post:
       operationId: risk_matrices_create
@@ -5728,41 +5856,6 @@ paths:
                   $ref: '#/components/schemas/RiskMatrix'
           description: ''
   /api/risk/matrices/{id}/:
-    put:
-      operationId: risk_matrices_update
-      description: Update an existing risk matrix configuration.
-      summary: Update risk matrix
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk matrix.
-        required: true
-      tags:
-      - Risk Management
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RiskMatrixRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/RiskMatrixRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/RiskMatrixRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RiskMatrix'
-          description: ''
     patch:
       operationId: risk_matrices_partial_update
       description: |-
@@ -5833,6 +5926,41 @@ paths:
         required: true
       tags:
       - Risk Management
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskMatrix'
+          description: ''
+    put:
+      operationId: risk_matrices_update
+      description: Update an existing risk matrix configuration.
+      summary: Update risk matrix
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk matrix.
+        required: true
+      tags:
+      - Risk Management
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RiskMatrixRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RiskMatrixRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RiskMatrixRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -6110,41 +6238,6 @@ paths:
                 $ref: '#/components/schemas/RiskActionSummary'
           description: ''
   /api/risk/actions/{id}/:
-    put:
-      operationId: risk_actions_update
-      description: Update an existing risk action. Progress and status will be validated.
-      summary: Update risk action
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk action.
-        required: true
-      tags:
-      - Risk Actions
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RiskActionCreateUpdateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/RiskActionCreateUpdateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/RiskActionCreateUpdateRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RiskActionCreateUpdate'
-          description: ''
     patch:
       operationId: risk_actions_partial_update
       description: Update specific fields of an existing risk action.
@@ -6221,6 +6314,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RiskActionDetail'
+          description: ''
+    put:
+      operationId: risk_actions_update
+      description: Update an existing risk action. Progress and status will be validated.
+      summary: Update risk action
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk action.
+        required: true
+      tags:
+      - Risk Actions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RiskActionCreateUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RiskActionCreateUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RiskActionCreateUpdateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskActionCreateUpdate'
           description: ''
   /api/risk/actions/{id}/add_note/:
     post:
@@ -6406,41 +6534,6 @@ paths:
                   $ref: '#/components/schemas/RiskActionReminderConfiguration'
           description: ''
   /api/risk/reminder-config/{id}/:
-    put:
-      operationId: risk_reminder_config_update
-      description: Update risk action reminder configuration settings.
-      summary: Update reminder configuration
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this Risk Action Reminder
-          Configuration.
-        required: true
-      tags:
-      - Risk Action Reminders
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RiskActionReminderConfigurationRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/RiskActionReminderConfigurationRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/RiskActionReminderConfigurationRequest'
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RiskActionReminderConfiguration'
-          description: ''
     patch:
       operationId: risk_reminder_config_partial_update
       description: |-
@@ -6522,6 +6615,41 @@ paths:
         required: true
       tags:
       - Risk Action Reminders
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskActionReminderConfiguration'
+          description: ''
+    put:
+      operationId: risk_reminder_config_update
+      description: Update risk action reminder configuration settings.
+      summary: Update reminder configuration
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Risk Action Reminder
+          Configuration.
+        required: true
+      tags:
+      - Risk Action Reminders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RiskActionReminderConfigurationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RiskActionReminderConfigurationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RiskActionReminderConfigurationRequest'
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -6861,41 +6989,6 @@ paths:
                   $ref: '#/components/schemas/PolicyCategory'
           description: ''
   /api/policies/categories/{id}/:
-    put:
-      operationId: policies_categories_update
-      description: ViewSet for managing policy categories.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this Policy Category.
-        required: true
-      tags:
-      - policies
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PolicyCategoryRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PolicyCategoryRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PolicyCategoryRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PolicyCategory'
-          description: ''
     patch:
       operationId: policies_categories_partial_update
       description: ViewSet for managing policy categories.
@@ -6962,6 +7055,41 @@ paths:
         required: true
       tags:
       - policies
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyCategory'
+          description: ''
+    put:
+      operationId: policies_categories_update
+      description: ViewSet for managing policy categories.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Policy Category.
+        required: true
+      tags:
+      - policies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyCategoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PolicyCategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PolicyCategoryRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -7178,41 +7306,6 @@ paths:
                 $ref: '#/components/schemas/PolicyDetail'
           description: ''
   /api/policies/policies/{id}/:
-    put:
-      operationId: policies_policies_update
-      description: ViewSet for managing policies with versioning support.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this Policy.
-        required: true
-      tags:
-      - policies
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PolicyCreateUpdateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PolicyCreateUpdateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PolicyCreateUpdateRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PolicyCreateUpdate'
-          description: ''
     patch:
       operationId: policies_policies_partial_update
       description: ViewSet for managing policies with versioning support.
@@ -7288,6 +7381,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PolicyDetail'
+          description: ''
+    put:
+      operationId: policies_policies_update
+      description: ViewSet for managing policies with versioning support.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Policy.
+        required: true
+      tags:
+      - policies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyCreateUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PolicyCreateUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PolicyCreateUpdateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyCreateUpdate'
           description: ''
   /api/policies/policies/{id}/acknowledge/:
     post:
@@ -7519,41 +7647,6 @@ paths:
                   $ref: '#/components/schemas/PolicyVersionList'
           description: ''
   /api/policies/versions/{id}/:
-    put:
-      operationId: policies_versions_update
-      description: ViewSet for managing policy versions.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this Policy Version.
-        required: true
-      tags:
-      - policies
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PolicyVersionDetailRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PolicyVersionDetailRequest'
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PolicyVersionDetailRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PolicyVersionDetail'
-          description: ''
     patch:
       operationId: policies_versions_partial_update
       description: ViewSet for managing policy versions.
@@ -7620,6 +7713,41 @@ paths:
         required: true
       tags:
       - policies
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyVersionDetail'
+          description: ''
+    put:
+      operationId: policies_versions_update
+      description: ViewSet for managing policy versions.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Policy Version.
+        required: true
+      tags:
+      - policies
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PolicyVersionDetailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PolicyVersionDetailRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyVersionDetailRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -8079,41 +8207,6 @@ paths:
                   $ref: '#/components/schemas/TrainingCategory'
           description: ''
   /api/training/categories/{id}/:
-    put:
-      operationId: training_categories_update
-      description: ViewSet for managing training categories.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this training category.
-        required: true
-      tags:
-      - training
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TrainingCategoryRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/TrainingCategoryRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/TrainingCategoryRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TrainingCategory'
-          description: ''
     patch:
       operationId: training_categories_partial_update
       description: ViewSet for managing training categories.
@@ -8180,6 +8273,41 @@ paths:
         required: true
       tags:
       - training
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingCategory'
+          description: ''
+    put:
+      operationId: training_categories_update
+      description: ViewSet for managing training categories.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this training category.
+        required: true
+      tags:
+      - training
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrainingCategoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TrainingCategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TrainingCategoryRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -8352,41 +8480,6 @@ paths:
                 $ref: '#/components/schemas/TrainingVideoDetail'
           description: ''
   /api/training/videos/{id}/:
-    put:
-      operationId: training_videos_update
-      description: ViewSet for managing training videos.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this training video.
-        required: true
-      tags:
-      - training
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TrainingVideoDetailRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/TrainingVideoDetailRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/TrainingVideoDetailRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TrainingVideoDetail'
-          description: ''
     patch:
       operationId: training_videos_partial_update
       description: ViewSet for managing training videos.
@@ -8453,6 +8546,41 @@ paths:
         required: true
       tags:
       - training
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingVideoDetail'
+          description: ''
+    put:
+      operationId: training_videos_update
+      description: ViewSet for managing training videos.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this training video.
+        required: true
+      tags:
+      - training
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrainingVideoDetailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TrainingVideoDetailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TrainingVideoDetailRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -8681,41 +8809,6 @@ paths:
                 $ref: '#/components/schemas/SecurityAwarenessCampaignDetail'
           description: ''
   /api/training/campaigns/{id}/:
-    put:
-      operationId: training_campaigns_update
-      description: ViewSet for managing security awareness campaigns.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this security awareness campaign.
-        required: true
-      tags:
-      - training
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SecurityAwarenessCampaignDetailRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/SecurityAwarenessCampaignDetailRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/SecurityAwarenessCampaignDetailRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SecurityAwarenessCampaignDetail'
-          description: ''
     patch:
       operationId: training_campaigns_partial_update
       description: ViewSet for managing security awareness campaigns.
@@ -8782,6 +8875,41 @@ paths:
         required: true
       tags:
       - training
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecurityAwarenessCampaignDetail'
+          description: ''
+    put:
+      operationId: training_campaigns_update
+      description: ViewSet for managing security awareness campaigns.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this security awareness campaign.
+        required: true
+      tags:
+      - training
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecurityAwarenessCampaignDetailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SecurityAwarenessCampaignDetailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SecurityAwarenessCampaignDetailRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -9155,39 +9283,6 @@ paths:
                 $ref: '#/components/schemas/PaginatedKnowledgeCategoryList'
           description: ''
   /api/knowledge/categories/{id}/:
-    put:
-      operationId: knowledge_categories_update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this knowledge category.
-        required: true
-      tags:
-      - knowledge
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/KnowledgeCategoryRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/KnowledgeCategoryRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/KnowledgeCategoryRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/KnowledgeCategory'
-          description: ''
     patch:
       operationId: knowledge_categories_partial_update
       parameters:
@@ -9248,6 +9343,39 @@ paths:
         required: true
       tags:
       - knowledge
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeCategory'
+          description: ''
+    put:
+      operationId: knowledge_categories_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this knowledge category.
+        required: true
+      tags:
+      - knowledge
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnowledgeCategoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/KnowledgeCategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/KnowledgeCategoryRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -9399,38 +9527,6 @@ paths:
                 $ref: '#/components/schemas/KnowledgeArticleDetail'
           description: ''
   /api/knowledge/articles/{slug}/:
-    put:
-      operationId: knowledge_articles_update
-      parameters:
-      - in: path
-        name: slug
-        schema:
-          type: string
-        required: true
-      tags:
-      - knowledge
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/KnowledgeArticleDetailRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/KnowledgeArticleDetailRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/KnowledgeArticleDetailRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/KnowledgeArticleDetail'
-          description: ''
     patch:
       operationId: knowledge_articles_partial_update
       parameters:
@@ -9488,6 +9584,38 @@ paths:
         required: true
       tags:
       - knowledge
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeArticleDetail'
+          description: ''
+    put:
+      operationId: knowledge_articles_update
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - knowledge
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnowledgeArticleDetailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/KnowledgeArticleDetailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/KnowledgeArticleDetailRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -10287,41 +10415,6 @@ paths:
                 $ref: '#/components/schemas/VendorSummary'
           description: ''
   /api/vendors/vendors/{id}/:
-    put:
-      operationId: vendors_vendors_update
-      description: Update an existing vendor profile with new information.
-      summary: Update vendor
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor.
-        required: true
-      tags:
-      - Vendors
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VendorCreateUpdateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/VendorCreateUpdateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/VendorCreateUpdateRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VendorCreateUpdate'
-          description: ''
     patch:
       operationId: vendors_vendors_partial_update
       description: |-
@@ -10428,6 +10521,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/VendorDetail'
+          description: ''
+    put:
+      operationId: vendors_vendors_update
+      description: Update an existing vendor profile with new information.
+      summary: Update vendor
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor.
+        required: true
+      tags:
+      - Vendors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorCreateUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VendorCreateUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VendorCreateUpdateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorCreateUpdate'
           description: ''
   /api/vendors/vendors/{id}/add_note/:
     post:
@@ -10576,44 +10704,6 @@ paths:
                   $ref: '#/components/schemas/VendorCategory'
           description: ''
   /api/vendors/categories/{id}/:
-    put:
-      operationId: vendors_categories_update
-      description: |-
-        **Vendor Category Management**
-
-        Manage vendor categories for classification and organization.
-        Categories help organize vendors by business type, risk level, and compliance requirements.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor category.
-        required: true
-      tags:
-      - Vendor Categories
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VendorCategoryRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/VendorCategoryRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/VendorCategoryRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VendorCategory'
-          description: ''
     patch:
       operationId: vendors_categories_partial_update
       description: |-
@@ -10689,6 +10779,44 @@ paths:
         required: true
       tags:
       - Vendor Categories
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorCategory'
+          description: ''
+    put:
+      operationId: vendors_categories_update
+      description: |-
+        **Vendor Category Management**
+
+        Manage vendor categories for classification and organization.
+        Categories help organize vendors by business type, risk level, and compliance requirements.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor category.
+        required: true
+      tags:
+      - Vendor Categories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorCategoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VendorCategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VendorCategoryRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -10842,43 +10970,6 @@ paths:
                   $ref: '#/components/schemas/VendorContact'
           description: ''
   /api/vendors/contacts/{id}/:
-    put:
-      operationId: vendors_contacts_update
-      description: |-
-        **Vendor Contact Management**
-
-        Manage contact persons for vendors with different roles and responsibilities.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor contact.
-        required: true
-      tags:
-      - Vendor Contacts
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VendorContactRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/VendorContactRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/VendorContactRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VendorContact'
-          description: ''
     patch:
       operationId: vendors_contacts_partial_update
       description: |-
@@ -10951,6 +11042,43 @@ paths:
         required: true
       tags:
       - Vendor Contacts
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorContact'
+          description: ''
+    put:
+      operationId: vendors_contacts_update
+      description: |-
+        **Vendor Contact Management**
+
+        Manage contact persons for vendors with different roles and responsibilities.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor contact.
+        required: true
+      tags:
+      - Vendor Contacts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorContactRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VendorContactRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VendorContactRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -11168,43 +11296,6 @@ paths:
                   $ref: '#/components/schemas/VendorService'
           description: ''
   /api/vendors/services/{id}/:
-    put:
-      operationId: vendors_services_update
-      description: |-
-        **Vendor Service Management**
-
-        Manage services provided by vendors including categorization and risk assessment.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor service.
-        required: true
-      tags:
-      - Vendor Services
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VendorServiceRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/VendorServiceRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/VendorServiceRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VendorService'
-          description: ''
     patch:
       operationId: vendors_services_partial_update
       description: |-
@@ -11287,6 +11378,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorService'
           description: ''
+    put:
+      operationId: vendors_services_update
+      description: |-
+        **Vendor Service Management**
+
+        Manage services provided by vendors including categorization and risk assessment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor service.
+        required: true
+      tags:
+      - Vendor Services
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorServiceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VendorServiceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VendorServiceRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorService'
+          description: ''
   /api/vendors/notes/:
     post:
       operationId: vendors_notes_create
@@ -11352,43 +11480,6 @@ paths:
                   $ref: '#/components/schemas/VendorNote'
           description: ''
   /api/vendors/notes/{id}/:
-    put:
-      operationId: vendors_notes_update
-      description: |-
-        **Vendor Note Management**
-
-        Manage notes and comments about vendors for tracking interactions and decisions.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor note.
-        required: true
-      tags:
-      - Vendor Notes
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VendorNoteRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/VendorNoteRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/VendorNoteRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VendorNote'
-          description: ''
     patch:
       operationId: vendors_notes_partial_update
       description: |-
@@ -11461,6 +11552,43 @@ paths:
         required: true
       tags:
       - Vendor Notes
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorNote'
+          description: ''
+    put:
+      operationId: vendors_notes_update
+      description: |-
+        **Vendor Note Management**
+
+        Manage notes and comments about vendors for tracking interactions and decisions.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor note.
+        required: true
+      tags:
+      - Vendor Notes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorNoteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VendorNoteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VendorNoteRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -11971,44 +12099,6 @@ paths:
                 $ref: '#/components/schemas/VendorTaskDetail'
           description: ''
   /api/vendors/tasks/{id}/:
-    put:
-      operationId: vendors_tasks_update
-      description: |-
-        **Vendor Task Management**
-
-        Comprehensive task management for vendor-related activities including contract renewals,
-        security reviews, compliance assessments, and automated task generation.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this Vendor Task.
-        required: true
-      tags:
-      - Vendor Tasks
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VendorTaskCreateUpdateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/VendorTaskCreateUpdateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/VendorTaskCreateUpdateRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VendorTaskCreateUpdate'
-          description: ''
     patch:
       operationId: vendors_tasks_partial_update
       description: |-
@@ -12093,6 +12183,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/VendorTaskDetail'
+          description: ''
+    put:
+      operationId: vendors_tasks_update
+      description: |-
+        **Vendor Task Management**
+
+        Comprehensive task management for vendor-related activities including contract renewals,
+        security reviews, compliance assessments, and automated task generation.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Vendor Task.
+        required: true
+      tags:
+      - Vendor Tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorTaskCreateUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VendorTaskCreateUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VendorTaskCreateUpdateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorTaskCreateUpdate'
           description: ''
   /api/vendors/tasks/{id}/update_status/:
     post:
@@ -12215,40 +12343,6 @@ paths:
                   $ref: '#/components/schemas/ScanTarget'
           description: ''
   /api/vuln/targets/{id}/:
-    put:
-      operationId: vuln_targets_update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this scan target.
-        required: true
-      tags:
-      - vuln
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ScanTargetRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ScanTargetRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ScanTargetRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ScanTarget'
-          description: ''
     patch:
       operationId: vuln_targets_partial_update
       parameters:
@@ -12312,6 +12406,40 @@ paths:
         required: true
       tags:
       - vuln
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanTarget'
+          description: ''
+    put:
+      operationId: vuln_targets_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this scan target.
+        required: true
+      tags:
+      - vuln
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanTargetRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ScanTargetRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ScanTargetRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -12458,40 +12586,6 @@ paths:
                 $ref: '#/components/schemas/ScanSchedule'
           description: ''
   /api/vuln/schedules/{id}/:
-    put:
-      operationId: vuln_schedules_update
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this scan schedule.
-        required: true
-      tags:
-      - vuln
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ScanScheduleRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ScanScheduleRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ScanScheduleRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ScanSchedule'
-          description: ''
     patch:
       operationId: vuln_schedules_partial_update
       parameters:
@@ -12555,6 +12649,40 @@ paths:
         required: true
       tags:
       - vuln
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanSchedule'
+          description: ''
+    put:
+      operationId: vuln_schedules_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this scan schedule.
+        required: true
+      tags:
+      - vuln
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanScheduleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ScanScheduleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ScanScheduleRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -13124,40 +13252,6 @@ paths:
                 $ref: '#/components/schemas/LimitOverrideRequest'
           description: ''
   /api/limit-overrides/{id}/:
-    put:
-      operationId: limit_overrides_update
-      description: ViewSet for managing limit override requests with approval workflow.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this limit override request.
-        required: true
-      tags:
-      - limit-overrides
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LimitOverrideRequestRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/LimitOverrideRequestRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/LimitOverrideRequestRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LimitOverrideRequest'
-          description: ''
     patch:
       operationId: limit_overrides_partial_update
       description: ViewSet for managing limit override requests with approval workflow.
@@ -13221,6 +13315,40 @@ paths:
         required: true
       tags:
       - limit-overrides
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LimitOverrideRequest'
+          description: ''
+    put:
+      operationId: limit_overrides_update
+      description: ViewSet for managing limit override requests with approval workflow.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this limit override request.
+        required: true
+      tags:
+      - limit-overrides
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LimitOverrideRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LimitOverrideRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LimitOverrideRequestRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -13463,38 +13591,6 @@ paths:
                 $ref: '#/components/schemas/Document'
           description: ''
   /api/documents/{id}/:
-    put:
-      operationId: documents_update
-      description: Update document metadata. File cannot be changed after upload.
-      summary: Update document
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this document.
-        required: true
-      tags:
-      - Documents
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/DocumentRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/DocumentRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Document'
-          description: ''
     patch:
       operationId: documents_partial_update
       description: |-
@@ -13585,6 +13681,38 @@ paths:
         required: true
       tags:
       - Documents
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
+    put:
+      operationId: documents_update
+      description: Update document metadata. File cannot be changed after upload.
+      summary: Update document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document.
+        required: true
+      tags:
+      - Documents
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+        required: true
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -14274,6 +14402,58 @@ components:
       required:
       - asset_id
       - name
+    AssetImportRequestRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+        dry_run:
+          type: boolean
+          default: false
+      required:
+      - file
+    AssetImportSample:
+      type: object
+      properties:
+        asset_id:
+          type: string
+        name:
+          type: string
+        asset_type:
+          type: string
+        source_sheet:
+          type: string
+      required:
+      - asset_id
+      - asset_type
+      - name
+      - source_sheet
+    AssetImportSummary:
+      type: object
+      properties:
+        dry_run:
+          type: boolean
+        importable_count:
+          type: integer
+        imported_count:
+          type: integer
+        updated_count:
+          type: integer
+        skipped_count:
+          type: integer
+        sheets:
+          type: object
+          additionalProperties:
+            type: integer
+        samples:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetImportSample'
+      required:
+      - dry_run
+      - sheets
+      - skipped_count
     AssetList:
       type: object
       properties:
@@ -23765,60 +23945,6 @@ components:
       - source_path
       - title
       - updated_at
-    TemplateDocumentRequest:
-      type: object
-      description: Serializer for imported template and sample documents.
-      properties:
-        title:
-          type: string
-          minLength: 1
-          maxLength: 255
-        module:
-          $ref: '#/components/schemas/ModuleEnum'
-        document_type:
-          $ref: '#/components/schemas/DocumentTypeEnum'
-        document_code:
-          type: string
-          maxLength: 80
-        version:
-          type: string
-          maxLength: 50
-        document:
-          type: integer
-        framework:
-          type: integer
-          nullable: true
-        clause:
-          type: integer
-          nullable: true
-        control:
-          type: integer
-          nullable: true
-        source_path:
-          type: string
-          minLength: 1
-          maxLength: 500
-        source_filename:
-          type: string
-          minLength: 1
-          maxLength: 255
-        source_checksum:
-          type: string
-          minLength: 1
-          maxLength: 64
-        source_modified_at:
-          type: string
-          format: date-time
-          nullable: true
-        metadata: {}
-      required:
-      - document
-      - document_type
-      - module
-      - source_checksum
-      - source_filename
-      - source_path
-      - title
     TemplateDocumentSummary:
       type: object
       description: Compact template document serializer for linked catalogue objects.
@@ -23886,6 +24012,76 @@ components:
       - document_type
       - module
       - title
+    TemplateImportRequestRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+        dry_run:
+          type: boolean
+          default: false
+        framework:
+          type: string
+        framework_version:
+          type: string
+        module:
+          type: string
+        document_type:
+          type: string
+      required:
+      - file
+    TemplateImportSample:
+      type: object
+      properties:
+        title:
+          type: string
+        module:
+          type: string
+        document_type:
+          type: string
+        source_filename:
+          type: string
+        linkage_status:
+          type: string
+      required:
+      - document_type
+      - linkage_status
+      - module
+      - source_filename
+      - title
+    TemplateImportSummary:
+      type: object
+      properties:
+        dry_run:
+          type: boolean
+        importable_count:
+          type: integer
+        imported_count:
+          type: integer
+        updated_count:
+          type: integer
+        skipped_count:
+          type: integer
+        total_importable:
+          type: integer
+        modules:
+          type: object
+          additionalProperties:
+            type: integer
+        document_types:
+          type: object
+          additionalProperties:
+            type: integer
+        samples:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateImportSample'
+      required:
+      - document_types
+      - dry_run
+      - modules
+      - skipped_count
     TenantDataExport:
       type: object
       description: Serializer for tenant data export jobs.

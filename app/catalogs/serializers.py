@@ -149,6 +149,35 @@ class TemplateDocumentSerializer(serializers.ModelSerializer):
         ]
 
 
+class TemplateImportRequestSerializer(serializers.Serializer):
+    file = serializers.FileField()
+    dry_run = serializers.BooleanField(required=False, default=False)
+    framework = serializers.CharField(required=False, allow_blank=True)
+    framework_version = serializers.CharField(required=False, allow_blank=True)
+    module = serializers.CharField(required=False, allow_blank=True)
+    document_type = serializers.CharField(required=False, allow_blank=True)
+
+
+class TemplateImportSampleSerializer(serializers.Serializer):
+    title = serializers.CharField()
+    module = serializers.CharField()
+    document_type = serializers.CharField()
+    source_filename = serializers.CharField()
+    linkage_status = serializers.CharField()
+
+
+class TemplateImportSummarySerializer(serializers.Serializer):
+    dry_run = serializers.BooleanField()
+    importable_count = serializers.IntegerField(required=False)
+    imported_count = serializers.IntegerField(required=False)
+    updated_count = serializers.IntegerField(required=False)
+    skipped_count = serializers.IntegerField()
+    total_importable = serializers.IntegerField(required=False)
+    modules = serializers.DictField(child=serializers.IntegerField())
+    document_types = serializers.DictField(child=serializers.IntegerField())
+    samples = TemplateImportSampleSerializer(many=True, required=False)
+
+
 class TemplateDocumentSummarySerializer(serializers.ModelSerializer):
     """Compact template document serializer for linked catalogue objects."""
     document_url = serializers.CharField(source='document.file_url', read_only=True)
