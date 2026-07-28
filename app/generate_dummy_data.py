@@ -124,9 +124,7 @@ class GRCDataGenerator:
 
         print(f"✅ Created {len(self.users)} users")
         if not os.environ.get(DEMO_PASSWORD_ENV):
-            print(
-                f"ℹ️  Users have unusable passwords. Set {DEMO_PASSWORD_ENV} to enable demo login."
-            )
+            print("ℹ️  Demo user login is disabled by default.")
 
     def create_risk_data(self):
         """Generate 10 comprehensive risk records"""
