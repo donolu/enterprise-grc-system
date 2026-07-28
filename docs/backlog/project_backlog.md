@@ -332,7 +332,7 @@
         10. ✅ **Integration & Dependencies** - Professional implementation:
             - Integration with existing Django authentication system
             - Compatible with django-tenants multi-tenant architecture
-            - Professional dependency management (python3-saml, social-auth-app-django, PyJWT, xmlsec)
+            - Professional dependency management (python3-saml, PyJWT, xmlsec)
             - URL routing and view handlers for all authentication flows
 
 ### EPIC 1: Certifications & Compliance Workflows

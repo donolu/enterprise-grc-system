@@ -208,7 +208,6 @@ def run_validation():
 
         sso_deps = [
             "python3-saml",
-            "social-auth-app-django",
             "djangorestframework-simplejwt",
             "xmlsec",
         ]
