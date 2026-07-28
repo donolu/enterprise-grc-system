@@ -324,10 +324,39 @@ SPECTACULAR_SETTINGS = {
 
     # Enum choices handling
     "ENUM_NAME_OVERRIDES": {
-        "StatusEnum": "catalogs.models.ControlAssessment.STATUS_CHOICES",
+        "AnalyticsExportStatusEnum": "exports.models.AssessmentReport.REPORT_STATUS",
+        "ControlAssessmentStatusEnum": "catalogs.models.ControlAssessment.STATUS_CHOICES",
+        "ControlEffectivenessRatingEnum": "catalogs.models.Control.EFFECTIVENESS_RATINGS",
+        "ControlEvidenceTypeEnum": "catalogs.models.ControlEvidence.EVIDENCE_TYPES",
+        "ControlStatusEnum": "catalogs.models.Control.STATUS_CHOICES",
+        "DataClassificationEnum": "vendors.models.VendorService.DATA_CLASSIFICATION_CHOICES",
+        "FrameworkStatusEnum": "catalogs.models.Framework.STATUS_CHOICES",
         "ImplementationStatusEnum": "catalogs.models.ControlAssessment.IMPLEMENTATION_STATUS_CHOICES",
-        "EvidenceTypeEnum": "catalogs.models.ControlEvidence.EVIDENCE_TYPES",
+        "KnowledgeArticleStatusEnum": "knowledge.models.KnowledgeArticle.STATUS_CHOICES",
+        "LimitOverrideStatusEnum": "core.models.LimitOverrideRequest.STATUS_CHOICES",
+        "LowMediumHighCriticalEnum": [
+            ("low", "Low"),
+            ("medium", "Medium"),
+            ("high", "High"),
+            ("critical", "Critical"),
+        ],
+        "PolicyApprovalStatusEnum": "policies.models.Policy.APPROVAL_STATUS_CHOICES",
+        "RiskActionEvidenceTypeEnum": "risk.models.RiskActionEvidence.EVIDENCE_TYPES",
+        "RiskActionNoteTypeEnum": [
+            ("progress", "Progress Update"),
+            ("issue", "Issue/Blocker"),
+            ("completion", "Completion"),
+            ("status_change", "Status Change"),
+            ("general", "General"),
+        ],
+        "RiskActionStatusEnum": "risk.models.RiskAction.STATUS_CHOICES",
+        "RiskActionTypeEnum": "risk.models.RiskAction.ACTION_TYPES",
+        "RiskStatusEnum": "risk.models.Risk.STATUS_CHOICES",
         "ReminderTypeEnum": "catalogs.models.AssessmentReminderLog.REMINDER_TYPES",
+        "RequirementApplicabilityEnum": "catalogs.models.ControlAssessment.APPLICABILITY_CHOICES",
+        "VendorStatusEnum": "vendors.models.Vendor.STATUS_CHOICES",
+        "VendorTaskPriorityEnum": "vendors.models.VendorTask.PRIORITY_CHOICES",
+        "VendorTaskStatusEnum": "vendors.models.VendorTask.STATUS_CHOICES",
     },
 
     # Error response schemas

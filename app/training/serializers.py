@@ -5,6 +5,7 @@ REST API serializers for security awareness training.
 """
 
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import (
@@ -31,7 +32,7 @@ class TrainingCategorySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['created_at', 'updated_at']
 
-    def get_videos_count(self, obj):
+    def get_videos_count(self, obj) -> int:
         return obj.videos.filter(is_published=True).count()
 
 
@@ -51,7 +52,7 @@ class TrainingVideoListSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
 
-    def get_created_by_name(self, obj):
+    def get_created_by_name(self, obj) -> str | None:
         if obj.created_by:
             return f"{obj.created_by.first_name} {obj.created_by.last_name}".strip() or obj.created_by.email
         return None
@@ -62,7 +63,7 @@ class TrainingVideoDetailSerializer(serializers.ModelSerializer):
 
     category_details = TrainingCategorySerializer(source='category', read_only=True)
     created_by_details = serializers.SerializerMethodField()
-    embed_url = serializers.ReadOnlyField()
+    embed_url = serializers.URLField(read_only=True)
 
     class Meta:
         model = TrainingVideo
@@ -75,6 +76,15 @@ class TrainingVideoDetailSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['created_by', 'view_count', 'published_at', 'created_at', 'updated_at']
 
+    @extend_schema_field({
+        'type': 'object',
+        'nullable': True,
+        'properties': {
+            'id': {'type': 'string'},
+            'name': {'type': 'string'},
+            'email': {'type': 'string', 'format': 'email'},
+        },
+    })
     def get_created_by_details(self, obj):
         if obj.created_by:
             return {
@@ -95,6 +105,8 @@ class SecurityAwarenessCampaignListSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
     target_users_count = serializers.SerializerMethodField()
+    open_rate = serializers.FloatField(read_only=True)
+    click_rate = serializers.FloatField(read_only=True)
 
     class Meta:
         model = SecurityAwarenessCampaign
@@ -106,12 +118,12 @@ class SecurityAwarenessCampaignListSerializer(serializers.ModelSerializer):
             'click_rate', 'status', 'created_at', 'updated_at'
         ]
 
-    def get_created_by_name(self, obj):
+    def get_created_by_name(self, obj) -> str | None:
         if obj.created_by:
             return f"{obj.created_by.first_name} {obj.created_by.last_name}".strip() or obj.created_by.email
         return None
 
-    def get_status(self, obj):
+    def get_status(self, obj) -> str:
         if not obj.is_active:
             return 'inactive'
         elif obj.end_date and obj.end_date < timezone.now():
@@ -123,7 +135,7 @@ class SecurityAwarenessCampaignListSerializer(serializers.ModelSerializer):
         else:
             return 'active'
 
-    def get_target_users_count(self, obj):
+    def get_target_users_count(self, obj) -> int:
         if obj.send_to_all_users:
             return User.objects.filter(is_active=True).count()
         return obj.target_users.count()
@@ -136,6 +148,8 @@ class SecurityAwarenessCampaignDetailSerializer(serializers.ModelSerializer):
     target_users_details = serializers.SerializerMethodField()
     recent_deliveries = serializers.SerializerMethodField()
     analytics = serializers.SerializerMethodField()
+    open_rate = serializers.FloatField(read_only=True)
+    click_rate = serializers.FloatField(read_only=True)
 
     class Meta:
         model = SecurityAwarenessCampaign
@@ -153,6 +167,15 @@ class SecurityAwarenessCampaignDetailSerializer(serializers.ModelSerializer):
             'open_rate', 'click_rate', 'created_at', 'updated_at'
         ]
 
+    @extend_schema_field({
+        'type': 'object',
+        'nullable': True,
+        'properties': {
+            'id': {'type': 'string'},
+            'name': {'type': 'string'},
+            'email': {'type': 'string', 'format': 'email'},
+        },
+    })
     def get_created_by_details(self, obj):
         if obj.created_by:
             return {
@@ -162,6 +185,25 @@ class SecurityAwarenessCampaignDetailSerializer(serializers.ModelSerializer):
             }
         return None
 
+    @extend_schema_field({
+        'type': 'object',
+        'properties': {
+            'type': {'type': 'string'},
+            'count': {'type': 'integer'},
+            'users': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'id': {'type': 'string'},
+                        'name': {'type': 'string'},
+                        'email': {'type': 'string', 'format': 'email'},
+                    },
+                },
+            },
+        },
+        'required': ['type', 'count'],
+    })
     def get_target_users_details(self, obj):
         if obj.send_to_all_users:
             return {'type': 'all_users', 'count': User.objects.filter(is_active=True).count()}
@@ -180,6 +222,7 @@ class SecurityAwarenessCampaignDetailSerializer(serializers.ModelSerializer):
                 ]
             }
 
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_recent_deliveries(self, obj):
         recent = obj.deliveries.select_related('user')[:5]
         return [
@@ -194,6 +237,23 @@ class SecurityAwarenessCampaignDetailSerializer(serializers.ModelSerializer):
             for delivery in recent
         ]
 
+    @extend_schema_field({
+        'type': 'object',
+        'properties': {
+            'recent_sent': {'type': 'integer'},
+            'recent_opened': {'type': 'integer'},
+            'recent_clicked': {'type': 'integer'},
+            'recent_bounced': {'type': 'integer'},
+            'recent_failed': {'type': 'integer'},
+        },
+        'required': [
+            'recent_sent',
+            'recent_opened',
+            'recent_clicked',
+            'recent_bounced',
+            'recent_failed',
+        ],
+    })
     def get_analytics(self, obj):
         from django.utils import timezone
         from datetime import timedelta
@@ -231,7 +291,7 @@ class CampaignDeliverySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['sent_at']
 
-    def get_user_name(self, obj):
+    def get_user_name(self, obj) -> str | None:
         if obj.user:
             return f"{obj.user.first_name} {obj.user.last_name}".strip() or obj.user.email
         return None

@@ -5,6 +5,7 @@ Comprehensive serialization for policy management, versioning, and acknowledgmen
 """
 
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import (
@@ -21,6 +22,7 @@ class UserBasicSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(read_only=True)
 
     class Meta:
+        ref_name = 'PolicyUserBasic'
         model = User
         fields = ['id', 'email', 'first_name', 'last_name', 'full_name']
         read_only_fields = ['id', 'email', 'first_name', 'last_name', 'full_name']
@@ -39,7 +41,7 @@ class PolicyCategorySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-    def get_policies_count(self, obj):
+    def get_policies_count(self, obj) -> int:
         """Get count of policies in this category."""
         return obj.policies.filter(status__in=['approved', 'under_review']).count()
 
@@ -95,11 +97,11 @@ class PolicyListSerializer(serializers.ModelSerializer):
             'is_due_for_review', 'created_at', 'updated_at'
         ]
 
-    def get_versions_count(self, obj):
+    def get_versions_count(self, obj) -> int:
         """Get count of versions for this policy."""
         return obj.versions.count()
 
-    def get_acknowledgment_count(self, obj):
+    def get_acknowledgment_count(self, obj) -> int:
         """Get count of acknowledgments for current version."""
         current_version = obj.current_version
         if current_version:
@@ -137,7 +139,7 @@ class PolicyVersionDetailSerializer(serializers.ModelSerializer):
             'is_current', 'is_expired', 'acknowledgments_count', 'created_at'
         ]
 
-    def get_acknowledgments_count(self, obj):
+    def get_acknowledgments_count(self, obj) -> int:
         """Get count of acknowledgments for this version."""
         return obj.acknowledgments.count()
 
@@ -206,6 +208,20 @@ class PolicyDetailSerializer(serializers.ModelSerializer):
             'is_due_for_review', 'acknowledgment_stats', 'created_at', 'updated_at'
         ]
 
+    @extend_schema_field({
+        'type': 'object',
+        'properties': {
+            'total_acknowledgments': {'type': 'integer'},
+            'total_distributions': {'type': 'integer'},
+            'pending_acknowledgments': {'type': 'integer'},
+            'acknowledgment_rate': {'type': 'number', 'format': 'float'},
+        },
+        'required': [
+            'total_acknowledgments',
+            'pending_acknowledgments',
+            'acknowledgment_rate',
+        ],
+    })
     def get_acknowledgment_stats(self, obj):
         """Get acknowledgment statistics for current version."""
         current_version = obj.current_version

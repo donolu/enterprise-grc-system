@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import (
@@ -23,7 +24,7 @@ class RiskCategorySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['created_at', 'updated_at']
     
-    def get_risk_count(self, obj):
+    def get_risk_count(self, obj) -> int:
         """Get count of risks in this category."""
         return obj.risks.count()
 
@@ -412,6 +413,7 @@ class RiskActionEvidenceSerializer(serializers.ModelSerializer):
             'validated_by', 'validated_at', 'validation_notes'
         ]
 
+    @extend_schema_field(serializers.URLField(allow_null=True))
     def get_file_url(self, obj):
         """Get absolute URL for uploaded file."""
         if obj.file:
@@ -452,6 +454,17 @@ class RiskActionListSerializer(serializers.ModelSerializer):
             'action_id', 'days_until_due', 'is_overdue', 'is_due_soon',
             'created_at', 'updated_at', 'completed_date'
         ]
+
+
+class RiskActionRiskSummarySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    risk_id = serializers.CharField()
+    title = serializers.CharField()
+    risk_level = serializers.CharField()
+    risk_level_display = serializers.CharField()
+    status = serializers.CharField()
+    status_display = serializers.CharField()
+    risk_owner = serializers.CharField(allow_null=True)
 
 
 class RiskActionDetailSerializer(serializers.ModelSerializer):
@@ -495,6 +508,7 @@ class RiskActionDetailSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at', 'created_by', 'completed_date'
         ]
 
+    @extend_schema_field(RiskActionRiskSummarySerializer)
     def get_risk_summary(self, obj):
         """Get summary information about the related risk."""
         return {

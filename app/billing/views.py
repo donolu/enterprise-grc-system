@@ -91,6 +91,7 @@ class BillingViewSet(viewsets.ViewSet):
     - Access billing history and invoices
     - Cancel or modify subscriptions
     """
+    serializer_class = SubscriptionSerializer
     permission_classes = [IsAuthenticated]
     
     @extend_schema(
@@ -235,6 +236,17 @@ class BillingViewSet(viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @extend_schema(
+        summary="Cancel current subscription",
+        description="Cancel the current tenant subscription at the end of the active billing period.",
+        request=None,
+        responses={
+            200: OpenApiResponse(description='Subscription cancellation scheduled'),
+            404: OpenApiResponse(description='No active subscription found'),
+            500: OpenApiResponse(description='Failed to cancel subscription'),
+        },
+        tags=['Billing'],
+    )
     @action(detail=False, methods=['post'])
     def cancel_subscription(self, request):
         """Cancel current subscription."""
@@ -274,6 +286,16 @@ class BillingViewSet(viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @extend_schema(
+        summary="Create billing portal session",
+        description="Create a Stripe customer portal session for billing self-service.",
+        responses={
+            200: OpenApiResponse(description='Billing portal session created'),
+            404: OpenApiResponse(description='No billing information found'),
+            500: OpenApiResponse(description='Failed to create billing portal session'),
+        },
+        tags=['Billing'],
+    )
     @action(detail=False, methods=['get'])
     def billing_portal(self, request):
         """Create Stripe billing portal session."""
