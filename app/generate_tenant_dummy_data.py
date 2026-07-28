@@ -166,9 +166,7 @@ class TenantDummyDataGenerator:
 
         print(f"✅ Created {len(created_users)} users")
         if not os.environ.get(DEMO_PASSWORD_ENV):
-            print(
-                f"ℹ️  Users have unusable passwords. Set {DEMO_PASSWORD_ENV} to enable demo login."
-            )
+            print("ℹ️  Demo user login is disabled by default.")
         return created_users
 
     def create_risk_data(self, users):
