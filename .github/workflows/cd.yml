@@ -36,7 +36,7 @@ jobs:
       image-digest: ${{ steps.build.outputs.digest }}
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v7
 
     - name: Set up QEMU
     # Needed for linux/arm64 cross-builds
@@ -109,7 +109,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v7
 
     - name: Azure Login (OIDC)
       uses: azure/login@v3
