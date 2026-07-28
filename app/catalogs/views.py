@@ -46,7 +46,9 @@ from .serializers import (
     ControlAssessmentCreateUpdateSerializer, AssessmentStatusUpdateSerializer,
     BulkAssessmentCreateSerializer, AssessmentEvidenceSerializer,
     AssessmentProgressSerializer, TemplateDocumentSerializer,
-    TemplateDocumentSummarySerializer
+    TemplateDocumentSummarySerializer,
+    TemplateImportRequestSerializer,
+    TemplateImportSummarySerializer,
 )
 
 
@@ -655,6 +657,18 @@ class TemplateDocumentViewSet(viewsets.ReadOnlyModelViewSet):
             'document', 'framework', 'clause', 'control', 'imported_by'
         )
 
+    @extend_schema(
+        summary="Import template library",
+        description="Import or preview a ZIP archive or single template file from the admin web interface.",
+        request=TemplateImportRequestSerializer,
+        responses={
+            200: TemplateImportSummarySerializer,
+            201: TemplateImportSummarySerializer,
+            400: OpenApiResponse(description='Missing or invalid template library upload'),
+            403: OpenApiResponse(description='Staff administrator access required'),
+        },
+        tags=['Template Documents'],
+    )
     @action(
         detail=False,
         methods=['post'],

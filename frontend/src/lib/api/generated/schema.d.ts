@@ -328,8 +328,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description List assets with reviews due today or overdue. */
-        get: operations["assets_assets_due_for_review_retrieve"];
+        /**
+         * List assets due for review
+         * @description List assets with reviews due today or overdue.
+         */
+        get: operations["assets_assets_due_for_review_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -347,7 +350,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Import an asset register spreadsheet from the admin web interface. */
+        /**
+         * Import asset register
+         * @description Import or preview an asset register spreadsheet from the admin web interface.
+         */
         post: operations["assets_assets_import_register_create"];
         delete?: never;
         options?: never;
@@ -997,7 +1003,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Import a ZIP template library from the admin web interface. */
+        /**
+         * Import template library
+         * @description Import or preview a ZIP archive or single template file from the admin web interface.
+         */
         post: operations["catalogs_api_template_documents_import_library_create"];
         delete?: never;
         options?: never;
@@ -5413,6 +5422,29 @@ export interface components {
             linked_risks?: number[];
             linked_controls?: number[];
             linked_documents?: number[];
+        };
+        AssetImportRequestRequest: {
+            /** Format: binary */
+            file: string;
+            /** @default false */
+            dry_run: boolean;
+        };
+        AssetImportSample: {
+            asset_id: string;
+            name: string;
+            asset_type: string;
+            source_sheet: string;
+        };
+        AssetImportSummary: {
+            dry_run: boolean;
+            importable_count?: number;
+            imported_count?: number;
+            updated_count?: number;
+            skipped_count: number;
+            sheets: {
+                [key: string]: number;
+            };
+            samples?: components["schemas"]["AssetImportSample"][];
         };
         AssetList: {
             readonly id: number;
@@ -10035,24 +10067,6 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
-        /** @description Serializer for imported template and sample documents. */
-        TemplateDocumentRequest: {
-            title: string;
-            module: components["schemas"]["ModuleEnum"];
-            document_type: components["schemas"]["DocumentTypeEnum"];
-            document_code?: string;
-            version?: string;
-            document: number;
-            framework?: number | null;
-            clause?: number | null;
-            control?: number | null;
-            source_path: string;
-            source_filename: string;
-            source_checksum: string;
-            /** Format: date-time */
-            source_modified_at?: string | null;
-            metadata?: unknown;
-        };
         /** @description Compact template document serializer for linked catalogue objects. */
         TemplateDocumentSummary: {
             readonly id: number;
@@ -10074,6 +10088,38 @@ export interface components {
             document_type: components["schemas"]["DocumentTypeEnum"];
             document_code?: string;
             version?: string;
+        };
+        TemplateImportRequestRequest: {
+            /** Format: binary */
+            file: string;
+            /** @default false */
+            dry_run: boolean;
+            framework?: string;
+            framework_version?: string;
+            module?: string;
+            document_type?: string;
+        };
+        TemplateImportSample: {
+            title: string;
+            module: string;
+            document_type: string;
+            source_filename: string;
+            linkage_status: string;
+        };
+        TemplateImportSummary: {
+            dry_run: boolean;
+            importable_count?: number;
+            imported_count?: number;
+            updated_count?: number;
+            skipped_count: number;
+            total_importable?: number;
+            modules: {
+                [key: string]: number;
+            };
+            document_types: {
+                [key: string]: number;
+            };
+            samples?: components["schemas"]["TemplateImportSample"][];
         };
         /** @description Serializer for tenant data export jobs. */
         TenantDataExport: {
@@ -11941,9 +11987,55 @@ export interface operations {
             };
         };
     };
-    assets_assets_due_for_review_retrieve: {
+    assets_assets_due_for_review_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description * `server` - Server
+                 *     * `workstation` - Workstation
+                 *     * `monitor` - Monitor
+                 *     * `mobile_device` - Mobile Device
+                 *     * `printer` - Printer
+                 *     * `infrastructure` - Infrastructure
+                 *     * `application` - Application
+                 *     * `database` - Database
+                 *     * `document` - Document
+                 *     * `other` - Other
+                 */
+                asset_type?: "application" | "database" | "document" | "infrastructure" | "mobile_device" | "monitor" | "other" | "printer" | "server" | "workstation";
+                /**
+                 * @description * `public` - Public
+                 *     * `internal` - Internal
+                 *     * `confidential` - Confidential
+                 *     * `restricted` - Restricted
+                 */
+                classification?: "confidential" | "internal" | "public" | "restricted";
+                /**
+                 * @description * `low` - Low
+                 *     * `medium` - Medium
+                 *     * `high` - High
+                 *     * `critical` - Critical
+                 */
+                criticality?: "critical" | "high" | "low" | "medium";
+                /**
+                 * @description * `planned` - Planned
+                 *     * `active` - Active
+                 *     * `maintenance` - Maintenance
+                 *     * `retired` - Retired
+                 *     * `disposed` - Disposed
+                 */
+                lifecycle_status?: "active" | "disposed" | "maintenance" | "planned" | "retired";
+                location?: string;
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                owner?: number;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -11955,7 +12047,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssetDetail"];
+                    "application/json": components["schemas"]["PaginatedAssetListList"];
                 };
             };
         };
@@ -11969,8 +12061,8 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": components["schemas"]["AssetDetailRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["AssetDetailRequest"];
+                "multipart/form-data": components["schemas"]["AssetImportRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AssetImportRequestRequest"];
             };
         };
         responses: {
@@ -11979,8 +12071,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AssetDetail"];
+                    "application/json": components["schemas"]["AssetImportSummary"];
                 };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetImportSummary"];
+                };
+            };
+            /** @description Missing or invalid asset register spreadsheet */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Staff administrator access required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -13577,8 +13691,8 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": components["schemas"]["TemplateDocumentRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["TemplateDocumentRequest"];
+                "multipart/form-data": components["schemas"]["TemplateImportRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TemplateImportRequestRequest"];
             };
         };
         responses: {
@@ -13587,8 +13701,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TemplateDocument"];
+                    "application/json": components["schemas"]["TemplateImportSummary"];
                 };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateImportSummary"];
+                };
+            };
+            /** @description Missing or invalid template library upload */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Staff administrator access required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

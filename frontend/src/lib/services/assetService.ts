@@ -14,15 +14,10 @@ export type PaginatedResponse<T> = Omit<AssetListResponse, "results"> & {
   results: T[];
 };
 
-export interface AssetImportResponse {
-  dry_run: boolean;
-  importable_count?: number;
-  imported_count?: number;
-  updated_count?: number;
-  skipped_count: number;
-  sheets: Record<string, number>;
-  samples?: Array<Record<string, string>>;
-}
+export type AssetImportResponse = OperationResponse<
+  "assets_assets_import_register_create",
+  200
+>;
 
 export async function getAssets(params: OperationQuery<"assets_assets_list"> = {}) {
   const { data } = await api.get<AssetListResponse>("/assets/assets/", { params });

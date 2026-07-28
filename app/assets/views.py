@@ -10,6 +10,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 
 from assets.management.commands.import_assets import Command as AssetImportCommand
 from .audit import (
@@ -21,6 +22,7 @@ from .audit import (
 from .models import Asset, AssetReviewReminderLog
 from .serializers import (
     AssetDetailSerializer,
+    AssetImportRequestSerializer,
     AssetImportSummarySerializer,
     AssetListSerializer,
     AssetReviewReminderLogSerializer,
@@ -103,6 +105,12 @@ class AssetViewSet(viewsets.ModelViewSet):
         )
         instance.delete()
 
+    @extend_schema(
+        summary="List assets due for review",
+        description="List assets with reviews due today or overdue.",
+        responses={200: AssetListSerializer(many=True)},
+        tags=['Assets'],
+    )
     @action(detail=False, methods=['get'])
     def due_for_review(self, request):
         """List assets with reviews due today or overdue."""
@@ -115,6 +123,18 @@ class AssetViewSet(viewsets.ModelViewSet):
         serializer = AssetListSerializer(queryset, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Import asset register",
+        description="Import or preview an asset register spreadsheet from the admin web interface.",
+        request=AssetImportRequestSerializer,
+        responses={
+            200: AssetImportSummarySerializer,
+            201: AssetImportSummarySerializer,
+            400: OpenApiResponse(description='Missing or invalid asset register spreadsheet'),
+            403: OpenApiResponse(description='Staff administrator access required'),
+        },
+        tags=['Assets'],
+    )
     @action(
         detail=False,
         methods=['post'],
