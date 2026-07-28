@@ -301,16 +301,16 @@ export default function RiskMitigationPage() {
               </Descriptions.Item>
             </Descriptions>
 
-            <Divider orientation="left">Risk Description</Divider>
+            <Divider titlePlacement="left">Risk Description</Divider>
             <Text>{selectedRisk.description}</Text>
 
-            <Divider orientation="left">Treatment Plan</Divider>
+            <Divider titlePlacement="left">Treatment Plan</Divider>
             <Text>{selectedRisk.treatmentPlan}</Text>
 
-            <Divider orientation="left">Current Controls</Divider>
+            <Divider titlePlacement="left">Current Controls</Divider>
             <Text>{selectedRisk.currentControls}</Text>
 
-            <Divider orientation="left">Mitigation Actions</Divider>
+            <Divider titlePlacement="left">Mitigation Actions</Divider>
             <Table
 
               pagination={false}
@@ -327,7 +327,7 @@ export default function RiskMitigationPage() {
               ]}
             />
 
-            <Divider orientation="left">Progress</Divider>
+            <Divider titlePlacement="left">Progress</Divider>
             <Progress
               percent={selectedRisk.progress}
               status={selectedRisk.progress === 100 ? 'success' : selectedRisk.progress > 80 ? 'active' : 'normal'}
