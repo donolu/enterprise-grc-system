@@ -279,15 +279,13 @@ jobs:
     - name: Comment on PR (if applicable)
       if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
       continue-on-error: true
-      uses: actions/github-script@v9
-      with:
-        script: |
-          const fs = require('fs');
-          const summary = fs.readFileSync('security-summary.md', 'utf8');
-
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: `## 🔒 Security Scan Results\n\n${summary}`
-          });
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        {
+          echo "## Security Scan Results"
+          echo ""
+          cat security-summary.md
+        } > pr-comment.md
+        gh pr comment "$PR_NUMBER" --body-file pr-comment.md
