@@ -9,60 +9,61 @@ class Asset(models.Model):
     """
     Information asset held by a tenant.
     """
+
     ASSET_TYPES = [
-        ('server', 'Server'),
-        ('workstation', 'Workstation'),
-        ('monitor', 'Monitor'),
-        ('mobile_device', 'Mobile Device'),
-        ('printer', 'Printer'),
-        ('infrastructure', 'Infrastructure'),
-        ('application', 'Application'),
-        ('database', 'Database'),
-        ('document', 'Document'),
-        ('other', 'Other'),
+        ("server", "Server"),
+        ("workstation", "Workstation"),
+        ("monitor", "Monitor"),
+        ("mobile_device", "Mobile Device"),
+        ("printer", "Printer"),
+        ("infrastructure", "Infrastructure"),
+        ("application", "Application"),
+        ("database", "Database"),
+        ("document", "Document"),
+        ("other", "Other"),
     ]
 
     CLASSIFICATION_CHOICES = [
-        ('public', 'Public'),
-        ('internal', 'Internal'),
-        ('confidential', 'Confidential'),
-        ('restricted', 'Restricted'),
+        ("public", "Public"),
+        ("internal", "Internal"),
+        ("confidential", "Confidential"),
+        ("restricted", "Restricted"),
     ]
 
     CRITICALITY_CHOICES = [
-        ('low', 'Low'),
-        ('medium', 'Medium'),
-        ('high', 'High'),
-        ('critical', 'Critical'),
+        ("low", "Low"),
+        ("medium", "Medium"),
+        ("high", "High"),
+        ("critical", "Critical"),
     ]
 
     LIFECYCLE_STATUS_CHOICES = [
-        ('planned', 'Planned'),
-        ('active', 'Active'),
-        ('maintenance', 'Maintenance'),
-        ('retired', 'Retired'),
-        ('disposed', 'Disposed'),
+        ("planned", "Planned"),
+        ("active", "Active"),
+        ("maintenance", "Maintenance"),
+        ("retired", "Retired"),
+        ("disposed", "Disposed"),
     ]
 
     asset_id = models.CharField(max_length=80, unique=True)
     name = models.CharField(max_length=255)
-    asset_type = models.CharField(max_length=30, choices=ASSET_TYPES, default='other')
+    asset_type = models.CharField(max_length=30, choices=ASSET_TYPES, default="other")
     description = models.TextField(blank=True)
 
     classification = models.CharField(
         max_length=30,
         choices=CLASSIFICATION_CHOICES,
-        default='internal',
+        default="internal",
     )
     criticality = models.CharField(
         max_length=20,
         choices=CRITICALITY_CHOICES,
-        default='medium',
+        default="medium",
     )
     lifecycle_status = models.CharField(
         max_length=30,
         choices=LIFECYCLE_STATUS_CHOICES,
-        default='active',
+        default="active",
     )
 
     owner = models.ForeignKey(
@@ -70,7 +71,7 @@ class Asset(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='owned_assets',
+        related_name="owned_assets",
     )
     owner_name = models.CharField(max_length=255, blank=True)
     custodian = models.CharField(max_length=255, blank=True)
@@ -92,19 +93,19 @@ class Asset(models.Model):
     disposal_date = models.DateField(null=True, blank=True)
 
     linked_risks = models.ManyToManyField(
-        'risk.Risk',
+        "risk.Risk",
         blank=True,
-        related_name='linked_assets',
+        related_name="linked_assets",
     )
     linked_controls = models.ManyToManyField(
-        'catalogs.Control',
+        "catalogs.Control",
         blank=True,
-        related_name='linked_assets',
+        related_name="linked_assets",
     )
     linked_documents = models.ManyToManyField(
-        'core.Document',
+        "core.Document",
         blank=True,
-        related_name='linked_assets',
+        related_name="linked_assets",
     )
 
     source_path = models.CharField(max_length=500, blank=True)
@@ -118,24 +119,24 @@ class Asset(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='created_assets',
+        related_name="created_assets",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['asset_id', 'name']
+        ordering = ["asset_id", "name"]
         indexes = [
-            models.Index(fields=['asset_type', 'lifecycle_status']),
-            models.Index(fields=['criticality']),
-            models.Index(fields=['classification']),
-            models.Index(fields=['owner']),
-            models.Index(fields=['next_review_date']),
-            models.Index(fields=['source_checksum']),
+            models.Index(fields=["asset_type", "lifecycle_status"]),
+            models.Index(fields=["criticality"]),
+            models.Index(fields=["classification"]),
+            models.Index(fields=["owner"]),
+            models.Index(fields=["next_review_date"]),
+            models.Index(fields=["source_checksum"]),
         ]
 
     def __str__(self):
-        return f'{self.asset_id}: {self.name}'
+        return f"{self.asset_id}: {self.name}"
 
     @property
     def is_review_overdue(self):
@@ -150,20 +151,20 @@ class Asset(models.Model):
 
 class AssetReviewReminderLog(models.Model):
     REMINDER_TYPES = [
-        ('advance_warning', 'Advance Warning'),
-        ('due_today', 'Due Today'),
-        ('overdue', 'Overdue'),
+        ("advance_warning", "Advance Warning"),
+        ("due_today", "Due Today"),
+        ("overdue", "Overdue"),
     ]
 
     asset = models.ForeignKey(
         Asset,
         on_delete=models.CASCADE,
-        related_name='review_reminder_logs',
+        related_name="review_reminder_logs",
     )
     owner = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='asset_review_reminder_logs',
+        related_name="asset_review_reminder_logs",
     )
     reminder_type = models.CharField(max_length=20, choices=REMINDER_TYPES)
     review_date = models.DateField()
@@ -171,12 +172,12 @@ class AssetReviewReminderLog(models.Model):
     email_sent = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = [('asset', 'owner', 'reminder_type', 'review_date')]
-        ordering = ['-sent_at']
+        unique_together = [("asset", "owner", "reminder_type", "review_date")]
+        ordering = ["-sent_at"]
         indexes = [
-            models.Index(fields=['asset', 'owner']),
-            models.Index(fields=['review_date', 'reminder_type']),
+            models.Index(fields=["asset", "owner"]),
+            models.Index(fields=["review_date", "reminder_type"]),
         ]
 
     def __str__(self):
-        return f'{self.reminder_type} reminder for {self.asset.asset_id}'
+        return f"{self.reminder_type} reminder for {self.asset.asset_id}"

@@ -35,12 +35,14 @@ factory-boy==3.3.3
 faker==40.31.0
 
 # Code quality
-ruff==0.9.9
-mypy==2.3.0
+ruff==0.15.20
+mypy>=1.19,<1.20
+django-stubs[compatible-mypy]>=5.0,<6.0
+djangorestframework-stubs>=3.15,<4.0
 pre-commit>=4.6.0
 
 # Security
-bandit==1.7.10
+bandit==1.9.4
 safety==3.2.10
 
 # SSO and Enterprise Authentication

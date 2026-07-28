@@ -40,13 +40,8 @@ class VendorAnalyticsService:
             ),
             "total_vendors": Vendor.objects.count(),
             "active_vendors": Vendor.objects.filter(status="active").count(),
-            "total_annual_spend": Vendor.objects.aggregate(
-                total=Sum("annual_spend")
-            )["total"]
-            or 0,
-            "avg_performance_score": Vendor.objects.aggregate(
-                avg=Avg("performance_score")
-            )["avg"]
+            "total_annual_spend": Vendor.objects.aggregate(total=Sum("annual_spend"))["total"] or 0,
+            "avg_performance_score": Vendor.objects.aggregate(avg=Avg("performance_score"))["avg"]
             or 0,
         }
 
@@ -154,9 +149,7 @@ class VendorAnalyticsService:
     @staticmethod
     def assessment_coverage_percentage():
         return (
-            Vendor.objects.filter(services__risk_assessment_completed=True)
-            .distinct()
-            .count()
+            Vendor.objects.filter(services__risk_assessment_completed=True).distinct().count()
             / max(Vendor.objects.count(), 1)
             * 100
         )

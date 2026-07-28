@@ -1,8 +1,8 @@
 # ADR-0003: Comprehensive Multi-Method Two-Factor Authentication Implementation
 
-**Status:** Accepted  
-**Date:** 2025-08-22  
-**Deciders:** Development Team  
+**Status:** Accepted
+**Date:** 2025-08-22
+**Deciders:** Development Team
 
 ## Context
 

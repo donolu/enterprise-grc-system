@@ -88,7 +88,7 @@ class TenantAwareFileSystemStorage(TenantStorageMixin, FileSystemStorage):
         saved_name = super()._save(self._tenant_key(name), content)
         prefix = f"{self._get_tenant_container_name()}/"
         if saved_name.startswith(prefix):
-            return saved_name[len(prefix):]
+            return saved_name[len(prefix) :]
         return saved_name
 
     def delete(self, name):
@@ -266,13 +266,12 @@ class TenantAwareS3Storage(TenantStorageMixin, Storage):
             Delimiter="/",
         )
         directories = [
-            item["Prefix"][len(prefix):].rstrip("/")
-            for item in response.get("CommonPrefixes", [])
+            item["Prefix"][len(prefix) :].rstrip("/") for item in response.get("CommonPrefixes", [])
         ]
         files = [
-            item["Key"][len(prefix):]
+            item["Key"][len(prefix) :]
             for item in response.get("Contents", [])
-            if item["Key"] != prefix and "/" not in item["Key"][len(prefix):]
+            if item["Key"] != prefix and "/" not in item["Key"][len(prefix) :]
         ]
         return directories, files
 
@@ -325,14 +324,14 @@ class TenantAwareS3Storage(TenantStorageMixin, Storage):
 class TenantAwareBlobStorage(TenantStorageMixin, Storage):
     """
     Azure Blob Storage backend with tenant isolation.
-    
+
     Each tenant gets their own container for complete data isolation.
     Container naming: tenant-{tenant_slug}
     """
-    
+
     def __init__(self, connection_string=None, container_prefix=None):
         self.connection_string = connection_string or os.environ.get(
-            'AZURE_STORAGE_CONNECTION_STRING'
+            "AZURE_STORAGE_CONNECTION_STRING"
         )
         self.container_prefix = container_prefix or getattr(
             settings,
@@ -341,7 +340,7 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
         )
         self._blob_client = None
         self._fallback_storages = {}
-        
+
     @property
     def blob_client(self):
         """Lazy initialization of blob client."""
@@ -352,22 +351,21 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
                 raise ValueError("azure-storage-blob is required for STORAGE_BACKEND=azure")
             self._blob_client = BlobServiceClient.from_connection_string(self.connection_string)
         return self._blob_client
-    
-    @property 
+
+    @property
     def fallback_storage(self):
         """Fallback to local file system storage if Azure is unavailable."""
         container_name = self._get_tenant_container_name()
         if container_name not in self._fallback_storages:
             # Create tenant-aware local storage
             from django.conf import settings
-            media_root = getattr(settings, 'MEDIA_ROOT', '/tmp/media')
+
+            media_root = getattr(settings, "MEDIA_ROOT", "/tmp/media")
             tenant_media_root = os.path.join(media_root, container_name)
             os.makedirs(tenant_media_root, exist_ok=True)
-            self._fallback_storages[container_name] = FileSystemStorage(
-                location=tenant_media_root
-            )
+            self._fallback_storages[container_name] = FileSystemStorage(location=tenant_media_root)
         return self._fallback_storages[container_name]
-    
+
     def _is_azure_available(self):
         """Check if Azure Storage is available."""
         try:
@@ -377,23 +375,23 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
         except (ServiceRequestError, Exception) as e:
             logger.warning(f"Azure Storage unavailable, falling back to local storage: {e}")
             return False
-        
+
     def _get_container_client(self, container_name=None):
         """Get a container client for the specified or current tenant."""
         if container_name is None:
             container_name = self._get_tenant_container_name()
-        
+
         container_client = self.blob_client.get_container_client(container_name)
-        
+
         # Create container if it doesn't exist
         try:
             container_client.get_container_properties()
         except ResourceNotFoundError:
             container_client.create_container()
-            
+
         return container_client
-    
-    def _open(self, name, mode='rb'):
+
+    def _open(self, name, mode="rb"):
         """Open and return a file-like object."""
         name = self._clean_name(name)
         if not self._is_azure_available():
@@ -401,17 +399,17 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
 
         container_client = self._get_container_client()
         blob_client = container_client.get_blob_client(name)
-        
+
         try:
             blob_data = blob_client.download_blob()
             return blob_data.readall()
         except ResourceNotFoundError:
             raise FileNotFoundError(f"File '{name}' not found in tenant storage")
-    
+
     def _save(self, name, content):
         """Save the file content to Azure Blob Storage or fallback to local storage."""
         name = self._clean_name(name)
-        
+
         # Try Azure Storage first
         if self._is_azure_available():
             try:
@@ -421,12 +419,14 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
                 logger.info(f"File saved to Azure Storage: {name}")
                 return name
             except Exception as e:
-                logger.warning(f"Failed to save to Azure Storage: {e}, falling back to local storage")
-        
+                logger.warning(
+                    f"Failed to save to Azure Storage: {e}, falling back to local storage"
+                )
+
         # Fallback to local storage
         logger.info(f"Saving file to local storage: {name}")
         return self.fallback_storage._save(name, content)
-    
+
     def delete(self, name):
         """Delete the specified file."""
         name = self._clean_name(name)
@@ -435,16 +435,16 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
 
         container_client = self._get_container_client()
         blob_client = container_client.get_blob_client(name)
-        
+
         try:
             blob_client.delete_blob()
         except ResourceNotFoundError:
             pass  # File already doesn't exist
-    
+
     def exists(self, name):
         """Check if a file exists."""
         name = self._clean_name(name)
-        
+
         # Try Azure Storage first
         if self._is_azure_available():
             try:
@@ -456,10 +456,10 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
                 return False
             except Exception:
                 pass  # Fall through to local storage check
-        
+
         # Check local storage
         return self.fallback_storage.exists(name)
-    
+
     def listdir(self, path):
         """List the contents of the specified path."""
         path = self._clean_name(path)
@@ -467,28 +467,28 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
             return self.fallback_storage.listdir(path)
 
         container_client = self._get_container_client()
-        
-        if path and not path.endswith('/'):
-            path += '/'
-        
+
+        if path and not path.endswith("/"):
+            path += "/"
+
         directories = set()
         files = []
-        
+
         for blob in container_client.list_blobs(name_starts_with=path):
             blob_name = blob.name
             if path:
-                blob_name = blob_name[len(path):]
-            
-            if '/' in blob_name:
+                blob_name = blob_name[len(path) :]
+
+            if "/" in blob_name:
                 # This is in a subdirectory
-                dir_name = blob_name.split('/')[0]
+                dir_name = blob_name.split("/")[0]
                 directories.add(dir_name)
             else:
                 # This is a file in the current directory
                 files.append(blob_name)
-        
+
         return list(directories), files
-    
+
     def size(self, name):
         """Return the size of the specified file."""
         name = self._clean_name(name)
@@ -497,44 +497,44 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
 
         container_client = self._get_container_client()
         blob_client = container_client.get_blob_client(name)
-        
+
         try:
             properties = blob_client.get_blob_properties()
             return properties.size
         except ResourceNotFoundError:
             raise FileNotFoundError(f"File '{name}' not found in tenant storage")
-    
+
     def url(self, name):
         """Return the URL for the specified file."""
         name = self._clean_name(name)
-        
+
         # Try Azure Storage first
         if self._is_azure_available():
             container_name = self._get_tenant_container_name()
-            
+
             # For development with Azurite
-            if 'devstoreaccount1' in self.connection_string:
+            if "devstoreaccount1" in self.connection_string:
                 return f"http://localhost:10000/devstoreaccount1/{container_name}/{name}"
-            
+
             # For production Azure Storage
             account_name = self._extract_account_name()
             return f"https://{account_name}.blob.core.windows.net/{container_name}/{name}"
-        
+
         # Fallback to local storage URL
         return self.fallback_storage.url(name)
-    
+
     def _extract_account_name(self):
         """Extract the storage account name from connection string."""
         # Parse connection string for AccountName
-        for part in self.connection_string.split(';'):
-            if part.startswith('AccountName='):
-                return part.split('=', 1)[1]
-        return 'unknown'
-    
+        for part in self.connection_string.split(";"):
+            if part.startswith("AccountName="):
+                return part.split("=", 1)[1]
+        return "unknown"
+
     def get_accessed_time(self, name):
         """Azure Blob Storage doesn't track access time."""
         raise NotImplementedError("Azure Blob Storage doesn't provide access time")
-    
+
     def get_created_time(self, name):
         """Return the creation time of the specified file."""
         name = self._clean_name(name)
@@ -543,13 +543,13 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
 
         container_client = self._get_container_client()
         blob_client = container_client.get_blob_client(name)
-        
+
         try:
             properties = blob_client.get_blob_properties()
             return properties.creation_time
         except ResourceNotFoundError:
             raise FileNotFoundError(f"File '{name}' not found in tenant storage")
-    
+
     def get_modified_time(self, name):
         """Return the modification time of the specified file."""
         name = self._clean_name(name)
@@ -558,7 +558,7 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
 
         container_client = self._get_container_client()
         blob_client = container_client.get_blob_client(name)
-        
+
         try:
             properties = blob_client.get_blob_properties()
             return properties.last_modified

@@ -10,24 +10,24 @@ from sso.models import SSOSession, SSOAuditLog
 
 
 class Command(BaseCommand):
-    help = 'Cleanup expired SSO sessions and old audit logs'
+    help = "Cleanup expired SSO sessions and old audit logs"
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--days',
+            "--days",
             type=int,
             default=90,
-            help='Keep audit logs newer than this many days (default: 90)'
+            help="Keep audit logs newer than this many days (default: 90)",
         )
         parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Show what would be deleted without actually deleting'
+            "--dry-run",
+            action="store_true",
+            help="Show what would be deleted without actually deleting",
         )
 
     def handle(self, *args, **options):
-        days = options['days']
-        dry_run = options['dry_run']
+        days = options["days"]
+        dry_run = options["dry_run"]
 
         if dry_run:
             self.stdout.write("DRY RUN MODE - No data will be deleted")
@@ -42,10 +42,7 @@ class Command(BaseCommand):
         """Mark expired sessions as expired."""
         now = timezone.now()
 
-        expired_sessions = SSOSession.objects.filter(
-            status='active',
-            expires_at__lt=now
-        )
+        expired_sessions = SSOSession.objects.filter(status="active", expires_at__lt=now)
 
         count = expired_sessions.count()
 
@@ -56,18 +53,14 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(f"Would mark {count} expired sessions")
         else:
-            expired_sessions.update(status='expired')
-            self.stdout.write(
-                self.style.SUCCESS(f"Marked {count} expired sessions")
-            )
+            expired_sessions.update(status="expired")
+            self.stdout.write(self.style.SUCCESS(f"Marked {count} expired sessions"))
 
     def cleanup_old_audit_logs(self, days, dry_run=False):
         """Delete old audit logs."""
         cutoff_date = timezone.now() - timedelta(days=days)
 
-        old_logs = SSOAuditLog.objects.filter(
-            event_timestamp__lt=cutoff_date
-        )
+        old_logs = SSOAuditLog.objects.filter(event_timestamp__lt=cutoff_date)
 
         count = old_logs.count()
 
@@ -80,7 +73,5 @@ class Command(BaseCommand):
         else:
             old_logs.delete()
             self.stdout.write(
-                self.style.SUCCESS(
-                    f"Deleted {count} audit logs older than {days} days"
-                )
+                self.style.SUCCESS(f"Deleted {count} audit logs older than {days} days")
             )

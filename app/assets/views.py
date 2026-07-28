@@ -31,7 +31,7 @@ from .serializers import (
 
 class AssetPagination(PageNumberPagination):
     page_size = 20
-    page_size_query_param = 'page_size'
+    page_size_query_param = "page_size"
     max_page_size = 100
 
 
@@ -39,37 +39,52 @@ class AssetViewSet(viewsets.ModelViewSet):
     """
     CRUD API for information assets.
     """
+
     permission_classes = [IsAuthenticated]
     pagination_class = AssetPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
-        'asset_type', 'classification', 'criticality', 'lifecycle_status',
-        'owner', 'location',
+        "asset_type",
+        "classification",
+        "criticality",
+        "lifecycle_status",
+        "owner",
+        "location",
     ]
     search_fields = [
-        'asset_id', 'name', 'description', 'owner_name', 'serial_number',
-        'ip_address', 'mac_address', 'location',
+        "asset_id",
+        "name",
+        "description",
+        "owner_name",
+        "serial_number",
+        "ip_address",
+        "mac_address",
+        "location",
     ]
     ordering_fields = [
-        'asset_id', 'name', 'asset_type', 'criticality', 'next_review_date',
-        'updated_at',
+        "asset_id",
+        "name",
+        "asset_type",
+        "criticality",
+        "next_review_date",
+        "updated_at",
     ]
-    ordering = ['asset_id']
+    ordering = ["asset_id"]
 
     def get_queryset(self):
-        return Asset.objects.select_related('owner', 'created_by').prefetch_related(
-            'linked_risks', 'linked_controls', 'linked_documents'
+        return Asset.objects.select_related("owner", "created_by").prefetch_related(
+            "linked_risks", "linked_controls", "linked_documents"
         )
 
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action == "list":
             return AssetListSerializer
         return AssetDetailSerializer
 
     def perform_create(self, serializer):
         asset = serializer.save()
         audit_asset_change(
-            event='ASSET_CREATED',
+            event="ASSET_CREATED",
             actor=self.request.user,
             target=asset,
             object_display=asset_display(asset),
@@ -84,7 +99,7 @@ class AssetViewSet(viewsets.ModelViewSet):
         previous_changed, new_changed = asset_changed_values(previous, new)
         if previous_changed or new_changed:
             audit_asset_change(
-                event='ASSET_UPDATED',
+                event="ASSET_UPDATED",
                 actor=self.request.user,
                 target=asset,
                 object_display=asset_display(asset),
@@ -96,7 +111,7 @@ class AssetViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         previous = snapshot_asset(instance)
         audit_asset_change(
-            event='ASSET_DELETED',
+            event="ASSET_DELETED",
             actor=self.request.user,
             target=instance,
             object_display=asset_display(instance),
@@ -109,12 +124,13 @@ class AssetViewSet(viewsets.ModelViewSet):
         summary="List assets due for review",
         description="List assets with reviews due today or overdue.",
         responses={200: AssetListSerializer(many=True)},
-        tags=['Assets'],
+        tags=["Assets"],
     )
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=["get"])
     def due_for_review(self, request):
         """List assets with reviews due today or overdue."""
         from django.utils import timezone
+
         queryset = self.get_queryset().filter(next_review_date__lte=timezone.now().date())
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -130,41 +146,41 @@ class AssetViewSet(viewsets.ModelViewSet):
         responses={
             200: AssetImportSummarySerializer,
             201: AssetImportSummarySerializer,
-            400: OpenApiResponse(description='Missing or invalid asset register spreadsheet'),
-            403: OpenApiResponse(description='Staff administrator access required'),
+            400: OpenApiResponse(description="Missing or invalid asset register spreadsheet"),
+            403: OpenApiResponse(description="Staff administrator access required"),
         },
-        tags=['Assets'],
+        tags=["Assets"],
     )
     @action(
         detail=False,
-        methods=['post'],
+        methods=["post"],
         parser_classes=[MultiPartParser, FormParser],
-        url_path='import-register',
+        url_path="import-register",
     )
     def import_register(self, request):
         """Import an asset register spreadsheet from the admin web interface."""
         if not request.user.is_staff and not request.user.is_superuser:
             return Response(
-                {'detail': 'Only staff administrators can import asset registers.'},
+                {"detail": "Only staff administrators can import asset registers."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        upload = request.FILES.get('file')
+        upload = request.FILES.get("file")
         if not upload:
             return Response(
-                {'file': ['An asset register spreadsheet is required.']},
+                {"file": ["An asset register spreadsheet is required."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if not upload.name.lower().endswith('.xlsx'):
+        if not upload.name.lower().endswith(".xlsx"):
             return Response(
-                {'file': ['Asset register imports require a .xlsx file.']},
+                {"file": ["Asset register imports require a .xlsx file."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        dry_run = str(request.data.get('dry_run', '')).lower() in {'1', 'true', 'yes'}
+        dry_run = str(request.data.get("dry_run", "")).lower() in {"1", "true", "yes"}
         command = AssetImportCommand()
 
-        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as temp_file:
             temp_path = Path(temp_file.name)
             for chunk in upload.chunks():
                 temp_file.write(chunk)
@@ -175,28 +191,30 @@ class AssetViewSet(viewsets.ModelViewSet):
             except CommandError:
                 return Response(
                     {
-                        'detail': 'Asset register import failed. Check the spreadsheet format.',
-                        'code': 'asset_import_invalid',
+                        "detail": "Asset register import failed. Check the spreadsheet format.",
+                        "code": "asset_import_invalid",
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
             if dry_run:
-                serializer = AssetImportSummarySerializer({
-                    'dry_run': True,
-                    'importable_count': len(entries),
-                    'skipped_count': command.skipped_count,
-                    'sheets': command.sheet_counts,
-                    'samples': [
-                        {
-                            'asset_id': entry['asset_id'],
-                            'name': entry['name'],
-                            'asset_type': entry['asset_type'],
-                            'source_sheet': entry['source_sheet'],
-                        }
-                        for entry in entries[:10]
-                    ],
-                })
+                serializer = AssetImportSummarySerializer(
+                    {
+                        "dry_run": True,
+                        "importable_count": len(entries),
+                        "skipped_count": command.skipped_count,
+                        "sheets": command.sheet_counts,
+                        "samples": [
+                            {
+                                "asset_id": entry["asset_id"],
+                                "name": entry["name"],
+                                "asset_type": entry["asset_type"],
+                                "source_sheet": entry["source_sheet"],
+                            }
+                            for entry in entries[:10]
+                        ],
+                    }
+                )
                 return Response(serializer.data)
 
             with transaction.atomic():
@@ -209,13 +227,15 @@ class AssetViewSet(viewsets.ModelViewSet):
                     updated,
                 )
 
-            serializer = AssetImportSummarySerializer({
-                'dry_run': False,
-                'imported_count': imported,
-                'updated_count': updated,
-                'skipped_count': command.skipped_count,
-                'sheets': command.sheet_counts,
-            })
+            serializer = AssetImportSummarySerializer(
+                {
+                    "dry_run": False,
+                    "imported_count": imported,
+                    "updated_count": updated,
+                    "skipped_count": command.skipped_count,
+                    "sheets": command.sheet_counts,
+                }
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         finally:
             temp_path.unlink(missing_ok=True)
@@ -225,9 +245,9 @@ class AssetReviewReminderLogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AssetReviewReminderLogSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['asset', 'owner', 'reminder_type', 'email_sent']
-    ordering_fields = ['sent_at', 'review_date']
-    ordering = ['-sent_at']
+    filterset_fields = ["asset", "owner", "reminder_type", "email_sent"]
+    ordering_fields = ["sent_at", "review_date"]
+    ordering = ["-sent_at"]
 
     def get_queryset(self):
-        return AssetReviewReminderLog.objects.select_related('asset', 'owner')
+        return AssetReviewReminderLog.objects.select_related("asset", "owner")

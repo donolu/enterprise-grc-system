@@ -155,8 +155,8 @@ VendorAdmin:
 @property
 def is_contract_expiring_soon(self):
     """Check if contract expires within renewal notice period"""
-    
-@property  
+
+@property
 def days_until_contract_expiry(self):
     """Calculate days until contract expiration"""
 
@@ -350,7 +350,7 @@ def days_until_contract_expiry(self):
 
 ---
 
-**Decision Made By**: Development Team  
-**Date**: August 23, 2025  
-**Reviewed By**: Architecture Review Board  
+**Decision Made By**: Development Team
+**Date**: August 23, 2025
+**Reviewed By**: Architecture Review Board
 **Next Review**: February 2026 (6 months)

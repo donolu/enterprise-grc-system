@@ -21,9 +21,7 @@ from exports.views import AssessmentReportViewSet
 def test_default_drf_throttles_are_enabled():
     throttle_classes = set(api_settings.DEFAULT_THROTTLE_CLASSES)
 
-    assert {AnonRateThrottle, UserRateThrottle, ScopedRateThrottle}.issubset(
-        throttle_classes
-    )
+    assert {AnonRateThrottle, UserRateThrottle, ScopedRateThrottle}.issubset(throttle_classes)
     assert {"anon", "user", "auth", "two_factor", "exports", "evidence_upload"} <= set(
         api_settings.DEFAULT_THROTTLE_RATES
     )
@@ -50,9 +48,7 @@ def test_export_views_use_export_scope():
 
 def test_upload_actions_use_evidence_upload_scope():
     assert DocumentViewSet.throttle_scope_by_action == {"create": "evidence_upload"}
-    assert ControlEvidenceViewSet.throttle_scope_by_action == {
-        "create": "evidence_upload"
-    }
+    assert ControlEvidenceViewSet.throttle_scope_by_action == {"create": "evidence_upload"}
     assert ControlAssessmentViewSet.throttle_scope_by_action == {
         "upload_evidence": "evidence_upload",
         "bulk_upload_evidence": "evidence_upload",

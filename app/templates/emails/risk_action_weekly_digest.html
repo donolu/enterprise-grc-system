@@ -217,7 +217,7 @@
                 <div class="action-info">
                     <div class="action-title">{{ action.action_id }}: {{ action.title }}</div>
                     <div class="action-meta">
-                        Risk: {{ action.risk.risk_id }} | Due: {{ action.due_date|date:"M d" }} 
+                        Risk: {{ action.risk.risk_id }} | Due: {{ action.due_date|date:"M d" }}
                         ({{ action.days_until_due|add:"-1" }} days overdue)
                         {% if action.progress_percentage > 0 %} | Progress: {{ action.progress_percentage }}%{% endif %}
                     </div>

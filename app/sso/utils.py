@@ -20,7 +20,7 @@ def get_tenant_from_request(request):
     """
     Extract tenant from request.
     """
-    return getattr(request, 'tenant', None)
+    return getattr(request, "tenant", None)
 
 
 def provision_user_from_sso(sso_provider, attributes, name_id, request):
@@ -30,7 +30,7 @@ def provision_user_from_sso(sso_provider, attributes, name_id, request):
     try:
         with transaction.atomic():
             # Extract user data from attributes
-            email = get_mapped_attribute_value(sso_provider, attributes, 'email')
+            email = get_mapped_attribute_value(sso_provider, attributes, "email")
             if not email:
                 email = name_id
 
@@ -38,9 +38,9 @@ def provision_user_from_sso(sso_provider, attributes, name_id, request):
                 logger.error("Cannot provision user without email")
                 return None
 
-            first_name = get_mapped_attribute_value(sso_provider, attributes, 'first_name') or ''
-            last_name = get_mapped_attribute_value(sso_provider, attributes, 'last_name') or ''
-            username = get_mapped_attribute_value(sso_provider, attributes, 'username') or email
+            first_name = get_mapped_attribute_value(sso_provider, attributes, "first_name") or ""
+            last_name = get_mapped_attribute_value(sso_provider, attributes, "last_name") or ""
+            username = get_mapped_attribute_value(sso_provider, attributes, "username") or email
 
             # Ensure unique username
             original_username = username
@@ -51,10 +51,7 @@ def provision_user_from_sso(sso_provider, attributes, name_id, request):
 
             # Create user
             user = User.objects.create_user(
-                username=username,
-                email=email,
-                first_name=first_name,
-                last_name=last_name
+                username=username, email=email, first_name=first_name, last_name=last_name
             )
 
             # Apply role mappings
@@ -69,11 +66,11 @@ def provision_user_from_sso(sso_provider, attributes, name_id, request):
                     logger.warning(f"Default role '{sso_provider.jit_default_role}' not found")
 
             # Apply staff/superuser status if mapped
-            is_staff = get_mapped_attribute_value(sso_provider, attributes, 'is_staff')
+            is_staff = get_mapped_attribute_value(sso_provider, attributes, "is_staff")
             if is_staff is not None:
                 user.is_staff = _convert_to_boolean(is_staff)
 
-            is_superuser = get_mapped_attribute_value(sso_provider, attributes, 'is_superuser')
+            is_superuser = get_mapped_attribute_value(sso_provider, attributes, "is_superuser")
             if is_superuser is not None:
                 user.is_superuser = _convert_to_boolean(is_superuser)
 
@@ -81,18 +78,18 @@ def provision_user_from_sso(sso_provider, attributes, name_id, request):
 
             # Log JIT provisioning
             SSOAuditLog.log_event(
-                'jit_provisioning',
+                "jit_provisioning",
                 f"User {email} provisioned via JIT from {sso_provider.name}",
                 sso_provider=sso_provider,
                 user=user,
                 request=request,
                 details={
-                    'attributes': attributes,
-                    'name_id': name_id,
-                    'username': username,
-                    'default_role': sso_provider.jit_default_role,
-                    'groups': list(user.groups.values_list('name', flat=True))
-                }
+                    "attributes": attributes,
+                    "name_id": name_id,
+                    "username": username,
+                    "default_role": sso_provider.jit_default_role,
+                    "groups": list(user.groups.values_list("name", flat=True)),
+                },
             )
 
             return user
@@ -100,12 +97,12 @@ def provision_user_from_sso(sso_provider, attributes, name_id, request):
     except Exception as e:
         logger.error(f"JIT provisioning failed: {str(e)}")
         SSOAuditLog.log_event(
-            'error',
+            "error",
             f"JIT provisioning failed: {str(e)}",
             sso_provider=sso_provider,
             request=request,
             success=False,
-            error_message=str(e)
+            error_message=str(e),
         )
         return None
 
@@ -116,7 +113,7 @@ def apply_role_mappings(user, sso_provider, attributes):
     """
     try:
         # Get groups attribute value
-        groups_value = get_mapped_attribute_value(sso_provider, attributes, 'groups')
+        groups_value = get_mapped_attribute_value(sso_provider, attributes, "groups")
         if not groups_value:
             return
 
@@ -124,7 +121,7 @@ def apply_role_mappings(user, sso_provider, attributes):
         group_names = []
         if isinstance(groups_value, str):
             # Handle comma-separated string
-            group_names = [name.strip() for name in groups_value.split(',')]
+            group_names = [name.strip() for name in groups_value.split(",")]
         elif isinstance(groups_value, list):
             # Handle list of group names
             group_names = groups_value
@@ -143,7 +140,7 @@ def apply_role_mappings(user, sso_provider, attributes):
                 logger.info(f"Added user {user.email} to group {django_group_name}")
             except Group.DoesNotExist:
                 # Optionally create group automatically
-                if getattr(settings, 'SSO_AUTO_CREATE_GROUPS', False):
+                if getattr(settings, "SSO_AUTO_CREATE_GROUPS", False):
                     group = Group.objects.create(name=django_group_name)
                     user.groups.add(group)
                     logger.info(f"Created and added user {user.email} to group {django_group_name}")
@@ -165,14 +162,14 @@ def transform_group_name(sso_group_name):
     # - Remove domain prefixes
 
     name = sso_group_name.lower()
-    name = name.replace(' ', '_')
-    name = name.replace('-', '_')
+    name = name.replace(" ", "_")
+    name = name.replace("-", "_")
 
     # Remove common prefixes
-    prefixes_to_remove = ['domain\\', 'company_', 'org_']
+    prefixes_to_remove = ["domain\\", "company_", "org_"]
     for prefix in prefixes_to_remove:
         if name.startswith(prefix):
-            name = name[len(prefix):]
+            name = name[len(prefix) :]
 
     return name
 
@@ -184,7 +181,7 @@ def _convert_to_boolean(value):
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
-        return value.lower() in ('true', '1', 'yes', 'on')
+        return value.lower() in ("true", "1", "yes", "on")
     return bool(value)
 
 
@@ -193,10 +190,7 @@ def get_mapped_attribute_value(sso_provider, attributes, field_name):
     Get attribute value based on mapping configuration.
     """
     try:
-        mapping = AttributeMapping.objects.get(
-            sso_provider=sso_provider,
-            user_field=field_name
-        )
+        mapping = AttributeMapping.objects.get(sso_provider=sso_provider, user_field=field_name)
 
         # Get attribute value
         sso_attr = mapping.sso_attribute
@@ -210,7 +204,7 @@ def get_mapped_attribute_value(sso_provider, attributes, field_name):
         if mapping.transform_expression and value:
             try:
                 # Safe evaluation of transform expression
-                local_vars = {'value': value, 'attributes': attributes}
+                local_vars = {"value": value, "attributes": attributes}
                 value = eval(mapping.transform_expression, {"__builtins__": {}}, local_vars)
             except Exception as e:
                 logger.error(f"Transform expression error: {str(e)}")
@@ -220,10 +214,26 @@ def get_mapped_attribute_value(sso_provider, attributes, field_name):
     except AttributeMapping.DoesNotExist:
         # Use default attribute names for common fields
         default_mappings = {
-            'email': ['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress', 'email', 'mail'],
-            'first_name': ['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname', 'firstName', 'given_name'],
-            'last_name': ['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname', 'lastName', 'family_name'],
-            'username': ['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name', 'username', 'preferred_username']
+            "email": [
+                "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+                "email",
+                "mail",
+            ],
+            "first_name": [
+                "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname",
+                "firstName",
+                "given_name",
+            ],
+            "last_name": [
+                "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname",
+                "lastName",
+                "family_name",
+            ],
+            "username": [
+                "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
+                "username",
+                "preferred_username",
+            ],
         }
 
         if field_name in default_mappings:
@@ -239,7 +249,7 @@ def generate_saml_metadata(sso_provider):
     """
     Generate SAML metadata XML for service provider.
     """
-    if not hasattr(sso_provider, 'saml_config'):
+    if not hasattr(sso_provider, "saml_config"):
         return None
 
     saml_config = sso_provider.saml_config
@@ -249,7 +259,7 @@ def generate_saml_metadata(sso_provider):
         saml_config.generate_sp_urls()
         saml_config.save()
 
-    metadata_template = '''<?xml version="1.0" encoding="UTF-8"?>
+    metadata_template = """<?xml version="1.0" encoding="UTF-8"?>
 <md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
                      xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
                      entityID="{entity_id}">
@@ -273,26 +283,26 @@ def generate_saml_metadata(sso_provider):
             isDefault="true"/>
 
     </md:SPSSODescriptor>
-</md:EntityDescriptor>'''
+</md:EntityDescriptor>"""
 
     # Include certificate if available
     certificate_section = ""
     if saml_config.sp_x509_cert:
-        certificate_section = f'''<md:KeyDescriptor use="signing">
+        certificate_section = f"""<md:KeyDescriptor use="signing">
             <ds:KeyInfo>
                 <ds:X509Data>
                     <ds:X509Certificate>{saml_config.sp_x509_cert.strip()}</ds:X509Certificate>
                 </ds:X509Data>
             </ds:KeyInfo>
-        </md:KeyDescriptor>'''
+        </md:KeyDescriptor>"""
 
     return metadata_template.format(
         entity_id=saml_config.sp_entity_id,
-        authn_requests_signed='true' if saml_config.authn_requests_signed else 'false',
-        want_assertions_signed='true' if saml_config.want_assertions_signed else 'false',
+        authn_requests_signed="true" if saml_config.authn_requests_signed else "false",
+        want_assertions_signed="true" if saml_config.want_assertions_signed else "false",
         certificate_section=certificate_section,
         sls_url=saml_config.sp_sls_url,
-        acs_url=saml_config.sp_acs_url
+        acs_url=saml_config.sp_acs_url,
     )
 
 
@@ -302,30 +312,30 @@ def create_default_attribute_mappings(sso_provider):
     """
     default_mappings = [
         {
-            'sso_attribute': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
-            'user_field': 'email',
-            'is_required': True
+            "sso_attribute": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+            "user_field": "email",
+            "is_required": True,
         },
         {
-            'sso_attribute': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname',
-            'user_field': 'first_name',
-            'is_required': False
+            "sso_attribute": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname",
+            "user_field": "first_name",
+            "is_required": False,
         },
         {
-            'sso_attribute': 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
-            'user_field': 'last_name',
-            'is_required': False
-        }
+            "sso_attribute": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname",
+            "user_field": "last_name",
+            "is_required": False,
+        },
     ]
 
     for mapping_data in default_mappings:
         AttributeMapping.objects.get_or_create(
             sso_provider=sso_provider,
-            sso_attribute=mapping_data['sso_attribute'],
+            sso_attribute=mapping_data["sso_attribute"],
             defaults={
-                'user_field': mapping_data['user_field'],
-                'is_required': mapping_data['is_required']
-            }
+                "user_field": mapping_data["user_field"],
+                "is_required": mapping_data["is_required"],
+            },
         )
 
 
@@ -335,8 +345,8 @@ def validate_sso_configuration(sso_provider):
     """
     errors = []
 
-    if sso_provider.provider_type == 'saml':
-        if not hasattr(sso_provider, 'saml_config'):
+    if sso_provider.provider_type == "saml":
+        if not hasattr(sso_provider, "saml_config"):
             errors.append("SAML configuration is required")
         else:
             saml_config = sso_provider.saml_config
@@ -347,8 +357,8 @@ def validate_sso_configuration(sso_provider):
             if not saml_config.idp_x509_cert:
                 errors.append("Identity Provider X.509 certificate is required")
 
-    elif sso_provider.provider_type == 'oauth':
-        if not hasattr(sso_provider, 'oauth_config'):
+    elif sso_provider.provider_type == "oauth":
+        if not hasattr(sso_provider, "oauth_config"):
             errors.append("OAuth configuration is required")
         else:
             oauth_config = sso_provider.oauth_config
@@ -369,8 +379,7 @@ def validate_sso_configuration(sso_provider):
     if sso_provider.enable_jit_provisioning:
         try:
             email_mapping = AttributeMapping.objects.get(
-                sso_provider=sso_provider,
-                user_field='email'
+                sso_provider=sso_provider, user_field="email"
             )
         except AttributeMapping.DoesNotExist:
             errors.append("Email attribute mapping is required for JIT provisioning")
@@ -384,13 +393,10 @@ def cleanup_expired_sso_sessions():
     """
     from .models import SSOSession
 
-    expired_sessions = SSOSession.objects.filter(
-        status='active',
-        expires_at__lt=timezone.now()
-    )
+    expired_sessions = SSOSession.objects.filter(status="active", expires_at__lt=timezone.now())
 
     count = expired_sessions.count()
-    expired_sessions.update(status='expired')
+    expired_sessions.update(status="expired")
 
     logger.info(f"Cleaned up {count} expired SSO sessions")
     return count

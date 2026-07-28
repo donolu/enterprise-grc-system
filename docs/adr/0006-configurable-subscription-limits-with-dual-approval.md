@@ -27,13 +27,13 @@ We have implemented a comprehensive **Database-Driven Configurable Limits System
 ```python
 class Subscription(models.Model):
     # ... existing fields ...
-    
+
     # Custom limit overrides (null = use plan default)
     custom_max_users = models.PositiveIntegerField(null=True, blank=True)
-    custom_max_documents = models.PositiveIntegerField(null=True, blank=True) 
+    custom_max_documents = models.PositiveIntegerField(null=True, blank=True)
     custom_max_frameworks = models.PositiveIntegerField(null=True, blank=True)
     custom_max_storage_gb = models.PositiveIntegerField(null=True, blank=True)
-    
+
     def get_effective_user_limit(self):
         return self.custom_max_users or self.plan.max_users
 ```
@@ -46,17 +46,17 @@ class LimitOverrideRequest(models.Model):
     limit_type = models.CharField(max_length=20, choices=LIMIT_TYPES)
     current_limit = models.PositiveIntegerField()
     requested_limit = models.PositiveIntegerField()
-    
+
     # Business context
     business_justification = models.TextField()
     urgency = models.CharField(max_length=10, choices=URGENCY_CHOICES)
     temporary = models.BooleanField(default=False)
     expires_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Dual approval tracking
     first_approver = models.CharField(max_length=255, blank=True)
     first_approved_at = models.DateTimeField(null=True, blank=True)
-    second_approver = models.CharField(max_length=255, blank=True)  
+    second_approver = models.CharField(max_length=255, blank=True)
     second_approved_at = models.DateTimeField(null=True, blank=True)
 ```
 
@@ -158,7 +158,7 @@ ADMIN_NOTIFICATION_EMAILS = ["admin@company.com"]
 - **Cons**: Requires deployment for changes, not tenant-specific
 - **Rejected**: Insufficient flexibility for multi-tenant SaaS needs
 
-### Single Approval Workflow  
+### Single Approval Workflow
 - **Pros**: Faster approval process, less complexity
 - **Cons**: Single point of failure, higher abuse risk
 - **Rejected**: Insufficient governance for financial impacts
@@ -269,6 +269,6 @@ ADMIN_NOTIFICATION_EMAILS=admin@company.com,devops@company.com
 
 ## References
 - Story 0.5: Setup Subscription & Billing (Stripe)
-- ADR-0005: Stripe Subscription Billing System  
+- ADR-0005: Stripe Subscription Billing System
 - Django Multi-Tenant Architecture Documentation
 - Database Design Patterns for Approval Workflows

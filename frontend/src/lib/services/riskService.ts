@@ -81,7 +81,7 @@ export const riskService = {
   async getRisks(filters: RiskFilters = {}): Promise<PaginatedResponse<Risk>> {
     try {
       const params = new URLSearchParams()
-      
+
       if (filters.riskLevel?.length) {
         params.append('risk_level', filters.riskLevel.join(','))
       }

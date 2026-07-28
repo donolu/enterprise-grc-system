@@ -40,16 +40,12 @@ class CatalogueAnalyticsService:
         today = now or timezone.now().date()
         return {
             "total_assessments": ControlAssessment.objects.count(),
-            "active_assessments": ControlAssessment.objects.filter(
-                status="in_progress"
-            ).count(),
-            "completed_assessments": ControlAssessment.objects.filter(
-                status="complete"
-            ).count(),
+            "active_assessments": ControlAssessment.objects.filter(status="in_progress").count(),
+            "completed_assessments": ControlAssessment.objects.filter(status="complete").count(),
             "overdue_assessments": CatalogueAnalyticsService.overdue_assessment_count(today),
-            "avg_completion_rate": ControlAssessment.objects.filter(
-                status="complete"
-            ).aggregate(avg_score=Avg("compliance_score"))["avg_score"]
+            "avg_completion_rate": ControlAssessment.objects.filter(status="complete").aggregate(
+                avg_score=Avg("compliance_score")
+            )["avg_score"]
             or 0,
         }
 
@@ -91,9 +87,7 @@ class CatalogueAnalyticsService:
         for framework in framework_stats:
             total = framework["total_assessments"]
             framework["completion_rate"] = (
-                round((framework["completed_assessments"] / total) * 100, 1)
-                if total > 0
-                else 0
+                round((framework["completed_assessments"] / total) * 100, 1) if total > 0 else 0
             )
 
         control_effectiveness = list(
@@ -155,12 +149,8 @@ class CatalogueAnalyticsService:
                 "total_frameworks": Framework.objects.count(),
                 "active_frameworks": Framework.objects.filter(status="active").count(),
                 "total_controls": Control.objects.count(),
-                "automated_controls": Control.objects.filter(
-                    automation_level="automated"
-                ).count(),
-                "avg_maturity_score": Control.objects.aggregate(
-                    avg=Avg(_maturity_score())
-                )["avg"]
+                "automated_controls": Control.objects.filter(automation_level="automated").count(),
+                "avg_maturity_score": Control.objects.aggregate(avg=Avg(_maturity_score()))["avg"]
                 or 0,
             },
             "generated_at": today.isoformat(),
@@ -183,9 +173,11 @@ class CatalogueAnalyticsService:
 
     @staticmethod
     def automation_rate_percentage():
-        return Control.objects.filter(automation_level="automated").count() / max(
-            Control.objects.count(), 1
-        ) * 100
+        return (
+            Control.objects.filter(automation_level="automated").count()
+            / max(Control.objects.count(), 1)
+            * 100
+        )
 
     @staticmethod
     def framework_risk_correlation(now=None):

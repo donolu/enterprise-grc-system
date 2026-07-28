@@ -4,21 +4,20 @@ from . import views
 
 # Create router and register viewsets
 router = DefaultRouter()
-router.register(r'frameworks', views.FrameworkViewSet)
-router.register(r'clauses', views.ClauseViewSet)
-router.register(r'controls', views.ControlViewSet)
-router.register(r'evidence', views.ControlEvidenceViewSet)
-router.register(r'template-documents', views.TemplateDocumentViewSet, basename='template-documents')
-router.register(r'mappings', views.FrameworkMappingViewSet)
-router.register(r'assessments', views.ControlAssessmentViewSet)
-router.register(r'assessment-evidence', views.AssessmentEvidenceViewSet)
+router.register(r"frameworks", views.FrameworkViewSet)
+router.register(r"clauses", views.ClauseViewSet)
+router.register(r"controls", views.ControlViewSet)
+router.register(r"evidence", views.ControlEvidenceViewSet)
+router.register(r"template-documents", views.TemplateDocumentViewSet, basename="template-documents")
+router.register(r"mappings", views.FrameworkMappingViewSet)
+router.register(r"assessments", views.ControlAssessmentViewSet)
+router.register(r"assessment-evidence", views.AssessmentEvidenceViewSet)
 
-app_name = 'catalogs'
+app_name = "catalogs"
 
 urlpatterns = [
     # API endpoints
-    path('api/', include(router.urls)),
-    
+    path("api/", include(router.urls)),
     # Additional stats endpoint
-    path('api/stats/', views.framework_stats, name='framework-stats'),
+    path("api/stats/", views.framework_stats, name="framework-stats"),
 ]

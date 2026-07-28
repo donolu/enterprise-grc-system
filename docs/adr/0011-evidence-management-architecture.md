@@ -40,7 +40,7 @@ def upload_evidence(self, request, pk=None):
 
 #### 2. Bulk Operations Architecture
 ```python
-@action(detail=True, methods=['post']) 
+@action(detail=True, methods=['post'])
 def bulk_upload_evidence(self, request, pk=None):
     """Upload multiple evidence files to assessment."""
     # Process files individually with detailed success/error reporting
@@ -82,7 +82,7 @@ def mark_as_primary_evidence(self, request, queryset):
 ```
 POST   /api/catalogs/assessments/{id}/upload_evidence/        # Direct upload
 POST   /api/catalogs/assessments/{id}/bulk_upload_evidence/   # Bulk upload
-GET    /api/catalogs/assessments/{id}/evidence/               # List evidence  
+GET    /api/catalogs/assessments/{id}/evidence/               # List evidence
 DELETE /api/catalogs/assessments/{id}/remove_evidence/        # Remove link
 POST   /api/catalogs/assessments/{id}/link_evidence/          # Link existing
 GET    /api/catalogs/evidence/{id}/assessments/               # Cross-reference
@@ -119,7 +119,7 @@ class AssessmentEvidence(models.Model):
     // ... other assessment fields
 }
 
-# Assessment Detail Response  
+# Assessment Detail Response
 {
     "evidence_count": 3,
     "primary_evidence": {
@@ -136,7 +136,7 @@ class AssessmentEvidence(models.Model):
 {
     "files": [file1, file2, file3],
     "title_0": "Document 1",
-    "title_1": "Document 2", 
+    "title_1": "Document 2",
     "evidence_type_0": "document",
     "evidence_type_1": "report"
 }
@@ -215,19 +215,19 @@ class AssessmentEvidence(models.Model):
 ```python
 class EvidenceManagementAPITest(APITestCase):
     """Comprehensive evidence management API testing."""
-    
+
     def test_direct_evidence_upload(self):
         """Test single file upload to assessment."""
-        
+
     def test_bulk_evidence_upload(self):
         """Test multi-file upload functionality."""
-        
+
     def test_assessment_evidence_listing(self):
         """Test evidence listing for assessments."""
-        
+
     def test_evidence_cross_referencing(self):
         """Test evidence usage across assessments."""
-        
+
     def test_api_response_enhancements(self):
         """Test evidence info in assessment responses."""
 ```
@@ -275,7 +275,7 @@ class EvidenceManagementAPITest(APITestCase):
 
 ## References
 - ADR-0009: Control Assessment Architecture
-- ADR-0002: User-Tenant Relationship via Schema Isolation  
+- ADR-0002: User-Tenant Relationship via Schema Isolation
 - ADR-0008: Framework & Control Catalog Architecture
 - Story 1.2: Control Assessments Implementation
 - Story 0.6: Document Storage (Azure Blob) Implementation

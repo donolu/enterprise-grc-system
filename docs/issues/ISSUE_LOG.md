@@ -147,5 +147,5 @@ Implemented enhanced TOTP service using `pyotp` library:
 
 ---
 
-*Last Updated: 2025-08-22*  
+*Last Updated: 2025-08-22*
 *Next Review: Weekly on Mondays*

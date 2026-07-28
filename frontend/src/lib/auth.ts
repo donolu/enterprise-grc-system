@@ -21,10 +21,10 @@ export async function login(email: string, password: string, otp?: string) {
     method: "POST",
     credentials: "include", // set refresh cookie on server
     headers,
-    body: JSON.stringify({ 
+    body: JSON.stringify({
       username: email,  // Django expects username field
-      password, 
-      otp 
+      password,
+      otp
     }),
   });
   if (!r.ok) throw new Error("Login failed");

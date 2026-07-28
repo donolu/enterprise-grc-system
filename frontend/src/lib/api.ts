@@ -77,11 +77,11 @@ api.interceptors.response.use(
         queue.push(() => resolve(api(original)));
       });
     }
-    
+
     // Enhanced error handling for different status codes
     if (err.response) {
       const { status, data } = err.response;
-      
+
       // Log errors in development
       if (process.env.NODE_ENV === 'development') {
         console.group(`🚨 API Error ${status}`);
@@ -92,10 +92,10 @@ api.interceptors.response.use(
         console.error('Headers:', err.config?.headers);
         console.groupEnd();
       }
-      
+
       // Create structured API exception
       const apiError = new APIException(status, data as APIError);
-      
+
       // Handle specific status codes
       switch (status) {
         case 400:
@@ -127,19 +127,19 @@ api.interceptors.response.use(
         default:
           console.error('Unexpected error:', status, data);
       }
-      
+
       return Promise.reject(apiError);
     } else if (err.request) {
       // Network error
       console.error('Network error - check your connection');
-      const networkError = new APIException(0, { 
+      const networkError = new APIException(0, {
         message: 'Network error - please check your connection and try again'
       });
       return Promise.reject(networkError);
     } else {
       // Request setup error
       console.error('Request setup error:', err.message);
-      const setupError = new APIException(0, { 
+      const setupError = new APIException(0, {
         message: 'Request setup error - please try again'
       });
       return Promise.reject(setupError);

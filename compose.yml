@@ -66,7 +66,7 @@ services:
     env_file: .env.dev
     ports: ["5555:5555"]
     depends_on: [redis]
-  
+
   frontend:
     build: ./frontend
     env_file: ./frontend/.env.local

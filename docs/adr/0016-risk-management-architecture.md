@@ -39,7 +39,7 @@ class RiskMatrix(models.Model):
     impact_levels = models.PositiveIntegerField(default=5)
     likelihood_levels = models.PositiveIntegerField(default=5)
     matrix_config = models.JSONField(default=dict)
-    
+
     def calculate_risk_level(self, impact, likelihood):
         """Calculate risk level based on matrix configuration."""
         return self.matrix_config.get(str(impact), {}).get(str(likelihood), 'medium')
@@ -60,11 +60,11 @@ class Risk(models.Model):
     treatment_strategy = models.CharField(max_length=20, choices=TREATMENT_STRATEGIES)
     risk_owner = models.ForeignKey(User, related_name='owned_risks')
     next_review_date = models.DateField(null=True, blank=True)
-    
+
     @property
     def risk_score(self):
         return self.impact * self.likelihood
-    
+
     @property
     def is_overdue_for_review(self):
         return self.next_review_date and self.next_review_date < timezone.now().date()
@@ -76,7 +76,7 @@ class Risk(models.Model):
 ```python
 class RiskViewSet(viewsets.ModelViewSet):
     """Comprehensive risk management with advanced capabilities."""
-    
+
     @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None):
         """Update risk status with automatic note creation."""
@@ -86,7 +86,7 @@ class RiskViewSet(viewsets.ModelViewSet):
             updated_risk = serializer.update_risk_status(risk)
             # Automatic note creation for audit trail
             return Response(RiskDetailSerializer(updated_risk).data)
-    
+
     @action(detail=False, methods=['post'])
     def bulk_create(self, request):
         """Efficient bulk risk creation with validation."""
@@ -111,7 +111,7 @@ class RiskFilter(django_filters.FilterSet):
     overdue_review = django_filters.BooleanFilter(method='filter_overdue_review')
     high_priority = django_filters.BooleanFilter(method='filter_high_priority')
     my_risks = django_filters.BooleanFilter(method='filter_my_risks')
-    
+
     def filter_overdue_review(self, queryset, name, value):
         if value:
             return queryset.filter(next_review_date__lt=timezone.now().date())
@@ -129,7 +129,7 @@ class RiskNote(models.Model):
     note_type = models.CharField(max_length=30, choices=NOTE_TYPES, default='general')
     created_by = models.ForeignKey(User, related_name='risk_notes')
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-created_at']
 ```
@@ -144,23 +144,23 @@ def save(self, *args, **kwargs):
     # Auto-generate risk_id if not provided
     if not self.risk_id:
         self.risk_id = self._generate_risk_id()
-    
+
     # Calculate risk level based on impact and likelihood
     self.risk_level = self._calculate_risk_level()
-    
+
     # Update assessment dates
     if self.pk:
         original = Risk.objects.get(pk=self.pk)
         if original.impact != self.impact or original.likelihood != self.likelihood:
             self.last_assessed_date = timezone.now().date()
-    
+
     super().save(*args, **kwargs)
 
 def _calculate_risk_level(self):
     """Intelligent risk level calculation with matrix support."""
     if self.risk_matrix:
         return self.risk_matrix.calculate_risk_level(self.impact, self.likelihood)
-    
+
     # Fallback calculation using default logic
     total = self.impact + self.likelihood
     if total <= 3:
@@ -231,13 +231,13 @@ class RiskAdmin(admin.ModelAdmin):
         'risk_id', 'title', 'risk_level_colored', 'risk_score_display',
         'status_colored', 'risk_owner_display', 'next_review_display'
     ]
-    
+
     def risk_level_colored(self, obj):
         """Color-coded risk level display."""
         colors = {'low': '#10B981', 'medium': '#F59E0B', 'high': '#EF4444', 'critical': '#DC2626'}
-        return format_html('<span style="color: {};">{}</span>', 
+        return format_html('<span style="color: {};">{}</span>',
                           colors.get(obj.risk_level), obj.get_risk_level_display())
-    
+
     def next_review_display(self, obj):
         """Overdue review warning display."""
         if obj.is_overdue_for_review:
@@ -249,7 +249,7 @@ class RiskAdmin(admin.ModelAdmin):
 ```python
 actions = [
     'mark_as_assessed',
-    'mark_as_treatment_planned', 
+    'mark_as_treatment_planned',
     'mark_as_mitigated',
     'set_next_review_date',
     'bulk_assign_owner',
@@ -299,7 +299,7 @@ def mark_as_mitigated(self, request, queryset):
 - **Bulk Operations**: Efficient batch processing for large risk sets
 - **Storage Efficiency**: JSON field usage for flexible matrix configuration
 
-#### 2. **API Performance** 
+#### 2. **API Performance**
 - **Response Optimization**: Serializer selection based on use case
 - **Filtering Efficiency**: Database-level filtering with proper indexing
 - **Pagination Support**: Large dataset handling with performance
@@ -324,7 +324,7 @@ def mark_as_mitigated(self, request, queryset):
 ### 1. Simple Risk List Approach (Rejected)
 **Rejected**: Basic risk list without matrices or advanced calculations would not support sophisticated organizational risk management requirements.
 
-### 2. Fixed Risk Matrix (Rejected)  
+### 2. Fixed Risk Matrix (Rejected)
 **Rejected**: Single fixed matrix approach would not accommodate different organizational risk assessment methodologies and standards.
 
 ### 3. External Risk Management Integration (Rejected)
@@ -338,7 +338,7 @@ def mark_as_mitigated(self, request, queryset):
 ### Positive
 - **Comprehensive Risk Management**: Complete risk lifecycle from identification to closure
 - **Flexible Assessment**: Configurable matrices support various organizational approaches
-- **Integration Ready**: Foundation prepared for risk treatment actions and notifications  
+- **Integration Ready**: Foundation prepared for risk treatment actions and notifications
 - **Professional Interface**: Enterprise-grade admin interface with visual indicators
 - **Analytics Capability**: Risk reporting and analytics for governance and decision-making
 - **Performance Optimized**: Strategic indexing and query optimization for scalability
@@ -392,20 +392,20 @@ def mark_as_mitigated(self, request, queryset):
 class RiskModelTest(TestCase):
     def test_risk_creation(self):
         """Test risk creation with automatic calculations."""
-    
+
     def test_risk_level_calculation(self):
         """Test risk level calculation with different matrices."""
-    
+
     def test_risk_properties(self):
         """Test calculated properties and status workflow."""
 
 class RiskAPITest(APITestCase):
     def test_risk_list_endpoint(self):
         """Test listing risks with filtering."""
-    
+
     def test_risk_status_update(self):
         """Test status updates with note creation."""
-    
+
     def test_bulk_risk_creation(self):
         """Test bulk operation functionality."""
 ```
@@ -427,7 +427,7 @@ class RiskAPITest(APITestCase):
 
 ### Phase 2: Advanced Features (Completed)
 1. Configurable risk matrices with calculation engine
-2. Advanced filtering and search capabilities  
+2. Advanced filtering and search capabilities
 3. Bulk operations and administrative efficiency
 4. Comprehensive API documentation and testing
 
@@ -441,7 +441,7 @@ class RiskAPITest(APITestCase):
 
 ### Planned Improvements (Story 2.2)
 1. **Risk Treatment Actions**: RiskAction model with due dates and assignments
-2. **Notification System**: Integration with existing reminder infrastructure  
+2. **Notification System**: Integration with existing reminder infrastructure
 3. **Evidence Integration**: Risk remediation evidence using existing evidence management
 4. **Advanced Reporting**: Risk reporting within existing report generation system
 

@@ -183,7 +183,7 @@
             <div class="action-title">
                 {{ action.action_id }}: {{ action.title }}
             </div>
-            
+
             <div class="action-details">
                 <div class="detail-item">
                     <span class="detail-label">Priority</span>
@@ -191,12 +191,12 @@
                         <span class="priority-badge priority-{{ action.priority }}">{{ action.get_priority_display }}</span>
                     </span>
                 </div>
-                
+
                 <div class="detail-item">
                     <span class="detail-label">Status</span>
                     <span class="detail-value">{{ action.get_status_display }}</span>
                 </div>
-                
+
                 <div class="detail-item">
                     <span class="detail-label">Due Date</span>
                     <span class="detail-value">
@@ -210,7 +210,7 @@
                         {% endif %}
                     </span>
                 </div>
-                
+
                 <div class="detail-item">
                     <span class="detail-label">Action Type</span>
                     <span class="detail-value">{{ action.get_action_type_display }}</span>

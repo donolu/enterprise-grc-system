@@ -7,14 +7,15 @@ import sys
 import django
 
 # Add app directory to path and setup Django
-sys.path.insert(0, '/Users/deji/Dev/aximcyber/app')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings.test')
+sys.path.insert(0, "/Users/deji/Dev/aximcyber/app")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "app.settings.test")
 
 try:
     django.setup()
 except Exception as e:
     print(f"Django setup failed: {e}")
     # Continue with basic validation
+
 
 def run_all_tests():
     """Run all SSO validation tests."""
@@ -26,13 +27,21 @@ def run_all_tests():
     print("1. Testing SSO models:")
     try:
         from sso.models import (
-            SSOProvider, SAMLProvider, OAuthProvider,
-            AttributeMapping, SSOSession, SSOAuditLog
+            SSOProvider,
+            SAMLProvider,
+            OAuthProvider,
+            AttributeMapping,
+            SSOSession,
+            SSOAuditLog,
         )
 
         models = [
-            'SSOProvider', 'SAMLProvider', 'OAuthProvider',
-            'AttributeMapping', 'SSOSession', 'SSOAuditLog'
+            "SSOProvider",
+            "SAMLProvider",
+            "OAuthProvider",
+            "AttributeMapping",
+            "SSOSession",
+            "SSOAuditLog",
         ]
 
         for model_name in models:
@@ -40,7 +49,7 @@ def run_all_tests():
             print(f"   ✅ {model_name} model defined")
 
             # Check key fields exist
-            if hasattr(model, '_meta'):
+            if hasattr(model, "_meta"):
                 field_names = [f.name for f in model._meta.fields]
                 print(f"      Fields: {len(field_names)} defined")
 
@@ -61,9 +70,9 @@ def run_all_tests():
         oauth_backend = OAuthBackend()
 
         # Check required methods exist
-        required_methods = ['authenticate', 'get_user']
+        required_methods = ["authenticate", "get_user"]
 
-        for backend, name in [(saml_backend, 'SAML'), (oauth_backend, 'OAuth')]:
+        for backend, name in [(saml_backend, "SAML"), (oauth_backend, "OAuth")]:
             for method in required_methods:
                 if hasattr(backend, method):
                     print(f"   ✅ {name} backend has {method}() method")
@@ -81,13 +90,17 @@ def run_all_tests():
     print("3. Testing SSO utility functions:")
     try:
         from sso.utils import (
-            provision_user_from_sso, get_mapped_attribute_value,
-            generate_saml_metadata, validate_sso_configuration
+            provision_user_from_sso,
+            get_mapped_attribute_value,
+            generate_saml_metadata,
+            validate_sso_configuration,
         )
 
         utils = [
-            'provision_user_from_sso', 'get_mapped_attribute_value',
-            'generate_saml_metadata', 'validate_sso_configuration'
+            "provision_user_from_sso",
+            "get_mapped_attribute_value",
+            "generate_saml_metadata",
+            "validate_sso_configuration",
         ]
 
         for util_name in utils:
@@ -109,8 +122,14 @@ def run_all_tests():
         from sso import views
 
         required_views = [
-            'sso_login_select', 'saml_login', 'saml_acs', 'saml_metadata',
-            'oauth_login', 'oauth_callback', 'sso_logout', 'sso_status'
+            "sso_login_select",
+            "saml_login",
+            "saml_acs",
+            "saml_metadata",
+            "oauth_login",
+            "oauth_callback",
+            "sso_logout",
+            "sso_status",
         ]
 
         for view_name in required_views:
@@ -133,13 +152,14 @@ def run_all_tests():
         from django.contrib import admin as django_admin
 
         # Check if models are registered
-        admin_models = [
-            'SSOProvider', 'AttributeMapping', 'SSOSession', 'SSOAuditLog'
-        ]
+        admin_models = ["SSOProvider", "AttributeMapping", "SSOSession", "SSOAuditLog"]
 
         registered_models = django_admin.site._registry
-        sso_registered = [model.__name__ for model in registered_models
-                         if model.__module__.startswith('sso.models')]
+        sso_registered = [
+            model.__name__
+            for model in registered_models
+            if model.__module__.startswith("sso.models")
+        ]
 
         for model_name in admin_models:
             if any(model_name in registered for registered in sso_registered):
@@ -160,8 +180,10 @@ def run_all_tests():
         from sso import tasks
 
         task_functions = [
-            'cleanup_expired_sessions', 'cleanup_old_audit_logs',
-            'generate_sso_usage_report', 'validate_sso_configurations'
+            "cleanup_expired_sessions",
+            "cleanup_old_audit_logs",
+            "generate_sso_usage_report",
+            "validate_sso_configurations",
         ]
 
         for task_name in task_functions:
@@ -182,19 +204,17 @@ def run_all_tests():
     try:
         from sso import urls
 
-        if hasattr(urls, 'urlpatterns'):
+        if hasattr(urls, "urlpatterns"):
             url_count = len(urls.urlpatterns)
             print(f"   ✅ {url_count} URL patterns defined")
 
             # Check for key endpoints
             url_names = []
             for pattern in urls.urlpatterns:
-                if hasattr(pattern, 'name') and pattern.name:
+                if hasattr(pattern, "name") and pattern.name:
                     url_names.append(pattern.name)
 
-            key_endpoints = [
-                'login_select', 'saml_login', 'saml_acs', 'oauth_login'
-            ]
+            key_endpoints = ["login_select", "saml_login", "saml_acs", "oauth_login"]
 
             for endpoint in key_endpoints:
                 if endpoint in url_names:
@@ -214,10 +234,10 @@ def run_all_tests():
     # Test 8: Check dependencies
     print("8. Testing SSO dependencies:")
     dependencies = [
-        ('onelogin.saml2.auth', 'python3-saml'),
-        ('social_django', 'social-auth-app-django'),
-        ('jwt', 'PyJWT'),
-        ('cryptography', 'cryptography')
+        ("onelogin.saml2.auth", "python3-saml"),
+        ("social_django", "social-auth-app-django"),
+        ("jwt", "PyJWT"),
+        ("cryptography", "cryptography"),
     ]
 
     for module, package in dependencies:

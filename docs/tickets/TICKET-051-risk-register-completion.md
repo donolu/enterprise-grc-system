@@ -47,7 +47,7 @@ Successfully implemented comprehensive risk register functionality with intellig
   def calculate_risk_level(self, impact, likelihood):
       """Calculate risk level using configurable matrices"""
       return self.risk_matrix.calculate_risk_level(impact, likelihood)
-  
+
   @property
   def risk_score(self):
       """Numerical risk score (impact * likelihood)"""
@@ -148,7 +148,7 @@ def _calculate_risk_level(self):
     """Calculate risk level based on impact, likelihood, and matrix"""
     if self.risk_matrix:
         return self.risk_matrix.calculate_risk_level(self.impact, self.likelihood)
-    
+
     # Fallback calculation for standard assessment
     total = self.impact + self.likelihood
     if total <= 3:

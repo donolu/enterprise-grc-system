@@ -126,7 +126,7 @@ export const policyService = {
   async getPolicies(filters: PolicyFilters = {}): Promise<PaginatedResponse<Policy>> {
     try {
       const params = new URLSearchParams()
-      
+
       if (filters.status?.length) {
         params.append('status', filters.status.join(','))
       }
@@ -159,7 +159,7 @@ export const policyService = {
       return response.data
     } catch (error) {
       console.error('Error fetching policies:', error)
-      
+
       // Return mock data as fallback with Django model structure
       return {
         results: [
@@ -335,7 +335,7 @@ export const policyService = {
       if (policyId) {
         params.append('policy', policyId)
       }
-      
+
       const response = await api.get(`/policies/acknowledgments/?${params.toString()}`)
       return response.data
     } catch (error) {
@@ -385,7 +385,7 @@ export const policyService = {
       return response.data
     } catch (error) {
       console.error('Error fetching policy analytics:', error)
-      
+
       // Return mock analytics as fallback
       return {
         totalPolicies: 24,

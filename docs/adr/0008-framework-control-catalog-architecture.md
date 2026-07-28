@@ -57,7 +57,7 @@ framework:
   name: "ISO/IEC 27001:2022"
   version: "2022"
   clauses:
-    - clause_id: "A.8.1.1" 
+    - clause_id: "A.8.1.1"
       title: "Inventory of information assets"
       external_references:
         nist_csf: ["ID.AM-1"]
@@ -222,7 +222,7 @@ POST /api/catalogs/frameworks/                   # Create framework
 GET /api/catalogs/frameworks/{id}/clauses/       # Framework clauses
 GET /api/catalogs/frameworks/{id}/stats/         # Framework statistics
 
-# Control management  
+# Control management
 GET /api/catalogs/controls/needing_testing/      # Controls requiring testing
 POST /api/catalogs/controls/{id}/update_testing/ # Update testing results
 GET /api/catalogs/controls/by_effectiveness/     # Group by effectiveness

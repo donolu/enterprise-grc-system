@@ -18,13 +18,12 @@ class TrainingCategory(models.Model):
     """
     Categories for organizing training content.
     """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     color = models.CharField(
-        max_length=7,
-        default="#1890ff",
-        help_text="Hex color code for category display"
+        max_length=7, default="#1890ff", help_text="Hex color code for category display"
     )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -32,7 +31,7 @@ class TrainingCategory(models.Model):
 
     class Meta:
         verbose_name_plural = "Training Categories"
-        ordering = ['name']
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
@@ -42,58 +41,45 @@ class TrainingVideo(models.Model):
     """
     Training videos from Synthesia.io or other providers.
     """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    category = models.ForeignKey(
-        TrainingCategory,
-        on_delete=models.CASCADE,
-        related_name='videos'
-    )
+    category = models.ForeignKey(TrainingCategory, on_delete=models.CASCADE, related_name="videos")
 
     # Video source information
     video_provider = models.CharField(
         max_length=50,
         choices=[
-            ('synthesia', 'Synthesia.io'),
-            ('youtube', 'YouTube'),
-            ('vimeo', 'Vimeo'),
-            ('custom', 'Custom URL')
+            ("synthesia", "Synthesia.io"),
+            ("youtube", "YouTube"),
+            ("vimeo", "Vimeo"),
+            ("custom", "Custom URL"),
         ],
-        default='synthesia'
+        default="synthesia",
     )
-    video_url = models.URLField(
-        help_text="Full URL to the video or embed URL"
-    )
-    video_id = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text="Provider-specific video ID"
-    )
+    video_url = models.URLField(help_text="Full URL to the video or embed URL")
+    video_id = models.CharField(max_length=100, blank=True, help_text="Provider-specific video ID")
 
     # Content metadata
     duration_minutes = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="Video duration in minutes"
+        null=True, blank=True, help_text="Video duration in minutes"
     )
     difficulty_level = models.CharField(
         max_length=20,
         choices=[
-            ('beginner', 'Beginner'),
-            ('intermediate', 'Intermediate'),
-            ('advanced', 'Advanced')
+            ("beginner", "Beginner"),
+            ("intermediate", "Intermediate"),
+            ("advanced", "Advanced"),
         ],
-        default='beginner'
+        default="beginner",
     )
 
     # Content management
     is_published = models.BooleanField(default=False)
     published_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='created_training_videos'
+        User, on_delete=models.CASCADE, related_name="created_training_videos"
     )
 
     # Tracking
@@ -102,7 +88,7 @@ class TrainingVideo(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
 
     def __str__(self):
         return self.title
@@ -115,11 +101,11 @@ class TrainingVideo(models.Model):
     @property
     def embed_url(self):
         """Generate embed URL based on provider."""
-        if self.video_provider == 'youtube' and self.video_id:
+        if self.video_provider == "youtube" and self.video_id:
             return f"https://www.youtube.com/embed/{self.video_id}"
-        elif self.video_provider == 'vimeo' and self.video_id:
+        elif self.video_provider == "vimeo" and self.video_id:
             return f"https://player.vimeo.com/video/{self.video_id}"
-        elif self.video_provider == 'synthesia':
+        elif self.video_provider == "synthesia":
             # Synthesia.io embed format (may need adjustment based on their API)
             return self.video_url
         else:
@@ -130,6 +116,7 @@ class SecurityAwarenessCampaign(models.Model):
     """
     Email campaigns for security awareness content.
     """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -145,12 +132,12 @@ class SecurityAwarenessCampaign(models.Model):
     send_frequency = models.CharField(
         max_length=20,
         choices=[
-            ('weekly', 'Weekly'),
-            ('biweekly', 'Bi-weekly'),
-            ('monthly', 'Monthly'),
-            ('quarterly', 'Quarterly'),
+            ("weekly", "Weekly"),
+            ("biweekly", "Bi-weekly"),
+            ("monthly", "Monthly"),
+            ("quarterly", "Quarterly"),
         ],
-        default='monthly'
+        default="monthly",
     )
 
     # Scheduling
@@ -160,22 +147,17 @@ class SecurityAwarenessCampaign(models.Model):
 
     # Target audience
     send_to_all_users = models.BooleanField(
-        default=True,
-        help_text="If False, only send to specific users or groups"
+        default=True, help_text="If False, only send to specific users or groups"
     )
     target_users = models.ManyToManyField(
         User,
         blank=True,
-        related_name='awareness_campaigns',
-        help_text="Specific users to receive this campaign (if not sending to all)"
+        related_name="awareness_campaigns",
+        help_text="Specific users to receive this campaign (if not sending to all)",
     )
 
     # Campaign management
-    created_by = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='created_campaigns'
-    )
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_campaigns")
     total_sent = models.PositiveIntegerField(default=0)
     total_opened = models.PositiveIntegerField(default=0)
     total_clicked = models.PositiveIntegerField(default=0)
@@ -184,7 +166,7 @@ class SecurityAwarenessCampaign(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
 
     def __str__(self):
         return self.name
@@ -214,13 +196,13 @@ class SecurityAwarenessCampaign(models.Model):
         if not self.next_send_date:
             return None
 
-        if self.send_frequency == 'weekly':
+        if self.send_frequency == "weekly":
             return self.next_send_date + timedelta(weeks=1)
-        elif self.send_frequency == 'biweekly':
+        elif self.send_frequency == "biweekly":
             return self.next_send_date + timedelta(weeks=2)
-        elif self.send_frequency == 'monthly':
+        elif self.send_frequency == "monthly":
             return self.next_send_date + timedelta(days=30)
-        elif self.send_frequency == 'quarterly':
+        elif self.send_frequency == "quarterly":
             return self.next_send_date + timedelta(days=90)
 
         return None
@@ -240,17 +222,12 @@ class CampaignDelivery(models.Model):
     """
     Track individual email deliveries for campaigns.
     """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     campaign = models.ForeignKey(
-        SecurityAwarenessCampaign,
-        on_delete=models.CASCADE,
-        related_name='deliveries'
+        SecurityAwarenessCampaign, on_delete=models.CASCADE, related_name="deliveries"
     )
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='campaign_deliveries'
-    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="campaign_deliveries")
 
     # Delivery tracking
     sent_at = models.DateTimeField(auto_now_add=True)
@@ -263,19 +240,19 @@ class CampaignDelivery(models.Model):
     delivery_status = models.CharField(
         max_length=20,
         choices=[
-            ('sent', 'Sent'),
-            ('delivered', 'Delivered'),
-            ('opened', 'Opened'),
-            ('clicked', 'Clicked'),
-            ('bounced', 'Bounced'),
-            ('failed', 'Failed')
+            ("sent", "Sent"),
+            ("delivered", "Delivered"),
+            ("opened", "Opened"),
+            ("clicked", "Clicked"),
+            ("bounced", "Bounced"),
+            ("failed", "Failed"),
         ],
-        default='sent'
+        default="sent",
     )
 
     class Meta:
-        unique_together = ['campaign', 'user', 'sent_at']
-        ordering = ['-sent_at']
+        unique_together = ["campaign", "user", "sent_at"]
+        ordering = ["-sent_at"]
 
     def __str__(self):
         return f"{self.campaign.name} → {self.user.email}"
@@ -285,31 +262,21 @@ class VideoView(models.Model):
     """
     Track video views for analytics.
     """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    video = models.ForeignKey(
-        TrainingVideo,
-        on_delete=models.CASCADE,
-        related_name='views'
-    )
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='video_views'
-    )
+    video = models.ForeignKey(TrainingVideo, on_delete=models.CASCADE, related_name="views")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="video_views")
 
     # View tracking
     started_at = models.DateTimeField(auto_now_add=True)
     duration_watched = models.PositiveIntegerField(
-        default=0,
-        help_text="Duration watched in seconds"
+        default=0, help_text="Duration watched in seconds"
     )
     completed = models.BooleanField(
-        default=False,
-        help_text="Whether the user watched the full video"
+        default=False, help_text="Whether the user watched the full video"
     )
     completion_percentage = models.PositiveIntegerField(
-        default=0,
-        help_text="Percentage of video watched"
+        default=0, help_text="Percentage of video watched"
     )
 
     # Session information
@@ -317,7 +284,7 @@ class VideoView(models.Model):
     user_agent = models.TextField(blank=True)
 
     class Meta:
-        ordering = ['-started_at']
+        ordering = ["-started_at"]
 
     def __str__(self):
         return f"{self.user.email} watched {self.video.title} ({self.completion_percentage}%)"
