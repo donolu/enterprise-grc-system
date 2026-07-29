@@ -276,16 +276,10 @@ jobs:
         name: security-summary
         path: security-summary.md
 
-    - name: Comment on PR (if applicable)
-      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-      continue-on-error: true
-      env:
-        GH_TOKEN: ${{ github.token }}
-        PR_NUMBER: ${{ github.event.pull_request.number }}
+    - name: Publish job summary
       run: |
         {
           echo "## Security Scan Results"
           echo ""
           cat security-summary.md
-        } > pr-comment.md
-        gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file pr-comment.md
+        } >> "$GITHUB_STEP_SUMMARY"
