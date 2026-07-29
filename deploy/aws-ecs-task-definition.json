@@ -44,7 +44,7 @@
         {"name": "STRIPE_WEBHOOK_SECRET", "valueFrom": "arn:aws:ssm:<region>:<account-id>:parameter/axim-grc/stripe-webhook-secret"}
       ],
       "healthCheck": {
-        "command": ["CMD-SHELL", "curl -f http://localhost:8000/health/ || exit 1"],
+        "command": ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health/', timeout=10).read()\""],
         "interval": 30,
         "timeout": 10,
         "retries": 3,
