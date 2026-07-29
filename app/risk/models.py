@@ -4,6 +4,8 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 import uuid
 
+from core.identifiers import next_prefixed_identifier, save_with_generated_identifier
+
 User = get_user_model()
 
 
@@ -209,10 +211,6 @@ class Risk(models.Model):
         return f"{self.risk_id}: {self.title}"
 
     def save(self, *args, **kwargs):
-        # Auto-generate risk_id if not provided
-        if not self.risk_id:
-            self.risk_id = self._generate_risk_id()
-
         # Calculate risk level based on impact and likelihood
         self.risk_level = self._calculate_risk_level()
 
@@ -230,14 +228,17 @@ class Risk(models.Model):
         elif self.status != "closed" and self.closed_date:
             self.closed_date = None
 
-        super().save(*args, **kwargs)
+        save_with_generated_identifier(
+            self,
+            "risk_id",
+            self._generate_risk_id,
+            lambda: super(Risk, self).save(*args, **kwargs),
+        )
 
     def _generate_risk_id(self):
         """Generate a unique risk ID."""
-        # Get current year and a sequence number
         year = timezone.now().year
-        existing_count = Risk.objects.filter(risk_id__startswith=f"RISK-{year}").count()
-        return f"RISK-{year}-{existing_count + 1:04d}"
+        return next_prefixed_identifier(Risk, "risk_id", f"RISK-{year}")
 
     def _calculate_risk_level(self):
         """Calculate risk level based on impact, likelihood, and risk matrix."""
@@ -454,10 +455,6 @@ class RiskAction(models.Model):
         return f"{self.action_id}: {self.title}"
 
     def save(self, *args, **kwargs):
-        # Auto-generate action_id if not provided
-        if not self.action_id:
-            self.action_id = self._generate_action_id()
-
         # Auto-set completed date when status changes to completed
         if self.status == "completed" and not self.completed_date:
             self.completed_date = timezone.now().date()
@@ -465,14 +462,17 @@ class RiskAction(models.Model):
         elif self.status != "completed" and self.completed_date:
             self.completed_date = None
 
-        super().save(*args, **kwargs)
+        save_with_generated_identifier(
+            self,
+            "action_id",
+            self._generate_action_id,
+            lambda: super(RiskAction, self).save(*args, **kwargs),
+        )
 
     def _generate_action_id(self):
         """Generate a unique risk action ID."""
-        # Get current year and a sequence number
         year = timezone.now().year
-        existing_count = RiskAction.objects.filter(action_id__startswith=f"RA-{year}").count()
-        return f"RA-{year}-{existing_count + 1:04d}"
+        return next_prefixed_identifier(RiskAction, "action_id", f"RA-{year}")
 
     @property
     def is_overdue(self):
