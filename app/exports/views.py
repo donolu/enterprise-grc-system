@@ -1,3 +1,5 @@
+import logging
+
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import viewsets, status
@@ -36,6 +38,8 @@ from .serializers import (
 )
 from .services import AssessmentReportGenerator, get_export_coverage_manifest
 from .tasks import generate_assessment_report_task, generate_tenant_data_export_task
+
+logger = logging.getLogger(__name__)
 
 
 @extend_schema_view(
@@ -242,9 +246,10 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_202_ACCEPTED,
             )
 
-        except Exception as e:
+        except Exception:
+            logger.exception("Failed to start assessment report generation")
             return Response(
-                {"error": f"Failed to start report generation: {str(e)}"},
+                {"error": "Failed to start report generation"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -375,11 +380,12 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_201_CREATED,
                 )
 
-            except Exception as e:
+            except Exception:
+                logger.exception("Failed to start quick assessment report generation")
                 # Clean up created report on failure
                 report.delete()
                 return Response(
-                    {"error": f"Failed to start report generation: {str(e)}"},
+                    {"error": "Failed to start report generation"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 

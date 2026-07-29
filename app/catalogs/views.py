@@ -1,4 +1,5 @@
 import tempfile
+import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -74,6 +75,8 @@ from .serializers import (
     TemplateImportRequestSerializer,
     TemplateImportSummarySerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class CatalogueAuditMixin:
@@ -1411,9 +1414,14 @@ class ControlAssessmentViewSet(CatalogueAuditMixin, viewsets.ModelViewSet):
                     }
                 )
 
-            except Exception as e:
+            except Exception:
+                logger.exception("Failed to process uploaded assessment evidence")
                 errors.append(
-                    {"file_name": uploaded_file.name, "error": str(e), "status": "failed"}
+                    {
+                        "file_name": uploaded_file.name,
+                        "error": "File could not be processed.",
+                        "status": "failed",
+                    }
                 )
 
         return Response(

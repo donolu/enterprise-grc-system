@@ -29,7 +29,9 @@ class ScanTargetSerializer(serializers.ModelSerializer):
         try:
             return validate_scan_target_address(value)
         except TargetValidationError as exc:
-            raise serializers.ValidationError(str(exc)) from exc
+            raise serializers.ValidationError(
+                "Enter an approved hostname, IP address or URL."
+            ) from exc
 
 
 class ScanScheduleSerializer(serializers.ModelSerializer):
