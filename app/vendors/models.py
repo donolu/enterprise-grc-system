@@ -13,6 +13,8 @@ from decimal import Decimal
 import uuid
 from datetime import timedelta
 
+from core.identifiers import next_prefixed_identifier, save_with_generated_identifier
+
 User = get_user_model()
 
 
@@ -326,24 +328,17 @@ class Vendor(models.Model):
         ]
 
     def save(self, *args, **kwargs):
-        if not self.vendor_id:
-            self.vendor_id = self._generate_vendor_id()
-        super().save(*args, **kwargs)
-
-    def _generate_vendor_id(self):
-        """Generate unique vendor ID in format VEN-YYYY-NNNN"""
-        year = timezone.now().year
-        last_vendor = (
-            Vendor.objects.filter(vendor_id__startswith=f"VEN-{year}-").order_by("vendor_id").last()
+        save_with_generated_identifier(
+            self,
+            "vendor_id",
+            self._generate_vendor_id,
+            lambda: super(Vendor, self).save(*args, **kwargs),
         )
 
-        if last_vendor:
-            last_number = int(last_vendor.vendor_id.split("-")[-1])
-            next_number = last_number + 1
-        else:
-            next_number = 1
-
-        return f"VEN-{year}-{next_number:04d}"
+    def _generate_vendor_id(self):
+        """Generate unique vendor ID in format VEN-YYYY-NNNN."""
+        year = timezone.now().year
+        return next_prefixed_identifier(Vendor, "vendor_id", f"VEN-{year}")
 
     @property
     def full_address(self):
@@ -749,9 +744,6 @@ class VendorTask(models.Model):
         verbose_name_plural = "Vendor Tasks"
 
     def save(self, *args, **kwargs):
-        if not self.task_id:
-            self.task_id = self._generate_task_id()
-
         # Auto-update status based on dates
         if self.due_date and not self.completed_date:
             if timezone.now().date() > self.due_date and self.status == "pending":
@@ -763,7 +755,12 @@ class VendorTask(models.Model):
         elif self.status != "completed":
             self.completed_date = None
 
-        super().save(*args, **kwargs)
+        save_with_generated_identifier(
+            self,
+            "task_id",
+            self._generate_task_id,
+            lambda: super(VendorTask, self).save(*args, **kwargs),
+        )
 
         # Create recurring instance if needed
         if (
@@ -775,19 +772,9 @@ class VendorTask(models.Model):
             self._create_next_recurring_instance()
 
     def _generate_task_id(self):
-        """Generate unique task ID in format TSK-YYYY-NNNN"""
+        """Generate unique task ID in format TSK-YYYY-NNNN."""
         year = timezone.now().year
-        last_task = (
-            VendorTask.objects.filter(task_id__startswith=f"TSK-{year}-").order_by("task_id").last()
-        )
-
-        if last_task:
-            last_number = int(last_task.task_id.split("-")[-1])
-            next_number = last_number + 1
-        else:
-            next_number = 1
-
-        return f"TSK-{year}-{next_number:04d}"
+        return next_prefixed_identifier(VendorTask, "task_id", f"TSK-{year}")
 
     def _create_next_recurring_instance(self):
         """Create next instance of a recurring task"""

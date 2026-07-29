@@ -13,6 +13,8 @@ from django.urls import reverse
 import uuid
 import os
 
+from core.identifiers import next_prefixed_identifier, save_with_generated_identifier
+
 User = get_user_model()
 
 
@@ -151,12 +153,6 @@ class Policy(models.Model):
         return reverse("admin:policies_policy_change", args=[self.pk])
 
     def save(self, *args, **kwargs):
-        # Auto-generate policy code if not provided
-        if not self.policy_code:
-            category_prefix = self.category.name[:3].upper()
-            count = Policy.objects.filter(category=self.category).count() + 1
-            self.policy_code = f"POL-{category_prefix}-{count:03d}"
-
         # Set next review date if not provided
         if not self.next_review_date and self.review_frequency_months:
             from dateutil.relativedelta import relativedelta  # type: ignore[import-untyped]
@@ -165,7 +161,16 @@ class Policy(models.Model):
                 months=self.review_frequency_months
             )
 
-        super().save(*args, **kwargs)
+        save_with_generated_identifier(
+            self,
+            "policy_code",
+            self._generate_policy_code,
+            lambda: super(Policy, self).save(*args, **kwargs),
+        )
+
+    def _generate_policy_code(self):
+        category_prefix = self.category.name[:3].upper()
+        return next_prefixed_identifier(Policy, "policy_code", f"POL-{category_prefix}", width=3)
 
 
 class PolicyVersion(models.Model):

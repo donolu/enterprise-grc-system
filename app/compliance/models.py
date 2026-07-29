@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
 
+from core.identifiers import next_prefixed_identifier, save_with_generated_identifier
+
 User = get_user_model()
 
 
@@ -86,15 +88,17 @@ class GovernanceArtefact(models.Model):
         return f"{self.artefact_id}: {self.title}"
 
     def save(self, *args, **kwargs):
-        if not self.artefact_id:
-            self.artefact_id = self._generate_identifier("GOV")
-        super().save(*args, **kwargs)
+        save_with_generated_identifier(
+            self,
+            "artefact_id",
+            lambda: self._generate_identifier("GOV"),
+            lambda: super(GovernanceArtefact, self).save(*args, **kwargs),
+        )
 
     @classmethod
     def _generate_identifier(cls, prefix):
         year = timezone.now().year
-        existing_count = cls.objects.filter(artefact_id__startswith=f"{prefix}-{year}").count()
-        return f"{prefix}-{year}-{existing_count + 1:04d}"
+        return next_prefixed_identifier(cls, "artefact_id", f"{prefix}-{year}")
 
 
 class RegulatoryRequirement(models.Model):
@@ -206,13 +210,17 @@ class RegulatoryRequirement(models.Model):
         return f"{self.requirement_id}: {self.title}"
 
     def save(self, *args, **kwargs):
-        if not self.requirement_id:
-            year = timezone.now().year
-            existing_count = RegulatoryRequirement.objects.filter(
-                requirement_id__startswith=f"REQ-{year}"
-            ).count()
-            self.requirement_id = f"REQ-{year}-{existing_count + 1:04d}"
-        super().save(*args, **kwargs)
+        save_with_generated_identifier(
+            self,
+            "requirement_id",
+            self._generate_requirement_id,
+            lambda: super(RegulatoryRequirement, self).save(*args, **kwargs),
+        )
+
+    @classmethod
+    def _generate_requirement_id(cls):
+        year = timezone.now().year
+        return next_prefixed_identifier(cls, "requirement_id", f"REQ-{year}")
 
 
 class NonConformity(models.Model):
@@ -313,17 +321,21 @@ class NonConformity(models.Model):
         return f"{self.nonconformity_id}: {self.title}"
 
     def save(self, *args, **kwargs):
-        if not self.nonconformity_id:
-            year = timezone.now().year
-            existing_count = NonConformity.objects.filter(
-                nonconformity_id__startswith=f"NC-{year}"
-            ).count()
-            self.nonconformity_id = f"NC-{year}-{existing_count + 1:04d}"
         if self.status in {"closed", "accepted"} and not self.closed_on:
             self.closed_on = timezone.now().date()
         elif self.status not in {"closed", "accepted"}:
             self.closed_on = None
-        super().save(*args, **kwargs)
+        save_with_generated_identifier(
+            self,
+            "nonconformity_id",
+            self._generate_nonconformity_id,
+            lambda: super(NonConformity, self).save(*args, **kwargs),
+        )
+
+    @classmethod
+    def _generate_nonconformity_id(cls):
+        year = timezone.now().year
+        return next_prefixed_identifier(cls, "nonconformity_id", f"NC-{year}")
 
     @property
     def is_overdue(self):
@@ -417,10 +429,14 @@ class ManagementReview(models.Model):
         return f"{self.review_id}: {self.title}"
 
     def save(self, *args, **kwargs):
-        if not self.review_id:
-            year = timezone.now().year
-            existing_count = ManagementReview.objects.filter(
-                review_id__startswith=f"MR-{year}"
-            ).count()
-            self.review_id = f"MR-{year}-{existing_count + 1:04d}"
-        super().save(*args, **kwargs)
+        save_with_generated_identifier(
+            self,
+            "review_id",
+            self._generate_review_id,
+            lambda: super(ManagementReview, self).save(*args, **kwargs),
+        )
+
+    @classmethod
+    def _generate_review_id(cls):
+        year = timezone.now().year
+        return next_prefixed_identifier(cls, "review_id", f"MR-{year}")
