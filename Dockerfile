@@ -64,7 +64,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2 \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -101,7 +100,7 @@ WORKDIR /workspace/app
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8000}/health/ || exit 1
+    CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://localhost:%s/health/' % os.environ.get('PORT', '8000'), timeout=10).read()"]
 
 # Expose port
 EXPOSE 8000
