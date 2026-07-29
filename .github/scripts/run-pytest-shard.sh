@@ -46,7 +46,10 @@ print(f"Collected {len(nodeids)} tests; selected {len(selected)} for shard {shar
 PY
 echo "::endgroup::"
 
-mapfile -t selected_nodeids <"$selected_file"
+selected_nodeids=()
+while IFS= read -r nodeid; do
+  selected_nodeids+=("$nodeid")
+done <"$selected_file"
 
 if (( ${#selected_nodeids[@]} == 0 )); then
   echo "::error::No tests selected for shard $((shard_index + 1))/$total_shards."
@@ -64,5 +67,4 @@ python -m pytest \
   --cov-report=term-missing \
   --cov-fail-under=0 \
   --durations=25 \
-  --verbose \
-  --migrations
+  --verbose
