@@ -43,8 +43,11 @@ class ScanTargetViewSet(viewsets.ModelViewSet):
         target = self.get_object()
         try:
             job = create_scan_job(target, requested_by=request.user)
-        except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError:
+            return Response(
+                {"detail": "Only approved scan targets can be scanned."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         schema_name = getattr(getattr(request, "tenant", None), "schema_name", None)
         run_scan_job.delay(str(job.id), schema_name)

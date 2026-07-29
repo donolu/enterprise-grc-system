@@ -110,8 +110,8 @@ def executive_dashboard(request):
     try:
         data = CrossModuleAnalyticsService.get_executive_dashboard_data()
         return Response(data, status=status.HTTP_200_OK)
-    except Exception as e:
-        logger.error(f"Error generating executive dashboard: {str(e)}")
+    except Exception:
+        logger.exception("Error generating executive dashboard")
         return Response(
             {"error": "Failed to generate executive dashboard"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -139,8 +139,8 @@ def compliance_dashboard(request):
     try:
         data = CrossModuleAnalyticsService.get_compliance_dashboard_data()
         return Response(data, status=status.HTTP_200_OK)
-    except Exception as e:
-        logger.error(f"Error generating compliance dashboard: {str(e)}")
+    except Exception:
+        logger.exception("Error generating compliance dashboard")
         return Response(
             {"error": "Failed to generate compliance dashboard"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -168,8 +168,8 @@ def vendor_risk_dashboard(request):
     try:
         data = CrossModuleAnalyticsService.get_vendor_risk_dashboard_data()
         return Response(data, status=status.HTTP_200_OK)
-    except Exception as e:
-        logger.error(f"Error generating vendor dashboard: {str(e)}")
+    except Exception:
+        logger.exception("Error generating vendor dashboard")
         return Response(
             {"error": "Failed to generate vendor dashboard"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -197,8 +197,8 @@ def policy_management_dashboard(request):
     try:
         data = CrossModuleAnalyticsService.get_policy_management_dashboard_data()
         return Response(data, status=status.HTTP_200_OK)
-    except Exception as e:
-        logger.error(f"Error generating policy dashboard: {str(e)}")
+    except Exception:
+        logger.exception("Error generating policy dashboard")
         return Response(
             {"error": "Failed to generate policy dashboard"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -226,8 +226,8 @@ def training_effectiveness_dashboard(request):
     try:
         data = CrossModuleAnalyticsService.get_training_effectiveness_dashboard_data()
         return Response(data, status=status.HTTP_200_OK)
-    except Exception as e:
-        logger.error(f"Error generating training dashboard: {str(e)}")
+    except Exception:
+        logger.exception("Error generating training dashboard")
         return Response(
             {"error": "Failed to generate training dashboard"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -257,8 +257,8 @@ def integrated_risk_posture(request):
     try:
         data = CrossModuleAnalyticsService.get_integrated_risk_posture()
         return Response(data, status=status.HTTP_200_OK)
-    except Exception as e:
-        logger.error(f"Error generating integrated risk posture: {str(e)}")
+    except Exception:
+        logger.exception("Error generating integrated risk posture")
         return Response(
             {"error": "Failed to generate integrated risk analysis"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -288,8 +288,8 @@ def executive_report_data(request):
     try:
         data = AnalyticsReportGenerator.generate_executive_report_data()
         return Response(data, status=status.HTTP_200_OK)
-    except Exception as e:
-        logger.error(f"Error generating executive report: {str(e)}")
+    except Exception:
+        logger.exception("Error generating executive report")
         return Response(
             {"error": "Failed to generate executive report"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -317,8 +317,8 @@ def operational_dashboard(request):
     try:
         data = AnalyticsReportGenerator.generate_operational_dashboard_data()
         return Response(data, status=status.HTTP_200_OK)
-    except Exception as e:
-        logger.error(f"Error generating operational dashboard: {str(e)}")
+    except Exception:
+        logger.exception("Error generating operational dashboard")
         return Response(
             {"error": "Failed to generate operational dashboard"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -363,10 +363,14 @@ def analytics_health_check(request):
 
         return Response(health_data, status=status.HTTP_200_OK)
 
-    except Exception as e:
-        logger.error(f"Analytics health check failed: {str(e)}")
+    except Exception:
+        logger.exception("Analytics health check failed")
         return Response(
-            {"status": "unhealthy", "error": str(e), "timestamp": timezone.now().isoformat()},
+            {
+                "status": "unhealthy",
+                "error": "Analytics service unavailable.",
+                "timestamp": timezone.now().isoformat(),
+            },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -448,8 +452,8 @@ def export_report(request):
             status=status.HTTP_202_ACCEPTED,
         )
 
-    except Exception as e:
-        logger.error(f"Error creating export job: {str(e)}")
+    except Exception:
+        logger.exception("Error creating export job")
         return Response(
             {"error": "Failed to create export job"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
@@ -506,8 +510,8 @@ def report_status(request, report_id):
 
         return Response(response_data)
 
-    except Exception as e:
-        logger.error(f"Error checking report status {report_id}: {str(e)}")
+    except Exception:
+        logger.exception("Error checking report status %s", report_id)
         return Response(
             {"error": "Failed to check report status"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
@@ -590,8 +594,8 @@ def download_report(request, report_id):
 
         return response
 
-    except Exception as e:
-        logger.error(f"Error downloading report {report_id}: {str(e)}")
+    except Exception:
+        logger.exception("Error downloading report %s", report_id)
         return Response(
             {"error": "Failed to download report"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
@@ -662,8 +666,8 @@ def my_reports(request):
             }
         )
 
-    except Exception as e:
-        logger.error(f"Error fetching user reports: {str(e)}")
+    except Exception:
+        logger.exception("Error fetching user reports")
         return Response(
             {"error": "Failed to fetch reports"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
@@ -693,8 +697,8 @@ def delete_report(request, report_id):
         if report.file_path and default_storage.exists(report.file_path):
             try:
                 default_storage.delete(report.file_path)
-            except Exception as e:
-                logger.warning(f"Failed to delete file for report {report_id}: {str(e)}")
+            except Exception:
+                logger.warning("Failed to delete file for report %s", report_id, exc_info=True)
 
         # Delete the report record
         report.delete()
@@ -703,8 +707,8 @@ def delete_report(request, report_id):
 
         return Response({"message": "Report deleted successfully"})
 
-    except Exception as e:
-        logger.error(f"Error deleting report {report_id}: {str(e)}")
+    except Exception:
+        logger.exception("Error deleting report %s", report_id)
         return Response(
             {"error": "Failed to delete report"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
@@ -745,8 +749,8 @@ def refresh_cache(request):
             status=status.HTTP_202_ACCEPTED,
         )
 
-    except Exception as e:
-        logger.error(f"Error queuing cache refresh: {str(e)}")
+    except Exception:
+        logger.exception("Error queuing cache refresh")
         return Response(
             {"error": "Failed to refresh cache"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

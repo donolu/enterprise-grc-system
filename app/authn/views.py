@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -32,6 +34,7 @@ from .serializers import (
 )
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class RegisterView(APIView):
@@ -556,9 +559,10 @@ class SetupTOTPView(APIView):
                     status=status.HTTP_200_OK,
                 )
 
-            except ValueError as e:
-                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-            except Exception as e:
+            except ValueError:
+                return Response({"error": "Invalid password"}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception:
+                logger.exception("Failed to set up TOTP device")
                 return Response(
                     {"error": "Failed to setup TOTP device. Please try again."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
