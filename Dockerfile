@@ -15,7 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libffi-dev \
     libcairo2-dev \
     libpango1.0-dev \
-    libgdk-pixbuf-xlib-2.0-dev \
     libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -51,6 +50,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     DJANGO_SETTINGS_MODULE=app.settings.production \
+    HOME="/home/appuser" \
+    XDG_CACHE_HOME="/home/appuser/.cache" \
     PATH="/opt/venv/bin:$PATH" \
     BUILD_ENV=${BUILD_ENV} \
     APP_VERSION=${BUILD_VERSION} \
@@ -63,7 +64,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2 \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
-    libgdk-pixbuf-xlib-2.0-0 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -89,8 +89,9 @@ COPY --chown=appuser:appuser scripts ./scripts
 # Make scripts executable
 RUN chmod +x ./scripts/startup.sh
 
-# Create log directory
-RUN mkdir -p /home/LogFiles && chown appuser:appuser /home/LogFiles
+# Create writable runtime directories for logs and font caches
+RUN mkdir -p /home/LogFiles /home/appuser/.cache/fontconfig && \
+    chown -R appuser:appuser /home/LogFiles /home/appuser
 
 # Switch to non-root user
 USER appuser
