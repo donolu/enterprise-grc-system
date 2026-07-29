@@ -237,7 +237,7 @@ jobs:
 
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v8
 
     - name: Generate security summary
       run: |
@@ -288,4 +288,4 @@ jobs:
           echo ""
           cat security-summary.md
         } > pr-comment.md
-        gh pr comment "$PR_NUMBER" --body-file pr-comment.md
+        gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file pr-comment.md
