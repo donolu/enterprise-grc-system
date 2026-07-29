@@ -21,7 +21,7 @@ if [[ -z "$MYPY_BIN" ]]; then
     MYPY_BIN="$(command -v mypy)"
   else
     echo "mypy not found; skipping type check locally (CI will verify)"
-    echo "To set up: pip install -r requirements.txt"
+    echo "To set up: pip install -r requirements-dev.txt"
     exit 0
   fi
 fi
