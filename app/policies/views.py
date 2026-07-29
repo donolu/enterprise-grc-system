@@ -13,6 +13,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Q, Avg, Case, When, Value, IntegerField
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
+import logging
 from datetime import timedelta
 from typing import Any
 
@@ -44,6 +45,8 @@ from .serializers import (
     PolicyVersionAuditLogSerializer,
 )
 from .filters import PolicyFilter, PolicyVersionFilter, PolicyAcknowledgmentFilter
+
+logger = logging.getLogger(__name__)
 
 
 class PolicyCategoryViewSet(viewsets.ModelViewSet):
@@ -727,15 +730,19 @@ class PolicyVersionViewSet(viewsets.ModelViewSet):
         try:
             finalize_policy_version_pdf(version)
         except DocumentConversionError as exc:
+            logger.exception("Policy version PDF finalisation failed")
             log_policy_version_event(
                 version=version,
                 action="conversion_failed",
                 actor=request.user,
                 request=request,
                 source={"type": "conversion", "reference": "policy_final_pdf"},
-                details={"error": str(exc)},
+                details={"error": exc.__class__.__name__},
             )
-            return Response({"error": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response(
+                {"error": "Document conversion failed. Please try again later."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         version.lifecycle_state = "final"
         version.finalized_at = timezone.now()

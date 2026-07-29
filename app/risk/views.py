@@ -1,3 +1,4 @@
+import logging
 from rest_framework import viewsets, status, filters, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -60,6 +61,8 @@ from .audit import (
     snapshot_risk_action,
     snapshot_risk_action_evidence,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @extend_schema_view(
@@ -1398,9 +1401,10 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
         try:
             dashboard_data = RiskReportGenerator.generate_risk_dashboard_data()
             return Response(dashboard_data)
-        except Exception as e:
+        except Exception:
+            logger.exception("Failed to generate risk dashboard data")
             return Response(
-                {"error": f"Failed to generate dashboard data: {str(e)}"},
+                {"error": "Failed to generate dashboard data"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -1426,9 +1430,10 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
         try:
             overview_data = RiskAnalyticsService.get_risk_overview_stats()
             return Response(overview_data)
-        except Exception as e:
+        except Exception:
+            logger.exception("Failed to generate risk overview")
             return Response(
-                {"error": f"Failed to generate risk overview: {str(e)}"},
+                {"error": "Failed to generate risk overview"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -1454,9 +1459,10 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
         try:
             action_data = RiskAnalyticsService.get_risk_action_overview_stats()
             return Response(action_data)
-        except Exception as e:
+        except Exception:
+            logger.exception("Failed to generate risk action overview")
             return Response(
-                {"error": f"Failed to generate action overview: {str(e)}"},
+                {"error": "Failed to generate action overview"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -1482,9 +1488,10 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
         try:
             heat_map_data = RiskAnalyticsService.get_risk_heat_map_data()
             return Response(heat_map_data)
-        except Exception as e:
+        except Exception:
+            logger.exception("Failed to generate risk heat map")
             return Response(
-                {"error": f"Failed to generate heat map: {str(e)}"},
+                {"error": "Failed to generate heat map"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -1523,9 +1530,10 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
                 {"error": "Invalid days parameter. Must be a number between 30 and 365."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        except Exception as e:
+        except Exception:
+            logger.exception("Failed to generate risk trend analysis")
             return Response(
-                {"error": f"Failed to generate trend analysis: {str(e)}"},
+                {"error": "Failed to generate trend analysis"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -1551,9 +1559,10 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
         try:
             progress_data = RiskAnalyticsService.get_risk_action_progress_analysis()
             return Response(progress_data)
-        except Exception as e:
+        except Exception:
+            logger.exception("Failed to generate risk action progress analysis")
             return Response(
-                {"error": f"Failed to generate progress analysis: {str(e)}"},
+                {"error": "Failed to generate progress analysis"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -1580,9 +1589,10 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
         try:
             executive_data = RiskAnalyticsService.get_executive_risk_summary()
             return Response(executive_data)
-        except Exception as e:
+        except Exception:
+            logger.exception("Failed to generate executive risk summary")
             return Response(
-                {"error": f"Failed to generate executive summary: {str(e)}"},
+                {"error": "Failed to generate executive summary"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -1609,9 +1619,10 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
         try:
             integration_data = RiskAnalyticsService.get_risk_control_integration_analysis()
             return Response(integration_data)
-        except Exception as e:
+        except Exception:
+            logger.exception("Failed to generate risk-control integration analysis")
             return Response(
-                {"error": f"Failed to generate control integration analysis: {str(e)}"},
+                {"error": "Failed to generate control integration analysis"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -1651,8 +1662,9 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
 
             category_data = RiskReportGenerator.get_risk_category_deep_dive(category_id)
             return Response(category_data)
-        except Exception as e:
+        except Exception:
+            logger.exception("Failed to generate risk category analysis")
             return Response(
-                {"error": f"Failed to generate category analysis: {str(e)}"},
+                {"error": "Failed to generate category analysis"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

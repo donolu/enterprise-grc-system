@@ -3,6 +3,7 @@ Health check views for monitoring and deployment verification.
 """
 
 import hmac
+import logging
 
 from django.http import HttpResponse, JsonResponse
 from django.views import View
@@ -14,6 +15,8 @@ import time
 from datetime import datetime
 
 from .observability import render_prometheus_metrics
+
+logger = logging.getLogger(__name__)
 
 
 class HealthCheckView(View):
@@ -39,11 +42,12 @@ class HealthCheckView(View):
                     "status": "healthy",
                     "message": "Database connection successful",
                 }
-        except Exception as e:
+        except Exception:
+            logger.exception("Health check database probe failed")
             health_data["status"] = "unhealthy"
             health_data["checks"]["database"] = {
                 "status": "unhealthy",
-                "message": f"Database connection failed: {str(e)}",
+                "message": "Database connection failed.",
             }
 
         # Cache check
@@ -61,10 +65,11 @@ class HealthCheckView(View):
             else:
                 raise Exception("Cache value mismatch")
 
-        except Exception as e:
+        except Exception:
+            logger.exception("Health check cache probe failed")
             health_data["checks"]["cache"] = {
                 "status": "degraded",
-                "message": f"Cache check failed: {str(e)}",
+                "message": "Cache check failed.",
             }
 
         # Storage check
@@ -78,10 +83,11 @@ class HealthCheckView(View):
                     "status": "healthy",
                     "message": f"{default_storage.__class__.__name__} configured",
                 }
-        except Exception as e:
+        except Exception:
+            logger.exception("Health check storage probe failed")
             health_data["checks"]["storage"] = {
                 "status": "degraded",
-                "message": f"Storage check failed: {str(e)}",
+                "message": "Storage check failed.",
             }
 
         # Stripe connectivity check (basic)
@@ -97,10 +103,11 @@ class HealthCheckView(View):
                     "status": "degraded",
                     "message": "Stripe not configured",
                 }
-        except Exception as e:
+        except Exception:
+            logger.exception("Health check Stripe configuration probe failed")
             health_data["checks"]["stripe"] = {
                 "status": "degraded",
-                "message": f"Stripe check failed: {str(e)}",
+                "message": "Stripe check failed.",
             }
 
         # Check if any critical systems are unhealthy
@@ -140,11 +147,12 @@ class ReadinessCheckView(View):
 
             return JsonResponse({"status": "ready", "timestamp": datetime.utcnow().isoformat()})
 
-        except Exception as e:
+        except Exception:
+            logger.exception("Readiness check failed")
             return JsonResponse(
                 {
                     "status": "not_ready",
-                    "message": str(e),
+                    "message": "Application is not ready.",
                     "timestamp": datetime.utcnow().isoformat(),
                 },
                 status=503,
