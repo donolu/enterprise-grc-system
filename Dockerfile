@@ -73,6 +73,10 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 
+# Runtime containers do not need package-management tooling.
+RUN /opt/venv/bin/python -m pip uninstall -y pip wheel virtualenv && \
+    /usr/local/bin/python -m pip uninstall -y pip wheel
+
 # Create workspace and set permissions
 WORKDIR /workspace
 RUN mkdir -p /workspace/app /workspace/static /workspace/media && \
