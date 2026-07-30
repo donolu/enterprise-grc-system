@@ -48,7 +48,7 @@ class OAuthBackend(BaseBackend):
                 return None
 
             sso_provider = SSOProvider.objects.get(
-                id=oauth_provider_id, tenant=tenant, is_active=True, provider_type="oauth"
+                id=oauth_provider_id, tenant_id=tenant.pk, is_active=True, provider_type="oauth"
             )
 
             if not hasattr(sso_provider, "oauth_config"):

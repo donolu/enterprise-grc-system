@@ -7,7 +7,6 @@ import uuid
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -100,6 +99,7 @@ class Migration(migrations.Migration):
                 (
                     "tenant",
                     models.ForeignKey(
+                        db_constraint=False,
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="sso_providers",
                         to="core.tenant",

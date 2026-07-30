@@ -25,7 +25,7 @@ def sso_login_select(request):
     if not tenant:
         return HttpResponseBadRequest("Tenant not found")
 
-    sso_providers = SSOProvider.objects.filter(tenant=tenant, is_active=True).select_related(
+    sso_providers = SSOProvider.objects.filter(tenant_id=tenant.pk, is_active=True).select_related(
         "saml_config", "oauth_config"
     )
 
@@ -44,7 +44,7 @@ def saml_login(request, provider_id):
 
     try:
         sso_provider = SSOProvider.objects.get(
-            id=provider_id, tenant=tenant, is_active=True, provider_type="saml"
+            id=provider_id, tenant_id=tenant.pk, is_active=True, provider_type="saml"
         )
 
         if not hasattr(sso_provider, "saml_config"):
@@ -125,7 +125,7 @@ def saml_sls(request, provider_id):
 
     try:
         sso_provider = SSOProvider.objects.get(
-            id=provider_id, tenant=tenant, is_active=True, provider_type="saml"
+            id=provider_id, tenant_id=tenant.pk, is_active=True, provider_type="saml"
         )
 
         # Get SSO session
@@ -165,7 +165,9 @@ def saml_metadata(request, provider_id):
         return HttpResponseBadRequest("Tenant not found")
 
     try:
-        sso_provider = SSOProvider.objects.get(id=provider_id, tenant=tenant, provider_type="saml")
+        sso_provider = SSOProvider.objects.get(
+            id=provider_id, tenant_id=tenant.pk, provider_type="saml"
+        )
 
         metadata_xml = generate_saml_metadata(sso_provider)
         if not metadata_xml:
@@ -239,7 +241,7 @@ def sso_status(request):
     if not tenant:
         return JsonResponse({"error": "Tenant not found"}, status=400)
 
-    sso_providers = SSOProvider.objects.filter(tenant=tenant, is_active=True).values(
+    sso_providers = SSOProvider.objects.filter(tenant_id=tenant.pk, is_active=True).values(
         "id", "name", "provider_type", "is_primary"
     )
 
@@ -263,7 +265,7 @@ def oauth_login(request, provider_id):
 
     try:
         sso_provider = SSOProvider.objects.get(
-            id=provider_id, tenant=tenant, is_active=True, provider_type="oauth"
+            id=provider_id, tenant_id=tenant.pk, is_active=True, provider_type="oauth"
         )
 
         if not hasattr(sso_provider, "oauth_config"):

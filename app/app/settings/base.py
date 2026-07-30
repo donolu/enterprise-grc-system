@@ -17,11 +17,7 @@ ALLOWED_HOSTS = ["*"]
 
 SHARED_APPS = [
     "django_tenants",  # Must be first
-    "django.contrib.admin",
-    "django.contrib.auth",
     "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
     "django_filters",
@@ -413,7 +409,8 @@ CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = "Lax"
 
 # Django-tenants settings
-DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
+TENANT_SYNC_ROUTER = "core.tenant_router.CoreModelTenantSyncRouter"
+DATABASE_ROUTERS = ("core.tenant_router.CoreModelTenantSyncRouter",)
 TENANT_MODEL = "core.Tenant"
 TENANT_DOMAIN_MODEL = "core.Domain"
 PUBLIC_SCHEMA_URLCONF = "app.public_urls"

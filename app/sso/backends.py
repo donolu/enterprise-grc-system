@@ -49,7 +49,7 @@ class SAMLBackend(BaseBackend):
                 return None
 
             sso_provider = SSOProvider.objects.get(
-                id=saml_provider_id, tenant=tenant, is_active=True, provider_type="saml"
+                id=saml_provider_id, tenant_id=tenant.pk, is_active=True, provider_type="saml"
             )
 
             if not hasattr(sso_provider, "saml_config"):
