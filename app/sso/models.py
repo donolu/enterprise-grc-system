@@ -6,11 +6,12 @@ Enterprise SSO configuration and management for SAML and OAuth providers.
 
 import uuid
 import json
-from django.db import models
+from django.db import connection, models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.core.validators import URLValidator
 from django.conf import settings
+from django_tenants.utils import schema_context
 from core.models import Tenant
 
 User = get_user_model()
@@ -40,7 +41,12 @@ class SSOProvider(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="sso_providers")
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name="sso_providers",
+        db_constraint=False,
+    )
 
     # Basic configuration
     name = models.CharField(max_length=100, help_text="Display name for this SSO provider")
@@ -87,7 +93,19 @@ class SSOProvider(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.name} ({self.get_provider_type_display()}) - {self.tenant.name}"
+        return f"{self.name} ({self.get_provider_type_display()}) - {self.tenant_display_name}"
+
+    @property
+    def public_tenant(self):
+        with schema_context("public"):
+            return Tenant.objects.get(pk=self.tenant_id)
+
+    @property
+    def tenant_display_name(self):
+        try:
+            return self.public_tenant.name
+        except Tenant.DoesNotExist:
+            return getattr(connection, "schema_name", "unknown")
 
     def clean(self):
         """Validate SSO provider configuration."""
@@ -96,7 +114,7 @@ class SSOProvider(models.Model):
         # Only one primary provider per tenant
         if self.is_primary:
             existing_primary = SSOProvider.objects.filter(
-                tenant=self.tenant, is_primary=True
+                tenant_id=self.tenant_id, is_primary=True
             ).exclude(id=self.id)
 
             if existing_primary.exists():
@@ -158,7 +176,7 @@ class SAMLProvider(models.Model):
 
     def generate_sp_urls(self):
         """Generate Service Provider URLs based on tenant domain."""
-        tenant = self.sso_provider.tenant
+        tenant = self.sso_provider.public_tenant
         base_url = f"https://{tenant.get_primary_domain().domain}"
 
         if not self.sp_entity_id:

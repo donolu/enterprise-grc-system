@@ -9,11 +9,11 @@ import tempfile
 DEBUG = False
 TESTING = True
 
-# The suite still has a mix of tenant-aware tests and legacy plain TestCase
-# tests. Keep all installed apps available in both schemas under test so the
-# tenant router does not hide tenant app tables from public-schema tests.
-SHARED_APPS = INSTALLED_APPS
-TENANT_APPS = INSTALLED_APPS
+# Most legacy unit tests exercise tenant-owned models in Django's default
+# public test schema. Production still uses CoreModelTenantSyncRouter; focused
+# router tests instantiate it directly to guard the schema split.
+TENANT_SYNC_ROUTER = "core.tenant_router.TestTenantSyncRouter"
+DATABASE_ROUTERS = ("core.tenant_router.TestTenantSyncRouter",)
 
 # Use in-memory cache for tests
 CACHES = {
