@@ -3,11 +3,13 @@ OAuth 2.0 / OpenID Connect authentication backend.
 """
 
 import logging
+from typing import Any
 import requests
 import jwt
 from django.contrib.auth.backends import BaseBackend
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.http import HttpRequest
 from django.utils import timezone
 from urllib.parse import urlencode
 
@@ -23,11 +25,18 @@ class OAuthBackend(BaseBackend):
     OAuth 2.0 / OpenID Connect authentication backend.
     """
 
-    def authenticate(self, request, oauth_code=None, oauth_state=None, oauth_provider_id=None):
+    def authenticate(
+        self,
+        request: HttpRequest | None,
+        oauth_code: Any = None,
+        oauth_state: Any = None,
+        oauth_provider_id: Any = None,
+        **_: Any,
+    ) -> Any | None:
         """
         Authenticate user via OAuth authorization code.
         """
-        if not oauth_code or not oauth_provider_id:
+        if request is None or not oauth_code or not oauth_provider_id:
             return None
 
         try:
@@ -85,10 +94,7 @@ class OAuthBackend(BaseBackend):
                     sso_provider=sso_provider,
                     user=user,
                     request=request,
-                    details={
-                        "user_info": user_info,
-                        "token_type": token_data.get("token_type", "Bearer"),
-                    },
+                    details={"auth_flow": "oauth"},
                 )
 
                 # Store SSO session in Django session
