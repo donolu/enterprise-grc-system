@@ -6,7 +6,7 @@ from sso.oauth_backends import OAuthBackend
 
 
 def test_oauth_backend_does_not_store_provider_refresh_token():
-    tenant = SimpleNamespace(id=1)
+    tenant = SimpleNamespace(id=1, pk=1)
     oauth_config = SimpleNamespace()
     sso_provider = SimpleNamespace(
         id=uuid4(),
