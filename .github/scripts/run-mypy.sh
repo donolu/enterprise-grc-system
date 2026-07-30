@@ -18,6 +18,16 @@ done
 
 if [[ -z "$MYPY_BIN" ]]; then
   if command -v mypy >/dev/null 2>&1; then
+    if ! python - <<'PY'
+import sys
+
+raise SystemExit(0 if sys.version_info >= (3, 12) else 1)
+PY
+    then
+      echo "mypy found, but the active Python is below 3.12; skipping local type check"
+      echo "To run locally: use a Python 3.12 virtualenv and install requirements-dev.txt"
+      exit 0
+    fi
     MYPY_BIN="$(command -v mypy)"
   else
     echo "mypy not found; skipping type check locally (CI will verify)"
@@ -38,9 +48,12 @@ export CELERY_RESULT_BACKEND=redis://localhost/1
 "$MYPY_BIN" \
   app/app \
   app/api \
+  app/sso \
   app/core/health.py \
+  app/core/identifiers.py \
+  app/core/observability.py \
+  app/core/storage.py \
   --disable-error-code var-annotated \
-  --disable-error-code django-manager-missing \
   --disable-error-code attr-defined \
   --disable-error-code misc \
   --disable-error-code union-attr \

@@ -2,8 +2,11 @@
 Django authentication backends for SSO providers.
 """
 
+from typing import Any
+
 from django.contrib.auth.backends import BaseBackend
 from django.contrib.auth import get_user_model
+from django.http import HttpRequest
 import logging
 
 from .models import SSOProvider, SAMLProvider, SSOSession, SSOAuditLog, AttributeMapping
@@ -25,11 +28,17 @@ class SAMLBackend(BaseBackend):
     SAML 2.0 authentication backend.
     """
 
-    def authenticate(self, request, saml_response=None, saml_provider_id=None):
+    def authenticate(
+        self,
+        request: HttpRequest | None,
+        saml_response: Any = None,
+        saml_provider_id: Any = None,
+        **_: Any,
+    ) -> Any | None:
         """
         Authenticate user via SAML response.
         """
-        if not saml_response or not saml_provider_id:
+        if request is None or not saml_response or not saml_provider_id:
             return None
 
         try:
