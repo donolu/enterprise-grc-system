@@ -77,9 +77,16 @@ def send_asset_reminder(asset, reminder_type, review_date):
         return 0
 
     subject = f"Asset review {reminder_type.replace('_', ' ')}: {asset.name}"
-    message = (
-        f"The asset {asset.asset_id} - {asset.name} has a review date of "
-        f"{asset.next_review_date}. Please review and update the asset register."
+    message = " ".join(
+        [
+            "The asset",
+            str(asset.asset_id),
+            "-",
+            asset.name,
+            "has a review date of",
+            f"{asset.next_review_date}.",
+            "Please review and update the asset register.",
+        ]
     )
     send_mail(
         subject,

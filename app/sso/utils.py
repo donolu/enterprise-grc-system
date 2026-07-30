@@ -2,6 +2,7 @@
 SSO utility functions.
 """
 
+import ast
 import logging
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -14,6 +15,93 @@ from .models import SSOProvider, SSOAuditLog, AttributeMapping
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
+
+
+class UnsafeTransformExpression(ValueError):
+    """Raised when an SSO transform expression uses unsupported syntax."""
+
+
+_ALLOWED_STRING_METHODS = {
+    "capitalize",
+    "casefold",
+    "lower",
+    "replace",
+    "split",
+    "strip",
+    "title",
+    "upper",
+}
+
+
+def _eval_transform_node(node, context):
+    if isinstance(node, ast.Expression):
+        return _eval_transform_node(node.body, context)
+
+    if isinstance(node, ast.Constant):
+        return node.value
+
+    if isinstance(node, ast.Name):
+        if node.id in context:
+            return context[node.id]
+        raise UnsafeTransformExpression(f"Unknown transform variable: {node.id}")
+
+    if isinstance(node, ast.List):
+        return [_eval_transform_node(item, context) for item in node.elts]
+
+    if isinstance(node, ast.Tuple):
+        return tuple(_eval_transform_node(item, context) for item in node.elts)
+
+    if isinstance(node, ast.Dict):
+        return {
+            _eval_transform_node(key, context): _eval_transform_node(value, context)
+            for key, value in zip(node.keys, node.values, strict=True)
+        }
+
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        return _eval_transform_node(node.left, context) + _eval_transform_node(node.right, context)
+
+    if isinstance(node, ast.Compare) and len(node.ops) == 1 and len(node.comparators) == 1:
+        left = _eval_transform_node(node.left, context)
+        right = _eval_transform_node(node.comparators[0], context)
+        operator = node.ops[0]
+        if isinstance(operator, ast.Eq):
+            return left == right
+        if isinstance(operator, ast.NotEq):
+            return left != right
+        raise UnsafeTransformExpression("Only equality comparisons are supported")
+
+    if isinstance(node, ast.Subscript):
+        value = _eval_transform_node(node.value, context)
+        index = _eval_transform_node(node.slice, context)
+        return value[index]
+
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+        return -_eval_transform_node(node.operand, context)
+
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        if node.func.attr.startswith("_"):
+            raise UnsafeTransformExpression("Private attributes are not supported")
+        target = _eval_transform_node(node.func.value, context)
+        args = [_eval_transform_node(arg, context) for arg in node.args]
+        kwargs = {
+            keyword.arg: _eval_transform_node(keyword.value, context)
+            for keyword in node.keywords
+            if keyword.arg is not None
+        }
+
+        if isinstance(target, dict) and node.func.attr == "get":
+            return target.get(*args, **kwargs)
+
+        if isinstance(target, str) and node.func.attr in _ALLOWED_STRING_METHODS:
+            return getattr(target, node.func.attr)(*args, **kwargs)
+
+    raise UnsafeTransformExpression(f"Unsupported transform syntax: {node.__class__.__name__}")
+
+
+def apply_transform_expression(expression, value, attributes):
+    """Apply a constrained SSO attribute transform expression."""
+    tree = ast.parse(expression, mode="eval")
+    return _eval_transform_node(tree, {"value": value, "attributes": attributes})
 
 
 def get_tenant_from_request(request):
@@ -203,9 +291,11 @@ def get_mapped_attribute_value(sso_provider, attributes, field_name):
         # Apply transformation if configured
         if mapping.transform_expression and value:
             try:
-                # Safe evaluation of transform expression
-                local_vars = {"value": value, "attributes": attributes}
-                value = eval(mapping.transform_expression, {"__builtins__": {}}, local_vars)
+                value = apply_transform_expression(
+                    mapping.transform_expression,
+                    value,
+                    attributes,
+                )
             except Exception as e:
                 logger.error(f"Transform expression error: {str(e)}")
 

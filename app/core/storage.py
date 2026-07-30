@@ -10,6 +10,7 @@ This module provides a Django storage backend that:
 
 import logging
 import os
+import tempfile
 from urllib.parse import quote, urljoin
 
 import boto3
@@ -77,7 +78,7 @@ class TenantAwareFileSystemStorage(TenantStorageMixin, FileSystemStorage):
             "tenant",
         )
         super().__init__(
-            location=location or getattr(settings, "MEDIA_ROOT", "/tmp/media"),
+            location=location or getattr(settings, "MEDIA_ROOT", tempfile.gettempdir()),
             base_url=base_url or getattr(settings, "MEDIA_URL", "/media/"),
         )
 
@@ -360,7 +361,7 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
             # Create tenant-aware local storage
             from django.conf import settings
 
-            media_root = getattr(settings, "MEDIA_ROOT", "/tmp/media")
+            media_root = getattr(settings, "MEDIA_ROOT", tempfile.gettempdir())
             tenant_media_root = os.path.join(media_root, container_name)
             os.makedirs(tenant_media_root, exist_ok=True)
             self._fallback_storages[container_name] = FileSystemStorage(location=tenant_media_root)
