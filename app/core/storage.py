@@ -11,6 +11,7 @@ This module provides a Django storage backend that:
 import logging
 import os
 import tempfile
+from typing import Any
 from urllib.parse import quote, urljoin
 
 import boto3
@@ -24,17 +25,28 @@ from django.utils.deconstruct import deconstructible
 
 logger = logging.getLogger(__name__)
 
+AzureBlobServiceClient: Any | None = None
+AzureResourceNotFoundError: type[Exception] = Exception
+AzureServiceRequestError: type[Exception] = Exception
+
 try:
-    from azure.storage.blob import BlobServiceClient
-    from azure.core.exceptions import ResourceNotFoundError, ServiceRequestError
+    from azure.core.exceptions import ResourceNotFoundError as _AzureResourceNotFoundError
+    from azure.core.exceptions import ServiceRequestError as _AzureServiceRequestError
+    from azure.storage.blob import BlobServiceClient as _AzureBlobServiceClient
 except ModuleNotFoundError:
-    BlobServiceClient = None
 
-    class ResourceNotFoundError(Exception):
+    class _FallbackAzureResourceNotFoundError(Exception):
         pass
 
-    class ServiceRequestError(Exception):
+    class _FallbackAzureServiceRequestError(Exception):
         pass
+
+    AzureResourceNotFoundError = _FallbackAzureResourceNotFoundError
+    AzureServiceRequestError = _FallbackAzureServiceRequestError
+else:
+    AzureBlobServiceClient = _AzureBlobServiceClient
+    AzureResourceNotFoundError = _AzureResourceNotFoundError
+    AzureServiceRequestError = _AzureServiceRequestError
 
 
 class TenantStorageMixin:
@@ -348,9 +360,11 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
         if self._blob_client is None:
             if not self.connection_string:
                 raise ValueError("Azure Storage connection string not configured")
-            if BlobServiceClient is None:
+            if AzureBlobServiceClient is None:
                 raise ValueError("azure-storage-blob is required for STORAGE_BACKEND=azure")
-            self._blob_client = BlobServiceClient.from_connection_string(self.connection_string)
+            self._blob_client = AzureBlobServiceClient.from_connection_string(
+                self.connection_string
+            )
         return self._blob_client
 
     @property
@@ -373,7 +387,7 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
             # Simple connectivity test
             self.blob_client.get_account_information()
             return True
-        except (ServiceRequestError, Exception) as e:
+        except (AzureServiceRequestError, Exception) as e:
             logger.warning(f"Azure Storage unavailable, falling back to local storage: {e}")
             return False
 
@@ -387,7 +401,7 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
         # Create container if it doesn't exist
         try:
             container_client.get_container_properties()
-        except ResourceNotFoundError:
+        except AzureResourceNotFoundError:
             container_client.create_container()
 
         return container_client
@@ -404,7 +418,7 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
         try:
             blob_data = blob_client.download_blob()
             return blob_data.readall()
-        except ResourceNotFoundError:
+        except AzureResourceNotFoundError:
             raise FileNotFoundError(f"File '{name}' not found in tenant storage")
 
     def _save(self, name, content):
@@ -439,7 +453,7 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
 
         try:
             blob_client.delete_blob()
-        except ResourceNotFoundError:
+        except AzureResourceNotFoundError:
             pass  # File already doesn't exist
 
     def exists(self, name):
@@ -453,7 +467,7 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
                 blob_client = container_client.get_blob_client(name)
                 blob_client.get_blob_properties()
                 return True
-            except ResourceNotFoundError:
+            except AzureResourceNotFoundError:
                 return False
             except Exception:
                 pass  # Fall through to local storage check
@@ -502,7 +516,7 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
         try:
             properties = blob_client.get_blob_properties()
             return properties.size
-        except ResourceNotFoundError:
+        except AzureResourceNotFoundError:
             raise FileNotFoundError(f"File '{name}' not found in tenant storage")
 
     def url(self, name):
@@ -548,7 +562,7 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
         try:
             properties = blob_client.get_blob_properties()
             return properties.creation_time
-        except ResourceNotFoundError:
+        except AzureResourceNotFoundError:
             raise FileNotFoundError(f"File '{name}' not found in tenant storage")
 
     def get_modified_time(self, name):
@@ -563,7 +577,7 @@ class TenantAwareBlobStorage(TenantStorageMixin, Storage):
         try:
             properties = blob_client.get_blob_properties()
             return properties.last_modified
-        except ResourceNotFoundError:
+        except AzureResourceNotFoundError:
             raise FileNotFoundError(f"File '{name}' not found in tenant storage")
 
     def storage_health(self):
