@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 import logging
 
 from .models import SSOProvider, SAMLProvider, SSOSession, SSOAuditLog, AttributeMapping
-from .utils import get_tenant_from_request, provision_user_from_sso
+from .utils import apply_transform_expression, get_tenant_from_request, provision_user_from_sso
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -232,9 +232,11 @@ class SAMLBackend(BaseBackend):
             # Apply transformation if configured
             if mapping.transform_expression and value:
                 try:
-                    # Safe evaluation of transform expression
-                    local_vars = {"value": value, "attributes": attributes}
-                    value = eval(mapping.transform_expression, {"__builtins__": {}}, local_vars)
+                    value = apply_transform_expression(
+                        mapping.transform_expression,
+                        value,
+                        attributes,
+                    )
                 except Exception as e:
                     logger.error(f"Transform expression error: {str(e)}")
 

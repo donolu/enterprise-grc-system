@@ -1,7 +1,6 @@
 from django.contrib import admin
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.urls import reverse
-from django.utils.safestring import mark_safe
 from django.utils import timezone
 from .models import (
     Framework,
@@ -534,15 +533,30 @@ class ControlAssessmentAdmin(admin.ModelAdmin):
         if not obj.change_log:
             return "No changes logged"
 
-        log_html = '<ul style="margin: 0; padding-left: 20px;">'
-        for entry in obj.change_log[-5:]:  # Show last 5 entries
-            log_html += f"<li><strong>{entry.get('user', 'Unknown')}</strong> ({entry.get('timestamp', 'Unknown time')}): {entry.get('description', 'No description')}</li>"
-        log_html += "</ul>"
+        log_html = format_html(
+            '<ul style="margin: 0; padding-left: 20px;">{}</ul>',
+            format_html_join(
+                "",
+                "<li><strong>{}</strong> ({}): {}</li>",
+                (
+                    (
+                        entry.get("user", "Unknown"),
+                        entry.get("timestamp", "Unknown time"),
+                        entry.get("description", "No description"),
+                    )
+                    for entry in obj.change_log[-5:]
+                ),
+            ),
+        )
 
         if len(obj.change_log) > 5:
-            log_html += f"<p><em>... and {len(obj.change_log) - 5} more entries</em></p>"
+            log_html = format_html(
+                "{}<p><em>... and {} more entries</em></p>",
+                log_html,
+                len(obj.change_log) - 5,
+            )
 
-        return mark_safe(log_html)
+        return log_html
 
     change_log_display.short_description = "Recent Changes"
 
