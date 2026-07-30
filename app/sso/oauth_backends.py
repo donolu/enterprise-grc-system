@@ -3,6 +3,7 @@ OAuth 2.0 / OpenID Connect authentication backend.
 """
 
 import logging
+import uuid
 from typing import Any
 import requests
 import jwt
@@ -81,7 +82,7 @@ class OAuthBackend(BaseBackend):
                 sso_session = SSOSession.objects.create(
                     user=user,
                     sso_provider=sso_provider,
-                    sso_session_id=token_data.get("refresh_token", ""),
+                    sso_session_id=f"oauth-{uuid.uuid4()}",
                     ip_address=SSOAuditLog.get_client_ip(request),
                     user_agent=request.META.get("HTTP_USER_AGENT", ""),
                     expires_at=self._calculate_token_expiry(token_data),
