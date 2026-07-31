@@ -1,10 +1,7 @@
 # Multi-stage Dockerfile for production-ready GRC Platform
 
 # Build stage
-# Keep the OS release explicit. The unqualified slim tag moved from Bookworm
-# to Trixie, changing the vulnerability and native-library surface underneath
-# otherwise identical application builds.
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.12-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -32,7 +29,7 @@ COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Production stage
-FROM python:3.12-slim-bookworm AS production
+FROM python:3.12-slim AS production
 
 # Build arguments
 ARG BUILD_ENV=production
