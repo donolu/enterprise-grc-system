@@ -1,5 +1,6 @@
 import csv
 import io
+import logging
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,6 +17,7 @@ from policies.models import PolicyAcknowledgment, PolicyDistribution
 from training.models import CampaignDelivery, VideoView
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -65,8 +67,14 @@ class OperatorProductAnalyticsService:
 
             try:
                 tenant_usage = self._tenant_usage(tenant)
-            except Exception as exc:  # pragma: no cover - defensive for partially migrated tenants
-                collection_errors.append({"tenant_schema": tenant.schema_name, "error": str(exc)})
+            except Exception:  # pragma: no cover - defensive for partially migrated tenants
+                logger.exception("Unable to collect analytics for tenant %s", tenant.id)
+                collection_errors.append(
+                    {
+                        "tenant_schema": tenant.schema_name,
+                        "error": "Unable to collect tenant usage.",
+                    }
+                )
                 tenant_usage = self._empty_usage()
 
             aggregate_usage.update(tenant_usage["usage_counts"])

@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
@@ -108,6 +109,18 @@ class OperatorProductAnalyticsTest(TestCase):
         self.assertNotIn("Secret audit export", response_text)
         self.assertNotIn("do not expose", response_text)
         self.assertTrue(dashboard["privacy"]["tenant_content_excluded"])
+
+    @mock.patch.object(OperatorProductAnalyticsService, "_tenant_usage")
+    def test_operator_dashboard_sanitises_tenant_collection_errors(self, tenant_usage):
+        tenant_usage.side_effect = RuntimeError("sensitive database details")
+
+        dashboard = OperatorProductAnalyticsService().build_dashboard()
+
+        self.assertEqual(
+            dashboard["collection_errors"][0]["error"],
+            "Unable to collect tenant usage.",
+        )
+        self.assertNotIn("sensitive database details", str(dashboard))
 
     def test_operator_endpoint_requires_staff_user(self):
         self.client.defaults["HTTP_HOST"] = self.tenant_a_domain
