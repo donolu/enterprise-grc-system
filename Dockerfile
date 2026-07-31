@@ -1,7 +1,10 @@
 # Multi-stage Dockerfile for production-ready GRC Platform
 
 # Build stage
-FROM python:3.12-slim AS builder
+# Keep the OS release explicit. The unqualified slim tag moved from Bookworm
+# to Trixie, changing the vulnerability and native-library surface underneath
+# otherwise identical application builds.
+FROM python:3.12-slim-bookworm AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -29,7 +32,7 @@ COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Production stage
-FROM python:3.12-slim AS production
+FROM python:3.12-slim-bookworm AS production
 
 # Build arguments
 ARG BUILD_ENV=production
@@ -67,7 +70,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2 \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get purge -y --allow-remove-essential apt perl-base \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /var/log/apt/*
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
