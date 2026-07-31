@@ -1,3 +1,4 @@
+import logging
 from types import SimpleNamespace
 from uuid import uuid4
 from unittest.mock import Mock, patch
@@ -52,3 +53,31 @@ def test_oauth_backend_does_not_store_provider_refresh_token():
     assert created_session_id.startswith("oauth-")
     assert created_session_id != "provider-refresh-token"
     assert request.session["sso_session_id"] == str(sso_session.id)
+
+
+def test_token_exchange_does_not_log_provider_response_body(caplog):
+    oauth_config = SimpleNamespace(
+        client_id="client-id",
+        client_secret="client-secret",
+        sso_provider=SimpleNamespace(id=uuid4()),
+        token_url="https://idp.example.test/token",
+        verify_ssl=True,
+    )
+    request = SimpleNamespace(
+        build_absolute_uri=lambda path: f"https://app.example.test{path}",
+    )
+    response = Mock(status_code=400, text="access_token=secret-refresh-token")
+
+    caplog.set_level(logging.ERROR, logger="sso.oauth_backends")
+
+    with patch("sso.oauth_backends.requests.post", return_value=response):
+        token_data = OAuthBackend()._exchange_code_for_token(
+            oauth_config,
+            "auth-code",
+            request,
+        )
+
+    assert token_data is None
+    assert "OAuth token exchange failed with status 400" in caplog.text
+    assert "secret-refresh-token" not in caplog.text
+    assert "client-secret" not in caplog.text

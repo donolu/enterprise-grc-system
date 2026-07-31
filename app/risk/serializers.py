@@ -1,3 +1,6 @@
+import logging
+
+from django.conf import settings
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 from django.contrib.auth import get_user_model
@@ -14,6 +17,7 @@ from .models import (
 )
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class RiskCategorySerializer(serializers.ModelSerializer):
@@ -432,9 +436,14 @@ class BulkRiskCreateSerializer(serializers.Serializer):
                     )
                     created_risks.append(risk)
 
-                except Exception as e:
+                except Exception:
+                    logger.error("Bulk risk creation failed for one item", exc_info=settings.DEBUG)
                     errors.append(
-                        {"index": i, "title": risk_data.get("title", ""), "error": str(e)}
+                        {
+                            "index": i,
+                            "title": risk_data.get("title", ""),
+                            "error": "Unable to create risk.",
+                        }
                     )
 
         return created_risks, errors
@@ -907,9 +916,17 @@ class RiskActionBulkCreateSerializer(serializers.Serializer):
                             action, action.assigned_to, self.context["request"].user
                         )
 
-                except Exception as e:
+                except Exception:
+                    logger.error(
+                        "Bulk risk action creation failed for one item",
+                        exc_info=settings.DEBUG,
+                    )
                     errors.append(
-                        {"index": i, "title": action_data.get("title", ""), "error": str(e)}
+                        {
+                            "index": i,
+                            "title": action_data.get("title", ""),
+                            "error": "Unable to create risk action.",
+                        }
                     )
 
         return created_actions, errors

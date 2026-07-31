@@ -2,6 +2,7 @@ import logging
 from rest_framework import viewsets, status, filters, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.conf import settings
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Q, Case, When, Value, IntegerField, F
 from django.utils import timezone
@@ -63,6 +64,10 @@ from .audit import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _log_api_error(message: str, *args: object) -> None:
+    logger.error(message, *args, exc_info=settings.DEBUG)
 
 
 @extend_schema_view(
@@ -1402,7 +1407,7 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
             dashboard_data = RiskReportGenerator.generate_risk_dashboard_data()
             return Response(dashboard_data)
         except Exception:
-            logger.exception("Failed to generate risk dashboard data")
+            _log_api_error("Failed to generate risk dashboard data")
             return Response(
                 {"error": "Failed to generate dashboard data"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1431,7 +1436,7 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
             overview_data = RiskAnalyticsService.get_risk_overview_stats()
             return Response(overview_data)
         except Exception:
-            logger.exception("Failed to generate risk overview")
+            _log_api_error("Failed to generate risk overview")
             return Response(
                 {"error": "Failed to generate risk overview"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1460,7 +1465,7 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
             action_data = RiskAnalyticsService.get_risk_action_overview_stats()
             return Response(action_data)
         except Exception:
-            logger.exception("Failed to generate risk action overview")
+            _log_api_error("Failed to generate risk action overview")
             return Response(
                 {"error": "Failed to generate action overview"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1489,7 +1494,7 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
             heat_map_data = RiskAnalyticsService.get_risk_heat_map_data()
             return Response(heat_map_data)
         except Exception:
-            logger.exception("Failed to generate risk heat map")
+            _log_api_error("Failed to generate risk heat map")
             return Response(
                 {"error": "Failed to generate heat map"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1531,7 +1536,7 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception:
-            logger.exception("Failed to generate risk trend analysis")
+            _log_api_error("Failed to generate risk trend analysis")
             return Response(
                 {"error": "Failed to generate trend analysis"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1560,7 +1565,7 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
             progress_data = RiskAnalyticsService.get_risk_action_progress_analysis()
             return Response(progress_data)
         except Exception:
-            logger.exception("Failed to generate risk action progress analysis")
+            _log_api_error("Failed to generate risk action progress analysis")
             return Response(
                 {"error": "Failed to generate progress analysis"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1590,7 +1595,7 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
             executive_data = RiskAnalyticsService.get_executive_risk_summary()
             return Response(executive_data)
         except Exception:
-            logger.exception("Failed to generate executive risk summary")
+            _log_api_error("Failed to generate executive risk summary")
             return Response(
                 {"error": "Failed to generate executive summary"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1620,7 +1625,7 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
             integration_data = RiskAnalyticsService.get_risk_control_integration_analysis()
             return Response(integration_data)
         except Exception:
-            logger.exception("Failed to generate risk-control integration analysis")
+            _log_api_error("Failed to generate risk-control integration analysis")
             return Response(
                 {"error": "Failed to generate control integration analysis"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1663,7 +1668,7 @@ class RiskAnalyticsViewSet(viewsets.ViewSet):
             category_data = RiskReportGenerator.get_risk_category_deep_dive(category_id)
             return Response(category_data)
         except Exception:
-            logger.exception("Failed to generate risk category analysis")
+            _log_api_error("Failed to generate risk category analysis")
             return Response(
                 {"error": "Failed to generate category analysis"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
