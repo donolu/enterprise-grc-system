@@ -62,6 +62,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    libexpat1 \
     libmagic1 \
     libcairo2 \
     libpango-1.0-0 \
