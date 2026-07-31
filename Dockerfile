@@ -70,8 +70,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2 \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
-    && apt-get purge -y --allow-remove-essential apt perl-base \
-    && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /var/log/apt/*
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
