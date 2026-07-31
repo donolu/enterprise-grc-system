@@ -103,6 +103,8 @@ jobs:
     name: Deploy to Staging Slot (Blue/Green)
     runs-on: ubuntu-latest
     needs: build-and-push
+    outputs:
+      azure-authenticated: ${{ steps.mark-azure-authenticated.outputs.ready }}
     environment: staging
     # Keep push-to-main CD green before Azure OIDC secrets are configured.
     # Main pushes still build, publish, generate SBOMs, and scan the image;
@@ -112,12 +114,44 @@ jobs:
     steps:
     - uses: actions/checkout@v7
 
+    - name: Validate Azure deployment configuration
+      env:
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        AZURE_WEBAPP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
+        AZURE_SLOT_STAGING: ${{ secrets.AZURE_SLOT_STAGING }}
+      run: |
+        missing=()
+        for name in \
+          AZURE_CLIENT_ID \
+          AZURE_TENANT_ID \
+          AZURE_SUBSCRIPTION_ID \
+          AZURE_RESOURCE_GROUP \
+          AZURE_WEBAPP_NAME \
+          AZURE_SLOT_STAGING; do
+          if [[ -z "${!name}" ]]; then
+            missing+=("$name")
+          fi
+        done
+
+        if ((${#missing[@]})); then
+          printf 'Missing required staging environment secret(s): %s\n' "${missing[*]}"
+          echo 'Configure these values in the GitHub staging Environment before retrying.'
+          exit 1
+        fi
+
     - name: Azure Login (OIDC)
       uses: azure/login@v3
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Mark Azure authentication successful
+      id: mark-azure-authenticated
+      run: echo "ready=true" >> "$GITHUB_OUTPUT"
 
     - name: Detect Compose vs Single image
       id: detect
@@ -215,7 +249,11 @@ jobs:
     name: Rollback (Swap back)
     runs-on: ubuntu-latest
     needs: [deploy-staging-slot]
-    if: failure() && github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
+    if: >-
+      failure() &&
+      needs.deploy-staging-slot.outputs.azure-authenticated == 'true' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.environment == 'staging'
     environment: production
 
     steps:
