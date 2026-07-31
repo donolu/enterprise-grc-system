@@ -21,6 +21,14 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
+def _log_oauth_error(message: str, *args: object) -> None:
+    logger.error(message, *args, exc_info=settings.DEBUG)
+
+
+def _log_oauth_warning(message: str, *args: object) -> None:
+    logger.warning(message, *args, exc_info=settings.DEBUG)
+
+
 class OAuthBackend(BaseBackend):
     """
     OAuth 2.0 / OpenID Connect authentication backend.
@@ -104,15 +112,15 @@ class OAuthBackend(BaseBackend):
                 return user
 
         except SSOProvider.DoesNotExist:
-            logger.error(f"SSO provider {oauth_provider_id} not found")
-        except Exception as e:
-            logger.error(f"OAuth authentication error: {str(e)}")
+            logger.error("SSO provider not found for OAuth authentication")
+        except Exception:
+            _log_oauth_error("OAuth authentication failed")
             SSOAuditLog.log_event(
                 "error",
-                f"OAuth authentication error: {str(e)}",
+                "OAuth authentication failed",
                 request=request,
                 success=False,
-                error_message=str(e),
+                error_message="OAuth authentication failed.",
             )
 
         return None
@@ -153,11 +161,11 @@ class OAuthBackend(BaseBackend):
             if response.status_code == 200:
                 return response.json()
             else:
-                logger.error(f"Token exchange failed: {response.status_code} {response.text}")
+                logger.error("OAuth token exchange failed with status %s", response.status_code)
                 return None
 
-        except Exception as e:
-            logger.error(f"Token exchange error: {str(e)}")
+        except Exception:
+            _log_oauth_error("OAuth token exchange failed")
             return None
 
     def _get_user_info(self, oauth_config, access_token, id_token=None):
@@ -175,8 +183,8 @@ class OAuthBackend(BaseBackend):
                         options={"verify_signature": False},  # DO NOT DO THIS IN PRODUCTION
                     )
                     return decoded_token
-                except Exception as e:
-                    logger.warning(f"Failed to decode ID token: {str(e)}")
+                except Exception:
+                    _log_oauth_warning("Failed to decode OAuth ID token")
 
             # Fall back to UserInfo endpoint
             if oauth_config.userinfo_url:
@@ -195,8 +203,8 @@ class OAuthBackend(BaseBackend):
                     logger.error(f"UserInfo request failed: {response.status_code}")
                     return None
 
-        except Exception as e:
-            logger.error(f"Failed to get user info: {str(e)}")
+        except Exception:
+            _log_oauth_error("Failed to get OAuth user info")
             return None
 
     def _calculate_token_expiry(self, token_data):
@@ -234,7 +242,7 @@ class OAuthBackend(BaseBackend):
             if sso_provider.enable_jit_provisioning:
                 return provision_user_from_sso(sso_provider, user_info, email, request)
             else:
-                logger.warning(f"JIT provisioning disabled for {email}")
+                logger.warning("JIT provisioning disabled for OAuth user")
                 return None
 
     def _get_user_attribute(self, sso_provider, user_info, field_name):
@@ -260,8 +268,8 @@ class OAuthBackend(BaseBackend):
             if updated:
                 user.save()
 
-        except Exception as e:
-            logger.error(f"Failed to update user from OAuth info: {str(e)}")
+        except Exception:
+            _log_oauth_error("Failed to update user from OAuth info")
 
     def get_user(self, user_id):
         """
@@ -313,8 +321,8 @@ class OAuthClient:
             response = requests.get(discovery_url, timeout=30)
             if response.status_code == 200:
                 return response.json()
-        except Exception as e:
-            logger.error(f"OIDC discovery failed: {str(e)}")
+        except Exception:
+            _log_oauth_error("OIDC discovery failed")
 
         return None
 
