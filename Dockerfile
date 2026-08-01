@@ -4,7 +4,7 @@
 # Keep the OS release explicit. The unqualified slim tag moved from Bookworm
 # to Trixie, changing the vulnerability and native-library surface underneath
 # otherwise identical application builds.
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.13-slim-bookworm AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -20,6 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2-dev \
     libpango1.0-dev \
     libmagic1 \
+    libxml2-dev \
+    libxmlsec1-dev \
+    libxslt1-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Create virtual environment
@@ -29,10 +33,10 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Install Python dependencies
 WORKDIR /build
 COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --no-binary=lxml,xmlsec -r requirements.txt
 
 # Production stage
-FROM python:3.12-slim-bookworm AS production
+FROM python:3.13-slim-bookworm AS production
 
 # Build arguments
 ARG BUILD_ENV=production
@@ -70,6 +74,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2 \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
+    libxml2 \
+    libxmlsec1 \
+    libxmlsec1-openssl \
+    libxslt1.1 \
     && apt-get purge -y --allow-remove-essential apt perl-base \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /var/log/apt/*
 
