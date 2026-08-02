@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
-from core.models import Tenant, Domain
+
+from core.models import Domain, Tenant
 
 
 class Command(BaseCommand):
@@ -15,17 +16,13 @@ class Command(BaseCommand):
         slug = options["slug"]
         domain_name = options["domain"]
 
-        # Create tenant
         tenant = Tenant.objects.create(name=name, slug=slug, schema_name=slug)
-
-        # Create domain
-        domain = Domain.objects.create(domain=domain_name, tenant=tenant, is_primary=True)
+        Domain.objects.create(domain=domain_name, tenant=tenant, is_primary=True)
 
         self.stdout.write(
             self.style.SUCCESS(f'Successfully created tenant "{name}" with domain "{domain_name}"')
         )
 
-        # Run migrations for this tenant
         self.stdout.write("Running migrations for new tenant...")
         from django.core.management import call_command
 
