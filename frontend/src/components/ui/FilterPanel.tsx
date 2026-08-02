@@ -9,9 +9,9 @@ import { useTheme } from '@/theme'
 const { Option } = Select
 const { RangePicker } = DatePicker
 
-type DateRangeValue = [Dayjs | null, Dayjs | null]
-type FilterValue = string | string[] | DateRangeValue | null | undefined
-type FilterValues = Record<string, FilterValue>
+export type DateRangeValue = [Dayjs | null, Dayjs | null]
+export type FilterValue = string | string[] | DateRangeValue | null | undefined
+export type FilterValues = Record<string, FilterValue>
 
 interface FilterOption {
   key: string

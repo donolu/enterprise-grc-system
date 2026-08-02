@@ -5,6 +5,7 @@ import { Card, Typography, Space, Button, Row, Col, Progress, Table, Tag, messag
 import { SafetyOutlined, PlusOutlined, ExclamationCircleOutlined, WarningOutlined, CheckCircleOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import { Breadcrumb, KPICard, RiskKPICard, StatusTag, PriorityTag, Loading, ExportButton, FilterPanel } from '@/components/ui'
+import type { FilterValues } from '@/components/ui/FilterPanel'
 import { riskService, type Risk, type RiskCategory, type RiskFilters } from '@/lib/services/riskService'
 
 const { Title, Text } = Typography
@@ -28,8 +29,6 @@ interface RiskChoices {
   treatment_strategies?: ChoiceOption[]
 }
 
-type FilterValue = string | string[] | null | undefined
-type FilterValues = Record<string, FilterValue>
 type PaginationConfig = { current?: number; pageSize?: number }
 
 export default function RiskPage() {
