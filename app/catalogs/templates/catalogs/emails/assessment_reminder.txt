@@ -6,7 +6,7 @@ This is a reminder about your assigned assessment that requires attention.
 
 ASSESSMENT DETAILS
 ==================
-Control: {{ control.control_id }} - {{ control.title }}
+Control: {{ control.control_id }} - {{ control.name }}
 Framework: {{ framework.short_name }} ({{ framework.name }})
 Current Status: {{ assessment.get_status_display }}
 Implementation Status: {{ assessment.get_implementation_status_display }}

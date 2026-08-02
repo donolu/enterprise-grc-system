@@ -182,14 +182,14 @@
             <div class="assessment-item overdue">
                 <div class="assessment-header">
                     <div class="assessment-title">
-                        {{ assessment.control.control_id }}: {{ assessment.control.title|truncatechars:60 }}
+                        {{ assessment.control.control_id }}: {{ assessment.control.name|truncatechars:60 }}
                     </div>
                     <span class="due-badge due-overdue">
                         {{ assessment.days_until_due|add:"-1" }} days overdue
                     </span>
                 </div>
                 <div class="assessment-details">
-                    <span class="framework-badge">{{ assessment.control.clause.framework.short_name }}</span>
+                    <span class="framework-badge">{{ assessment.control.clauses.all.0.framework.short_name }}</span>
                     Status: {{ assessment.get_status_display }} •
                     Due: {{ assessment.due_date|date:"M d, Y" }}
                 </div>
@@ -205,7 +205,7 @@
             <div class="assessment-item {% if assessment.days_until_due <= 3 %}due-soon{% endif %}">
                 <div class="assessment-header">
                     <div class="assessment-title">
-                        {{ assessment.control.control_id }}: {{ assessment.control.title|truncatechars:60 }}
+                        {{ assessment.control.control_id }}: {{ assessment.control.name|truncatechars:60 }}
                     </div>
                     <span class="due-badge {% if assessment.days_until_due == 0 %}due-today{% elif assessment.days_until_due <= 3 %}due-soon{% else %}due-upcoming{% endif %}">
                         {% if assessment.days_until_due == 0 %}
@@ -216,7 +216,7 @@
                     </span>
                 </div>
                 <div class="assessment-details">
-                    <span class="framework-badge">{{ assessment.control.clause.framework.short_name }}</span>
+                    <span class="framework-badge">{{ assessment.control.clauses.all.0.framework.short_name }}</span>
                     Status: {{ assessment.get_status_display }} •
                     Due: {{ assessment.due_date|date:"M d, Y" }}
                 </div>

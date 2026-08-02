@@ -1,0 +1,4 @@
+Hello {{ assessment.assigned_to.get_full_name|default:assessment.assigned_to.username }},
+
+The assessment for control {{ control.control_id }} is now {{ new_status|title }}.
+{{ control.name }}
