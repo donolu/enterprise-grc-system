@@ -88,7 +88,6 @@ addopts = """
     --cov-fail-under=70
 """
 filterwarnings = [
-    "ignore::django.utils.deprecation.RemovedInDjango50Warning",
     "ignore::DeprecationWarning",
     "ignore::PendingDeprecationWarning",
 ]
@@ -101,7 +100,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = "."
+source = ["."]
 omit = [
     "*/migrations/*",
     "*/venv/*",
