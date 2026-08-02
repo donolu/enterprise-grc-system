@@ -199,6 +199,12 @@ interface StatusTagProps {
   onClick?: () => void;
 }
 
+type StatusConfig = {
+  color: string;
+  icon: React.ReactNode;
+  label: string;
+}
+
 export const StatusTag: React.FC<StatusTagProps> = ({
   status,
   context,
@@ -208,7 +214,7 @@ export const StatusTag: React.FC<StatusTagProps> = ({
   style,
   onClick
 }) => {
-  const config = StatusConfigs[context]?.[status];
+  const config = (StatusConfigs[context] as Record<string, StatusConfig> | undefined)?.[status];
 
   if (!config) {
     return (
@@ -282,7 +288,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   size = 'default',
   showZero = false
 }) => {
-  const config = StatusConfigs[context]?.[status];
+  const config = (StatusConfigs[context] as Record<string, StatusConfig> | undefined)?.[status];
 
   if (!config) return null;
 

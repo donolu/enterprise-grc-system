@@ -5,6 +5,7 @@ import { Card, Typography, Space, Button, Row, Col, Table, Tag, Progress, Avatar
 import { TeamOutlined, PlusOutlined, WarningOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import { Breadcrumb, VendorKPICard, KPICard, StatusTag, PriorityTag, Loading, ExportButton, FilterPanel } from '@/components/ui'
+import type { FilterValues } from '@/components/ui/FilterPanel'
 import { vendorService, type Vendor, type VendorCategory, type VendorFilters } from '@/lib/services/vendorService'
 
 const { Title, Text } = Typography
@@ -28,8 +29,6 @@ interface VendorChoices {
   vendor_type_choices?: ChoiceOption[]
 }
 
-type FilterValue = string | string[] | null | undefined
-type FilterValues = Record<string, FilterValue>
 type PaginationConfig = { current?: number; pageSize?: number }
 
 export default function VendorsPage() {
