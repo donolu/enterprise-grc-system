@@ -64,7 +64,7 @@
         4.  Users from one tenant cannot access data from another.
     *   **What was achieved:**
         1.  ✅ Full django-tenants integration with PostgreSQL schema isolation
-        2.  ✅ Automatic schema creation via `create_tenant` management command
+        2.  ✅ Automatic schema creation via `provision_tenant` management command
         3.  ✅ Tenant resolution via subdomain middleware (django-tenants)
         4.  ✅ Complete data isolation verified - users cannot cross-access tenants
         5.  ✅ Shared vs tenant app separation properly configured
