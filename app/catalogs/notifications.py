@@ -167,18 +167,26 @@ class AssessmentReminderService:
                 return False
 
             # Get assessments for this user
-            upcoming_assessments = ControlAssessment.objects.filter(
-                assigned_to=user,
-                due_date__gte=timezone.now().date(),
-                due_date__lte=timezone.now().date() + timedelta(days=14),
-                status__in=["not_started", "pending", "in_progress", "under_review"],
-            ).select_related("control").prefetch_related("control__clauses__framework")
+            upcoming_assessments = (
+                ControlAssessment.objects.filter(
+                    assigned_to=user,
+                    due_date__gte=timezone.now().date(),
+                    due_date__lte=timezone.now().date() + timedelta(days=14),
+                    status__in=["not_started", "pending", "in_progress", "under_review"],
+                )
+                .select_related("control")
+                .prefetch_related("control__clauses__framework")
+            )
 
-            overdue_assessments = ControlAssessment.objects.filter(
-                assigned_to=user,
-                due_date__lt=timezone.now().date(),
-                status__in=["not_started", "pending", "in_progress", "under_review"],
-            ).select_related("control").prefetch_related("control__clauses__framework")
+            overdue_assessments = (
+                ControlAssessment.objects.filter(
+                    assigned_to=user,
+                    due_date__lt=timezone.now().date(),
+                    status__in=["not_started", "pending", "in_progress", "under_review"],
+                )
+                .select_related("control")
+                .prefetch_related("control__clauses__framework")
+            )
 
             # Skip if no assessments
             if not upcoming_assessments.exists() and not overdue_assessments.exists():
@@ -305,11 +313,15 @@ class AssessmentReminderService:
 
                 try:
                     # Process individual assessment reminders
-                    assessments = ControlAssessment.objects.filter(
-                        assigned_to=user,
-                        due_date__isnull=False,
-                        status__in=["not_started", "pending", "in_progress", "under_review"],
-                    ).select_related("control").prefetch_related("control__clauses__framework")
+                    assessments = (
+                        ControlAssessment.objects.filter(
+                            assigned_to=user,
+                            due_date__isnull=False,
+                            status__in=["not_started", "pending", "in_progress", "under_review"],
+                        )
+                        .select_related("control")
+                        .prefetch_related("control__clauses__framework")
+                    )
 
                     for assessment in assessments:
                         days_until_due = assessment.days_until_due
