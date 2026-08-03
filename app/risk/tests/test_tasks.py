@@ -55,17 +55,20 @@ class RiskActionTaskTest(TestCase):
         # Create reminder configurations
         RiskActionReminderConfiguration.objects.create(
             user=self.user1,
-            enabled=True,
-            send_due_reminders=True,
-            send_overdue_reminders=True,
-            reminder_days_before=7,
+            enable_reminders=True,
+            email_notifications=True,
+            overdue_reminders=True,
+            advance_warning_days=7,
         )
         RiskActionReminderConfiguration.objects.create(
             user=self.user2,
-            enabled=True,
-            send_due_reminders=True,
-            send_overdue_reminders=True,
-            reminder_days_before=3,
+            enable_reminders=True,
+            email_notifications=True,
+            overdue_reminders=True,
+            advance_warning_days=3,
+        )
+        RiskActionReminderConfiguration.objects.filter(user__in=[self.user1, self.user2]).update(
+            weekly_digest_day=timezone.now().weekday()
         )
 
     @patch("risk.notifications.RiskActionReminderService.send_individual_reminder")
@@ -157,7 +160,7 @@ class RiskActionTaskTest(TestCase):
 
         # Disable reminders for user2
         config = RiskActionReminderConfiguration.objects.get(user=self.user2)
-        config.enabled = False
+        config.enable_reminders = False
         config.save()
 
         # Create actions for both users
@@ -207,11 +210,8 @@ class RiskActionTaskTest(TestCase):
         # Should attempt all reminders despite one failing
         self.assertEqual(mock_send_reminder.call_count, 3)
 
-    @patch("risk.notifications.RiskActionReminderService.send_individual_reminder")
-    def test_send_due_reminders_prevents_duplicate_daily_reminders(self, mock_send_reminder):
+    def test_send_due_reminders_prevents_duplicate_daily_reminders(self):
         """Test that duplicate reminders are not sent on same day."""
-        mock_send_reminder.return_value = True
-
         action = RiskAction.objects.create(
             risk=self.risk,
             title="Test Action",
@@ -223,16 +223,24 @@ class RiskActionTaskTest(TestCase):
 
         # Create existing log entry for today
         RiskActionReminderLog.objects.create(
-            action=action, user=self.user1, reminder_type="due_today", sent_successfully=True
+            action=action,
+            user=self.user1,
+            reminder_type="due_today",
+            subject="Test reminder",
+            email_sent=True,
+            days_before_due=0,
         )
 
         result = send_risk_action_due_reminders.apply()
 
         self.assertTrue(result.successful())
         # Should not send duplicate reminder
-        mock_send_reminder.assert_not_called()
+        self.assertEqual(
+            RiskActionReminderLog.objects.filter(action=action, reminder_type="due_today").count(),
+            1,
+        )
 
-    @patch("risk.notifications.RiskActionNotificationService.send_weekly_digest")
+    @patch("risk.notifications.RiskActionReminderService.send_weekly_digest")
     def test_weekly_digest_task_success(self, mock_send_digest):
         """Test successful execution of weekly digest task."""
         mock_send_digest.return_value = True
@@ -268,14 +276,14 @@ class RiskActionTaskTest(TestCase):
         self.assertIn(self.user1, called_users)
         self.assertIn(self.user2, called_users)
 
-    @patch("risk.notifications.RiskActionNotificationService.send_weekly_digest")
+    @patch("risk.notifications.RiskActionReminderService.send_weekly_digest")
     def test_weekly_digest_respects_user_preferences(self, mock_send_digest):
         """Test that weekly digest respects user preferences."""
         mock_send_digest.return_value = True
 
         # Disable weekly digest for user2
         config = RiskActionReminderConfiguration.objects.get(user=self.user2)
-        config.send_weekly_digest = False
+        config.weekly_digest_enabled = False
         config.save()
 
         # Create actions for both users
@@ -301,7 +309,7 @@ class RiskActionTaskTest(TestCase):
         self.assertEqual(mock_send_digest.call_count, 1)
         self.assertEqual(mock_send_digest.call_args[0][0], self.user1)
 
-    @patch("risk.notifications.RiskActionNotificationService.send_weekly_digest")
+    @patch("risk.notifications.RiskActionReminderService.send_weekly_digest")
     def test_weekly_digest_handles_exceptions(self, mock_send_digest):
         """Test that weekly digest task handles exceptions gracefully."""
         # First call succeeds, second fails
@@ -344,11 +352,11 @@ class RiskActionTaskTest(TestCase):
         )
 
         result = send_immediate_risk_action_reminder.apply(
-            args=[action.id, self.user1.id, "due_soon", 3]
+            args=[action.id, self.user1.id, "advance_warning"]
         )
 
         self.assertTrue(result.successful())
-        mock_send_reminder.assert_called_once_with(action, self.user1, "due_soon", 3)
+        mock_send_reminder.assert_called_once_with(action, self.user1, "advance_warning", 3)
 
     @patch("risk.notifications.RiskActionReminderService.send_individual_reminder")
     def test_process_individual_reminder_task_retry(self, mock_send_reminder):
@@ -364,11 +372,13 @@ class RiskActionTaskTest(TestCase):
             status="pending",
         )
 
-        with self.assertRaises(Exception):
-            # Task should raise exception after max retries
-            send_immediate_risk_action_reminder.apply(
-                args=[action.id, self.user1.id, "due_soon", 3]
-            )
+        result = send_immediate_risk_action_reminder.apply(
+            args=[action.id, self.user1.id, "advance_warning"]
+        )
+
+        self.assertTrue(result.successful())
+        self.assertEqual(result.result["status"], "error")
+        self.assertIn("Temporary failure", result.result["message"])
 
     def test_cleanup_old_reminder_logs_task(self):
         """Test cleanup of old reminder logs."""
@@ -383,30 +393,33 @@ class RiskActionTaskTest(TestCase):
 
         # Create old log entries (older than 90 days)
         old_date = timezone.now() - timedelta(days=100)
-        RiskActionReminderLog.objects.create(
+        old_log = RiskActionReminderLog.objects.create(
             action=action,
             user=self.user1,
-            reminder_type="due_soon",
-            sent_successfully=True,
-            sent_at=old_date,
+            reminder_type="advance_warning",
+            subject="Test reminder",
+            email_sent=True,
         )
-        RiskActionReminderLog.objects.create(
+        RiskActionReminderLog.objects.filter(pk=old_log.pk).update(sent_at=old_date)
+        old_log = RiskActionReminderLog.objects.create(
             action=action,
             user=self.user1,
             reminder_type="overdue",
-            sent_successfully=True,
-            sent_at=old_date,
+            subject="Test reminder",
+            email_sent=True,
         )
+        RiskActionReminderLog.objects.filter(pk=old_log.pk).update(sent_at=old_date)
 
         # Create recent log entry (should not be deleted)
         recent_date = timezone.now() - timedelta(days=30)
-        RiskActionReminderLog.objects.create(
+        recent_log = RiskActionReminderLog.objects.create(
             action=action,
             user=self.user1,
             reminder_type="due_today",
-            sent_successfully=True,
-            sent_at=recent_date,
+            subject="Test reminder",
+            email_sent=True,
         )
+        RiskActionReminderLog.objects.filter(pk=recent_log.pk).update(sent_at=recent_date)
 
         self.assertEqual(RiskActionReminderLog.objects.count(), 3)
 
@@ -426,10 +439,9 @@ class RiskActionTaskTest(TestCase):
             # Simulate database error
             mock_filter.side_effect = Exception("Database connection failed")
 
-            result = send_risk_action_due_reminders.apply()
+            with self.assertRaises(Retry):
+                send_risk_action_due_reminders.apply()
 
-            # Task should handle error gracefully
-            self.assertTrue(result.successful())
             # Error should be logged
             mock_logger.error.assert_called()
 
@@ -456,20 +468,12 @@ class RiskActionTaskTest(TestCase):
             self.assertTrue(result.successful())
             stats = result.result
 
-            self.assertIn("total_users_processed", stats)
-            self.assertIn("total_reminders_sent", stats)
-            self.assertIn("total_errors", stats)
-            self.assertIn("processing_time", stats)
+            self.assertEqual(stats["status"], "success")
+            self.assertEqual(stats["total_processed"], 3)
+            self.assertEqual(stats["total_sent"], 3)
 
-            self.assertGreaterEqual(stats["total_users_processed"], 1)
-            self.assertGreaterEqual(stats["total_reminders_sent"], 0)
-            self.assertEqual(stats["total_errors"], 0)
-
-    @patch("risk.notifications.RiskActionReminderService.send_individual_reminder")
-    def test_reminder_frequency_control(self, mock_send_reminder):
+    def test_reminder_frequency_control(self):
         """Test that reminder frequency is controlled properly."""
-        mock_send_reminder.return_value = True
-
         action = RiskAction.objects.create(
             risk=self.risk,
             title="Frequency Test Action",
@@ -483,15 +487,17 @@ class RiskActionTaskTest(TestCase):
         result = send_risk_action_due_reminders.apply()
         self.assertTrue(result.successful())
 
-        # Reset mock
-        mock_send_reminder.reset_mock()
-
         # Immediate second run should not send duplicate reminders
         result = send_risk_action_due_reminders.apply()
         self.assertTrue(result.successful())
 
         # Should not send reminder again for same day
-        mock_send_reminder.assert_not_called()
+        self.assertEqual(
+            RiskActionReminderLog.objects.filter(
+                action=action, reminder_type="advance_warning"
+            ).count(),
+            1,
+        )
 
     def test_task_performance_with_large_dataset(self):
         """Test task performance with larger number of actions."""
