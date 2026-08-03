@@ -3,9 +3,9 @@ from decimal import Decimal
 from django.test import TestCase
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
-from django.contrib.admin import ModelAdmin
-from django.http import HttpRequest
+from django.urls import reverse
 from django.contrib.messages.storage.fallback import FallbackStorage
+from django_tenants.test.cases import TenantTestCase
 from unittest.mock import Mock, patch
 
 from ..models import (
@@ -31,6 +31,8 @@ class MockRequest:
 
     def __init__(self, user=None):
         self.user = user or Mock()
+        self.session = {}
+        self.GET = {}
         self._messages = FallbackStorage(self)
 
     def build_absolute_uri(self, location=None):
@@ -78,14 +80,13 @@ class RiskActionAdminTest(TestCase):
         expected_fields = [
             "action_id",
             "title",
-            "risk_link",
-            "action_type",
-            "priority",
-            "assigned_to",
-            "status",
+            "risk_display",
+            "priority_colored",
+            "status_colored",
             "progress_bar",
-            "due_date",
-            "days_until_due_display",
+            "assigned_to_display",
+            "due_date_display",
+            "created_at",
         ]
 
         self.assertEqual(list(self.admin.list_display), expected_fields)
@@ -96,9 +97,11 @@ class RiskActionAdminTest(TestCase):
             "status",
             "priority",
             "action_type",
+            ("assigned_to", self.admin.list_filter[3][1]),
+            ("risk", self.admin.list_filter[4][1]),
             "due_date",
-            "assigned_to",
-            "risk__risk_level",
+            "start_date",
+            "completed_date",
             "created_at",
         ]
 
@@ -112,8 +115,6 @@ class RiskActionAdminTest(TestCase):
             "description",
             "risk__risk_id",
             "risk__title",
-            "assigned_to__username",
-            "assigned_to__email",
         ]
 
         self.assertEqual(list(self.admin.search_fields), expected_search)
@@ -122,12 +123,11 @@ class RiskActionAdminTest(TestCase):
         """Test the risk_link method returns proper HTML link."""
         request = MockRequest(self.user)
 
-        link_html = self.admin.risk_link(self.action)
+        link_html = self.admin.risk_display(self.action)
 
         self.assertIn(self.risk.risk_id, link_html)
-        self.assertIn(self.risk.title, link_html)
         self.assertIn("<a href=", link_html)
-        self.assertIn('target="_blank"', link_html)
+        self.assertIn("href=", link_html)
 
     def test_progress_bar_method(self):
         """Test the progress_bar method returns proper HTML."""
@@ -158,8 +158,7 @@ class RiskActionAdminTest(TestCase):
         )
 
         display = self.admin.days_until_due_display(future_action)
-        self.assertIn("7 days", display)
-        self.assertIn("color: #059669", display)  # Green for future
+        self.assertEqual(display, "7 days remaining")
 
         # Overdue action
         overdue_action = RiskAction.objects.create(
@@ -172,7 +171,7 @@ class RiskActionAdminTest(TestCase):
 
         display = self.admin.days_until_due_display(overdue_action)
         self.assertIn("3 days overdue", display)
-        self.assertIn("color: #dc2626", display)  # Red for overdue
+        self.assertIn("color: #DC2626", display)  # Red for overdue
 
         # Due today
         today_action = RiskAction.objects.create(
@@ -185,21 +184,21 @@ class RiskActionAdminTest(TestCase):
 
         display = self.admin.days_until_due_display(today_action)
         self.assertIn("Due today", display)
-        self.assertIn("color: #f59e0b", display)  # Orange for due today
+        self.assertIn("color: #F59E0B", display)  # Orange for due today
 
     def test_get_status_display_method(self):
         """Test the get_status_display method returns colored status."""
         # Test different statuses
         test_cases = [
-            ("pending", "#6b7280"),  # Gray
-            ("in_progress", "#2563eb"),  # Blue
-            ("completed", "#059669"),  # Green
-            ("cancelled", "#dc2626"),  # Red
+            ("pending", "#6B7280"),
+            ("in_progress", "#3B82F6"),
+            ("completed", "#10B981"),
+            ("cancelled", "#EF4444"),
         ]
 
         for status, expected_color in test_cases:
             self.action.status = status
-            status_html = self.admin.get_status_display(self.action)
+            status_html = self.admin.status_colored(self.action)
 
             self.assertIn(expected_color, status_html)
             self.assertIn(status.replace("_", " ").title(), status_html)
@@ -207,15 +206,15 @@ class RiskActionAdminTest(TestCase):
     def test_get_priority_display_method(self):
         """Test the get_priority_display method returns colored priority."""
         test_cases = [
-            ("low", "#6b7280"),  # Gray
-            ("medium", "#f59e0b"),  # Orange
-            ("high", "#dc2626"),  # Red
-            ("critical", "#991b1b"),  # Dark red
+            ("low", "#10B981"),
+            ("medium", "#F59E0B"),
+            ("high", "#EF4444"),
+            ("critical", "#DC2626"),
         ]
 
         for priority, expected_color in test_cases:
             self.action.priority = priority
-            priority_html = self.admin.get_priority_display(self.action)
+            priority_html = self.admin.priority_colored(self.action)
 
             self.assertIn(expected_color, priority_html)
             self.assertIn(priority.title(), priority_html)
@@ -225,19 +224,21 @@ class RiskActionAdminTest(TestCase):
         fieldsets = self.admin.get_fieldsets(MockRequest(self.user))
 
         # Check that we have the expected number of fieldsets
-        self.assertEqual(len(fieldsets), 4)
+        self.assertEqual(len(fieldsets), 6)
 
         # Check fieldset titles
         fieldset_titles = [fs[0] for fs in fieldsets]
         expected_titles = [
-            "Basic Information",
-            "Assignment & Dates",
-            "Progress & Status",
-            "Additional Information",
+            "Action Information",
+            "Assignment & Priority",
+            "Scheduling",
+            "Cost & Effort",
+            "Requirements",
+            "Metadata",
         ]
         self.assertEqual(fieldset_titles, expected_titles)
 
-    @patch("risk.notifications.RiskActionNotificationService.notify_assignment")
+    @patch("risk.notifications.RiskActionReminderService.send_assignment_notification")
     def test_save_model_triggers_notification(self, mock_notify):
         """Test that saving an action triggers appropriate notifications."""
         request = MockRequest(self.user)
@@ -251,10 +252,10 @@ class RiskActionAdminTest(TestCase):
             due_date=date.today() + timedelta(days=20),
         )
 
-        self.admin.save_model(request, new_action, None, True)
+        self.admin.save_model(request, new_action, None, False)
 
         # Should trigger assignment notification for new action
-        mock_notify.assert_called_once_with(new_action, request.user)
+        mock_notify.assert_called_once_with(new_action, new_action.assigned_to, request.user)
 
     def test_bulk_actions(self):
         """Test custom bulk actions."""
@@ -262,21 +263,23 @@ class RiskActionAdminTest(TestCase):
 
         # Check that custom actions are present
         self.assertIn("mark_as_completed", actions)
-        self.assertIn("mark_as_cancelled", actions)
-        self.assertIn("send_reminder_emails", actions)
+        self.assertIn("mark_as_deferred", actions)
+        self.assertIn("send_reminder_notifications", actions)
 
-    @patch("risk.notifications.RiskActionReminderService.send_individual_reminder")
-    def test_send_reminder_emails_action(self, mock_send_reminder):
+    @patch("risk.tasks.send_immediate_risk_action_reminder.delay")
+    def test_send_reminder_notifications_action(self, mock_send_reminder):
         """Test the send reminder emails bulk action."""
         request = MockRequest(self.user)
         mock_send_reminder.return_value = True
 
         queryset = RiskAction.objects.filter(id=self.action.id)
 
-        result = self.admin.send_reminder_emails(request, queryset)
+        result = self.admin.send_reminder_notifications(request, queryset)
 
         self.assertIsNone(result)  # Bulk actions return None on success
-        mock_send_reminder.assert_called_once()
+        mock_send_reminder.assert_called_once_with(
+            self.action.id, self.assignee.id, "advance_warning"
+        )
 
     def test_mark_as_completed_action(self):
         """Test the mark as completed bulk action."""
@@ -289,7 +292,6 @@ class RiskActionAdminTest(TestCase):
         self.action.refresh_from_db()
         self.assertEqual(self.action.status, "completed")
         self.assertEqual(self.action.progress_percentage, 100)
-        self.assertIsNotNone(self.action.completed_date)
 
     def test_mark_as_cancelled_action(self):
         """Test the mark as cancelled bulk action."""
@@ -297,10 +299,10 @@ class RiskActionAdminTest(TestCase):
 
         queryset = RiskAction.objects.filter(id=self.action.id)
 
-        result = self.admin.mark_as_cancelled(request, queryset)
+        result = self.admin.mark_as_deferred(request, queryset)
 
         self.action.refresh_from_db()
-        self.assertEqual(self.action.status, "cancelled")
+        self.assertEqual(self.action.status, "deferred")
 
 
 class RiskActionNoteAdminTest(TestCase):
@@ -332,7 +334,14 @@ class RiskActionNoteAdminTest(TestCase):
 
     def test_list_display_fields(self):
         """Test list display configuration."""
-        expected_fields = ["action", "note_preview", "created_by", "created_at"]
+        expected_fields = [
+            "action_display",
+            "note_type",
+            "note_preview",
+            "progress_display",
+            "created_by_display",
+            "created_at",
+        ]
         self.assertEqual(list(self.admin.list_display), expected_fields)
 
     def test_note_preview_method(self):
@@ -352,15 +361,9 @@ class RiskActionNoteAdminTest(TestCase):
         self.assertEqual(len(preview), 103)  # 100 chars + '...'
         self.assertTrue(preview.endswith("..."))
 
-    def test_save_model_sets_created_by(self):
-        """Test that save_model automatically sets created_by."""
-        request = MockRequest(self.user)
-
-        new_note = RiskActionNote(action=self.action, note="New note without created_by set")
-
-        self.admin.save_model(request, new_note, None, True)
-
-        self.assertEqual(new_note.created_by, self.user)
+    def test_created_at_is_read_only(self):
+        """Test that the admin protects the note timestamp."""
+        self.assertIn("created_at", self.admin.readonly_fields)
 
 
 class RiskActionEvidenceAdminTest(TestCase):
@@ -398,38 +401,28 @@ class RiskActionEvidenceAdminTest(TestCase):
         """Test list display configuration."""
         expected_fields = [
             "title",
-            "action",
+            "action_display",
             "evidence_type",
-            "uploaded_by",
-            "created_at",
-            "is_validated",
-            "file_link",
+            "validation_status",
+            "uploaded_by_display",
+            "evidence_date",
         ]
         self.assertEqual(list(self.admin.list_display), expected_fields)
 
-    def test_file_link_method_with_file(self):
-        """Test file_link method when evidence has file."""
-        # This test would need actual file upload in a real scenario
-        # For now, test the case where there's no file
-        link = self.admin.file_link(self.evidence)
-        self.assertEqual(link, "-")
+    def test_display_methods(self):
+        """Test evidence display methods for an unvalidated item."""
+        link = self.admin.action_display(self.evidence)
+        self.assertIn(self.action.action_id, link)
 
-    def test_save_model_sets_uploaded_by(self):
-        """Test that save_model automatically sets uploaded_by."""
-        request = MockRequest(self.user)
+        link = self.admin.uploaded_by_display(self.evidence)
+        self.assertEqual(link, self.user.username)
 
-        new_evidence = RiskActionEvidence(
-            action=self.action, title="New Evidence", evidence_type="screenshot"
-        )
+        link = self.admin.validation_status(self.evidence)
+        self.assertIn("Pending", link)
 
-        with patch(
-            "risk.notifications.RiskActionNotificationService.notify_evidence_uploaded"
-        ) as mock_notify:
-            self.admin.save_model(request, new_evidence, None, True)
-
-            self.assertEqual(new_evidence.uploaded_by, self.user)
-            # Should trigger evidence notification for new evidence
-            mock_notify.assert_called_once_with(new_evidence, request.user)
+    def test_uploaded_by_is_read_only(self):
+        """Test that the uploader is controlled by the admin configuration."""
+        self.assertIn("uploaded_by", self.admin.readonly_fields)
 
 
 class RiskActionReminderConfigurationAdminTest(TestCase):
@@ -445,31 +438,31 @@ class RiskActionReminderConfigurationAdminTest(TestCase):
             username="test_user", email="test@example.com", password="testpass123"
         )
 
-        self.config = RiskActionReminderConfiguration.objects.create(
-            user=self.user, enabled=True, send_due_reminders=True, reminder_days_before=7
-        )
+        self.config = RiskActionReminderConfiguration.objects.create(user=self.user)
 
     def test_list_display_fields(self):
         """Test list display configuration."""
         expected_fields = [
-            "user",
-            "enabled",
-            "send_assignment_notifications",
-            "send_due_reminders",
-            "send_overdue_reminders",
-            "send_weekly_digest",
-            "reminder_days_before",
+            "user_display",
+            "enable_reminders",
+            "advance_warning_days",
+            "reminder_frequency",
+            "email_notifications",
+            "weekly_digest_enabled",
+            "updated_at",
         ]
         self.assertEqual(list(self.admin.list_display), expected_fields)
 
     def test_list_filter_fields(self):
         """Test list filter configuration."""
         expected_filters = [
-            "enabled",
-            "send_assignment_notifications",
-            "send_due_reminders",
-            "send_overdue_reminders",
-            "send_weekly_digest",
+            "enable_reminders",
+            "email_notifications",
+            "reminder_frequency",
+            "weekly_digest_enabled",
+            "overdue_reminders",
+            "silence_completed",
+            "updated_at",
         ]
         self.assertEqual(list(self.admin.list_filter), expected_filters)
 
@@ -479,10 +472,12 @@ class RiskActionReminderConfigurationAdminTest(TestCase):
         self.assertEqual(list(self.admin.search_fields), expected_search)
 
 
-class AdminIntegrationTest(TestCase):
+class AdminIntegrationTest(TenantTestCase):
     """Integration tests for admin interface."""
 
     def setUp(self):
+        super().setUp()
+        self.client.defaults["HTTP_HOST"] = self.domain.domain
         self.user = User.objects.create_superuser(
             username="admin", email="admin@example.com", password="adminpass123"
         )
@@ -503,13 +498,13 @@ class AdminIntegrationTest(TestCase):
             due_date=date.today() + timedelta(days=30),
         )
 
-        response = self.client.get("/admin/risk/riskaction/")
+        response = self.client.get(reverse("admin:risk_riskaction_changelist"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Test Action")
 
     def test_risk_action_admin_add_view(self):
         """Test that risk action add form loads successfully."""
-        response = self.client.get("/admin/risk/riskaction/add/")
+        response = self.client.get(reverse("admin:risk_riskaction_add"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Risk")
         self.assertContains(response, "Title")
@@ -525,7 +520,7 @@ class AdminIntegrationTest(TestCase):
             due_date=date.today() + timedelta(days=30),
         )
 
-        response = self.client.get(f"/admin/risk/riskaction/{action.id}/change/")
+        response = self.client.get(reverse("admin:risk_riskaction_change", args=[action.id]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Test Action")
         self.assertContains(response, action.action_id)

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 from django.db.models import Count
 from .models import (
@@ -13,6 +13,16 @@ from .models import (
     RiskActionEvidence,
     RiskActionReminderConfiguration,
 )
+
+
+def _user_display_link(user):
+    """Return a user link when the custom user admin is registered, else text."""
+    label = user.get_full_name() or user.username
+    try:
+        url = reverse("admin:core_user_change", args=[user.pk])
+    except NoReverseMatch:
+        return label
+    return format_html('<a href="{}">{}</a>', url, label)
 
 
 @admin.register(RiskCategory)
@@ -281,12 +291,7 @@ class RiskAdmin(admin.ModelAdmin):
     def risk_owner_display(self, obj):
         """Display risk owner with link."""
         if obj.risk_owner:
-            url = reverse("admin:core_user_change", args=[obj.risk_owner.pk])
-            return format_html(
-                '<a href="{}">{}</a>',
-                url,
-                obj.risk_owner.get_full_name() or obj.risk_owner.username,
-            )
+            return _user_display_link(obj.risk_owner)
         return "Unassigned"
 
     risk_owner_display.short_description = "Risk Owner"
@@ -631,12 +636,7 @@ class RiskActionAdmin(admin.ModelAdmin):
     def assigned_to_display(self, obj):
         """Display assigned user with link."""
         if obj.assigned_to:
-            url = reverse("admin:core_user_change", args=[obj.assigned_to.pk])
-            return format_html(
-                '<a href="{}">{}</a>',
-                url,
-                obj.assigned_to.get_full_name() or obj.assigned_to.username,
-            )
+            return _user_display_link(obj.assigned_to)
         return "Unassigned"
 
     assigned_to_display.short_description = "Assigned To"
@@ -661,6 +661,8 @@ class RiskActionAdmin(admin.ModelAdmin):
 
     def days_until_due_display(self, obj):
         """Display days until due with status."""
+        if not obj.due_date:
+            return "Not set"
         days = obj.days_until_due
         if days < 0:
             return format_html(
@@ -958,10 +960,7 @@ class RiskActionReminderConfigurationAdmin(admin.ModelAdmin):
 
     def user_display(self, obj):
         """Display user with link."""
-        url = reverse("admin:core_user_change", args=[obj.user.pk])
-        return format_html(
-            '<a href="{}">{}</a>', url, obj.user.get_full_name() or obj.user.username
-        )
+        return _user_display_link(obj.user)
 
     user_display.short_description = "User"
     user_display.admin_order_field = "user__first_name"
