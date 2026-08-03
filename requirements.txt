@@ -21,7 +21,7 @@ reportlab==4.2.2
 PyJWT==2.13.0
 django-tenants==3.10.2
 gunicorn==23.0.0
-packaging>=23.0
+packaging>=26.2
 flower==2.0.1
 stripe==12.4.0
 
