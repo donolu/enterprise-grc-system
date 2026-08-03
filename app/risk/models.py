@@ -477,19 +477,23 @@ class RiskAction(models.Model):
     @property
     def is_overdue(self):
         """Check if action is overdue."""
-        if self.status in ["completed", "cancelled"]:
+        if self.status in ["completed", "cancelled"] or not self.due_date:
             return False
         return self.due_date < timezone.now().date()
 
     @property
     def days_until_due(self):
         """Days until due date (negative if overdue)."""
+        if not self.due_date:
+            return None
         delta = self.due_date - timezone.now().date()
         return delta.days
 
     @property
     def is_due_soon(self, days_threshold=7):
         """Check if action is due within the threshold."""
+        if not self.due_date:
+            return False
         return 0 <= self.days_until_due <= days_threshold
 
     def get_priority_color(self):
