@@ -14,8 +14,8 @@ Total Items: {{ overdue_assessments.count|add:upcoming_assessments.count }}
 OVERDUE ASSESSMENTS ({{ overdue_assessments.count }})
 ================================
 {% for assessment in overdue_assessments %}
-🚨 {{ assessment.control.control_id }}: {{ assessment.control.title|truncatechars:60 }}
-   Framework: {{ assessment.control.clause.framework.short_name }}
+🚨 {{ assessment.control.control_id }}: {{ assessment.control.name|truncatechars:60 }}
+   Framework: {{ assessment.control.clauses.all.0.framework.short_name }}
    Status: {{ assessment.get_status_display }}
    Due Date: {{ assessment.due_date|date:"M d, Y" }} ({{ assessment.days_until_due|add:"-1" }} days overdue)
 
@@ -26,8 +26,8 @@ OVERDUE ASSESSMENTS ({{ overdue_assessments.count }})
 UPCOMING ASSESSMENTS ({{ upcoming_assessments.count }})
 ==============================
 {% for assessment in upcoming_assessments %}
-📋 {{ assessment.control.control_id }}: {{ assessment.control.title|truncatechars:60 }}
-   Framework: {{ assessment.control.clause.framework.short_name }}
+📋 {{ assessment.control.control_id }}: {{ assessment.control.name|truncatechars:60 }}
+   Framework: {{ assessment.control.clauses.all.0.framework.short_name }}
    Status: {{ assessment.get_status_display }}
    Due Date: {{ assessment.due_date|date:"M d, Y" }}{% if assessment.days_until_due == 0 %} (DUE TODAY){% else %} ({{ assessment.days_until_due }} days remaining){% endif %}
 

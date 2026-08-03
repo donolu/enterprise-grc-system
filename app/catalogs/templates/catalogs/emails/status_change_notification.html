@@ -1,0 +1,3 @@
+<p>Hello {{ assessment.assigned_to.get_full_name|default:assessment.assigned_to.username }},</p>
+<p>The assessment for control <strong>{{ control.control_id }}</strong> is now <strong>{{ new_status|title }}</strong>.</p>
+<p>{{ control.name }}</p>

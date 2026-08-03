@@ -12,6 +12,18 @@ from .models import ControlAssessment, AssessmentReminderConfiguration, Assessme
 logger = logging.getLogger(__name__)
 
 
+def _get_assessment_framework(assessment):
+    """Return the first framework linked to an assessment's control."""
+    clause = assessment.control.clauses.select_related("framework").first()
+    return clause.framework if clause else None
+
+
+def _get_framework_short_name(assessment):
+    """Return a display name for the assessment framework, if one is linked."""
+    framework = _get_assessment_framework(assessment)
+    return framework.short_name if framework else "Unmapped"
+
+
 class AssessmentReminderService:
     """
     Service for sending automated assessment reminders and notifications.
@@ -65,7 +77,7 @@ class AssessmentReminderService:
                 "user": user,
                 "assessment": assessment,
                 "control": assessment.control,
-                "framework": assessment.control.clause.framework,
+                "framework": _get_assessment_framework(assessment),
                 "reminder_type": reminder_type,
                 "days_before_due": days_before_due,
                 "is_overdue": assessment.is_overdue,
@@ -155,18 +167,26 @@ class AssessmentReminderService:
                 return False
 
             # Get assessments for this user
-            upcoming_assessments = ControlAssessment.objects.filter(
-                assigned_to=user,
-                due_date__gte=timezone.now().date(),
-                due_date__lte=timezone.now().date() + timedelta(days=14),
-                status__in=["not_started", "pending", "in_progress", "under_review"],
-            ).select_related("control", "control__clause", "control__clause__framework")
+            upcoming_assessments = (
+                ControlAssessment.objects.filter(
+                    assigned_to=user,
+                    due_date__gte=timezone.now().date(),
+                    due_date__lte=timezone.now().date() + timedelta(days=14),
+                    status__in=["not_started", "pending", "in_progress", "under_review"],
+                )
+                .select_related("control")
+                .prefetch_related("control__clauses__framework")
+            )
 
-            overdue_assessments = ControlAssessment.objects.filter(
-                assigned_to=user,
-                due_date__lt=timezone.now().date(),
-                status__in=["not_started", "pending", "in_progress", "under_review"],
-            ).select_related("control", "control__clause", "control__clause__framework")
+            overdue_assessments = (
+                ControlAssessment.objects.filter(
+                    assigned_to=user,
+                    due_date__lt=timezone.now().date(),
+                    status__in=["not_started", "pending", "in_progress", "under_review"],
+                )
+                .select_related("control")
+                .prefetch_related("control__clauses__framework")
+            )
 
             # Skip if no assessments
             if not upcoming_assessments.exists() and not overdue_assessments.exists():
@@ -248,7 +268,7 @@ class AssessmentReminderService:
     def _generate_subject_line(assessment, reminder_type, days_before_due):
         """Generate email subject line based on reminder type."""
         control_id = assessment.control.control_id
-        framework = assessment.control.clause.framework.short_name
+        framework = _get_framework_short_name(assessment)
 
         if reminder_type == "overdue":
             days_overdue = abs(days_before_due) if days_before_due else 0
@@ -293,11 +313,15 @@ class AssessmentReminderService:
 
                 try:
                     # Process individual assessment reminders
-                    assessments = ControlAssessment.objects.filter(
-                        assigned_to=user,
-                        due_date__isnull=False,
-                        status__in=["not_started", "pending", "in_progress", "under_review"],
-                    ).select_related("control", "control__clause", "control__clause__framework")
+                    assessments = (
+                        ControlAssessment.objects.filter(
+                            assigned_to=user,
+                            due_date__isnull=False,
+                            status__in=["not_started", "pending", "in_progress", "under_review"],
+                        )
+                        .select_related("control")
+                        .prefetch_related("control__clauses__framework")
+                    )
 
                     for assessment in assessments:
                         days_until_due = assessment.days_until_due
@@ -388,12 +412,13 @@ class AssessmentNotificationService:
             context = {
                 "assessment": assessment,
                 "control": assessment.control,
-                "framework": assessment.control.clause.framework,
+                "framework": _get_assessment_framework(assessment),
                 "assigned_by": assigned_by,
                 "site_domain": settings.SITE_DOMAIN,
             }
 
-            subject = f"New Assessment Assignment: {assessment.control.control_id} ({assessment.control.clause.framework.short_name})"
+            framework = _get_framework_short_name(assessment)
+            subject = f"New Assessment Assignment: {assessment.control.control_id} ({framework})"
 
             html_message = render_to_string("catalogs/emails/assignment_notification.html", context)
             text_message = render_to_string("catalogs/emails/assignment_notification.txt", context)
@@ -448,7 +473,7 @@ class AssessmentNotificationService:
             context = {
                 "assessment": assessment,
                 "control": assessment.control,
-                "framework": assessment.control.clause.framework,
+                "framework": _get_assessment_framework(assessment),
                 "old_status": old_status,
                 "new_status": new_status,
                 "changed_by": changed_by,

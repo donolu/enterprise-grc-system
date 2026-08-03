@@ -1,0 +1,4 @@
+<p>Hello {{ assessment.assigned_to.get_full_name|default:assessment.assigned_to.username }},</p>
+<p>You have been assigned the assessment for control <strong>{{ control.control_id }}</strong>.</p>
+<p>{{ control.name }}</p>
+<p>Please sign in to review the assessment and record its evidence.</p>

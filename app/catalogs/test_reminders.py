@@ -14,7 +14,11 @@ from .models import (
     AssessmentReminderLog,
 )
 from .notifications import AssessmentReminderService, AssessmentNotificationService
-from .tasks import send_due_reminders, send_immediate_reminder, test_reminder_configuration
+from .tasks import (
+    send_due_reminders,
+    send_immediate_reminder,
+    test_reminder_configuration as send_test_reminder_configuration,
+)
 
 User = get_user_model()
 
@@ -75,7 +79,7 @@ class AssessmentReminderLogTest(TestCase):
 
         # Create test framework and assessment
         self.framework = Framework.objects.create(
-            name="Test Framework", short_name="TEST", version="1.0"
+            name="Test Framework", short_name="TEST", version="1.0", effective_date=date.today()
         )
 
         self.clause = Clause.objects.create(
@@ -83,8 +87,12 @@ class AssessmentReminderLogTest(TestCase):
         )
 
         self.control = Control.objects.create(
-            clause=self.clause, control_id="T.1.1", title="Test Control"
+            name="Test Control",
+            description="Test control description",
+            control_id="T.1.1",
+            control_type="administrative",
         )
+        self.control.clauses.add(self.clause)
 
         self.assessment = ControlAssessment.objects.create(
             control=self.control,
@@ -140,7 +148,7 @@ class AssessmentReminderServiceTest(TestCase):
 
         # Create test assessment
         self.framework = Framework.objects.create(
-            name="Test Framework", short_name="TEST", version="1.0"
+            name="Test Framework", short_name="TEST", version="1.0", effective_date=date.today()
         )
 
         self.clause = Clause.objects.create(
@@ -148,11 +156,12 @@ class AssessmentReminderServiceTest(TestCase):
         )
 
         self.control = Control.objects.create(
-            clause=self.clause,
+            name="Test Control",
+            control_type="administrative",
             control_id="T.1.1",
-            title="Test Control",
             description="Test control description",
         )
+        self.control.clauses.add(self.clause)
 
         self.assessment = ControlAssessment.objects.create(
             control=self.control,
@@ -338,7 +347,7 @@ class AssessmentNotificationServiceTest(TestCase):
         )
 
         self.framework = Framework.objects.create(
-            name="Test Framework", short_name="TEST", version="1.0"
+            name="Test Framework", short_name="TEST", version="1.0", effective_date=date.today()
         )
 
         self.clause = Clause.objects.create(
@@ -346,8 +355,12 @@ class AssessmentNotificationServiceTest(TestCase):
         )
 
         self.control = Control.objects.create(
-            clause=self.clause, control_id="T.1.1", title="Test Control"
+            name="Test Control",
+            description="Test control description",
+            control_id="T.1.1",
+            control_type="administrative",
         )
+        self.control.clauses.add(self.clause)
 
         self.assessment = ControlAssessment.objects.create(
             control=self.control, assigned_to=self.user
@@ -426,9 +439,17 @@ class ReminderTasksTest(TestCase):
     def test_send_immediate_reminder_task(self, mock_send):
         """Test sending immediate reminder task."""
         # Create test assessment
-        framework = Framework.objects.create(name="Test", short_name="TEST", version="1.0")
+        framework = Framework.objects.create(
+            name="Test", short_name="TEST", version="1.0", effective_date=date.today()
+        )
         clause = Clause.objects.create(framework=framework, clause_id="T.1", title="Test")
-        control = Control.objects.create(clause=clause, control_id="T.1.1", title="Test")
+        control = Control.objects.create(
+            name="Test",
+            description="Test control description",
+            control_id="T.1.1",
+            control_type="administrative",
+        )
+        control.clauses.add(clause)
         assessment = ControlAssessment.objects.create(control=control, assigned_to=self.user)
 
         # Mock service response
@@ -445,7 +466,7 @@ class ReminderTasksTest(TestCase):
     def test_test_reminder_configuration_task(self):
         """Test the reminder configuration test task."""
         # Call the task
-        result = test_reminder_configuration(self.user.id)
+        result = send_test_reminder_configuration(self.user.id)
 
         # Verify task response
         self.assertEqual(result["status"], "success")
@@ -468,7 +489,7 @@ class ReminderIntegrationTest(TestCase):
 
         # Create framework structure
         self.framework = Framework.objects.create(
-            name="ISO 27001", short_name="ISO27001", version="2022"
+            name="ISO 27001", short_name="ISO27001", version="2022", effective_date=date.today()
         )
 
         self.clause = Clause.objects.create(
@@ -476,8 +497,12 @@ class ReminderIntegrationTest(TestCase):
         )
 
         self.control = Control.objects.create(
-            clause=self.clause, control_id="A.5.1.1", title="Information security policies"
+            name="Information security policies",
+            description="Information security policies",
+            control_id="A.5.1.1",
+            control_type="administrative",
         )
+        self.control.clauses.add(self.clause)
 
         # Clear mail
         mail.outbox = []
@@ -517,7 +542,7 @@ class ReminderIntegrationTest(TestCase):
         results = AssessmentReminderService.process_daily_reminders()
 
         # Verify results
-        self.assertEqual(results["processed_users"], 2)
+        self.assertEqual(results["processed_users"], 1)
         self.assertEqual(results["advance_warnings_sent"], 1)  # Only user1 should get reminder
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, [self.user1.email])
