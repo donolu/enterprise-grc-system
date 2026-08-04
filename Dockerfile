@@ -4,7 +4,7 @@
 # Keep the OS release explicit. The unqualified slim tag moved from Bookworm
 # to Trixie, changing the vulnerability and native-library surface underneath
 # otherwise identical application builds.
-FROM python:3.13-slim-bookworm AS builder
+FROM python:3.14-slim-bookworm AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -36,7 +36,7 @@ COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir --no-binary=lxml,xmlsec -r requirements.txt
 
 # Production stage
-FROM python:3.13-slim-bookworm AS production
+FROM python:3.14-slim-bookworm AS production
 
 # Build arguments
 ARG BUILD_ENV=production
