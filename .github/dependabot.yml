@@ -1,38 +1,39 @@
 version: 2
 updates:
-  # Python dependencies
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     reviewers:
-      - "donolu"  # Replace with actual GitHub usernames
+      - "donolu"
     assignees:
-      - "donolu"  # Replace with actual GitHub usernames
+      - "donolu"
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
-    labels:
-      - "dependencies"
-      - "python"
+    labels: ["dependencies", "python"]
+    groups:
+      python-production:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
+      python-development:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
     ignore:
-      # Ignore major version updates for stable dependencies
       - dependency-name: "django"
         update-types: ["version-update:semver-major"]
       - dependency-name: "djangorestframework"
         update-types: ["version-update:semver-major"]
-
-  # Node.js dependencies (Frontend)
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
       day: "monday"
       time: "10:00"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     reviewers:
       - "donolu"
     assignees:
@@ -40,50 +41,50 @@ updates:
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
-    labels:
-      - "dependencies"
-      - "frontend"
-      - "nodejs"
+    labels: ["dependencies", "frontend", "nodejs"]
+    groups:
+      npm-production:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
+      npm-development:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
     ignore:
-      # Ignore major React updates until ready
       - dependency-name: "react"
         update-types: ["version-update:semver-major"]
       - dependency-name: "react-dom"
         update-types: ["version-update:semver-major"]
-
-  # Docker base image updates
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
       day: "tuesday"
       time: "09:00"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
     reviewers:
       - "donolu"
     assignees:
       - "donolu"
     commit-message:
       prefix: "docker"
-    labels:
-      - "dependencies"
-      - "docker"
-
-  # GitHub Actions updates
+    labels: ["dependencies", "docker"]
+    groups:
+      docker-non-major:
+        update-types: ["minor", "patch"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
       day: "tuesday"
       time: "10:00"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
     reviewers:
       - "donolu"
     assignees:
       - "donolu"
     commit-message:
       prefix: "ci"
-    labels:
-      - "dependencies"
-      - "github-actions"
-      - "ci/cd"
+    labels: ["dependencies", "github-actions", "ci/cd"]
+    groups:
+      github-actions-non-major:
+        update-types: ["minor", "patch"]
