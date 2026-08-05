@@ -11,7 +11,6 @@ celery==5.6.3
 redis==5.0.7
 python-dotenv==1.2.2
 drf-spectacular==0.30.0
-weasyprint==69.0
 azure-storage-blob==12.30.0
 boto3==1.43.62
 python-magic==0.4.27
