@@ -504,7 +504,9 @@ class AssessmentReportGeneratorTest(TestCase):
         generator = AssessmentReportGenerator(report)
 
         # Mock a failure in PDF rendering
-        with patch.object(generator, "_render_pdf", side_effect=Exception("PDF error")):
+        with patch.object(
+            generator.pdf_renderer, "render", side_effect=Exception("PDF error")
+        ):
             with self.assertRaises(Exception):
                 generator.generate_report()
 

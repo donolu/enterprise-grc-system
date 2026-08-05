@@ -18,7 +18,7 @@ from catalogs.models import ControlAssessment, Framework, AssessmentEvidence
 from risk.analytics import RiskAnalyticsService, RiskReportGenerator
 from risk.models import Risk, RiskAction
 from .models import AssessmentReport, TenantDataExport
-from .pdf_renderers import AssessmentSummaryPDFRenderer
+from .pdf_renderers import AssessmentSummaryPDFRenderer, ReportPDFRenderer
 from .audit import (
     assessment_report_display,
     audit_export_change,
@@ -422,6 +422,7 @@ class AssessmentReportGenerator:
     def __init__(self, report: AssessmentReport):
         self.report = report
         self.pdf_renderer = AssessmentSummaryPDFRenderer()
+        self.report_pdf_renderer = ReportPDFRenderer()
 
     def generate_report(self):
         """Generate the PDF report based on report type."""
@@ -438,22 +439,21 @@ class AssessmentReportGenerator:
                     "exports/reports/assessment_summary.html", summary_context
                 )
             elif self.report.report_type == "detailed_assessment":
-                html_content = self._generate_detailed_assessment()
+                summary_context = self._get_detailed_assessment_context()
             elif self.report.report_type == "evidence_portfolio":
-                html_content = self._generate_evidence_portfolio()
+                summary_context = self._get_evidence_portfolio_context()
             elif self.report.report_type == "compliance_gap":
-                html_content = self._generate_compliance_gap()
+                summary_context = self._get_compliance_gap_context()
             elif self.report.report_type == "risk_analytics":
-                html_content = self._generate_risk_analytics_report()
+                summary_context = self._get_risk_analytics_report_context()
             else:
                 raise ValueError(f"Unknown report type: {self.report.report_type}")
 
             # Generate PDF
-            pdf_content = (
-                self.pdf_renderer.render(summary_context)
-                if summary_context is not None
-                else self._render_pdf(html_content)
-            )
+            if self.report.report_type == "assessment_summary":
+                pdf_content = self.pdf_renderer.render(summary_context)
+            else:
+                pdf_content = self.report_pdf_renderer.render(self.report.report_type, summary_context)
 
             # Save PDF as Document
             filename = self._generate_filename()
@@ -567,11 +567,12 @@ class AssessmentReportGenerator:
 
     def _generate_detailed_assessment(self):
         """Generate detailed assessment report HTML."""
-        context = {
-            "report": self.report,
-            "generated_at": timezone.now(),
-        }
+        return render_to_string(
+            "exports/reports/detailed_assessment.html", self._get_detailed_assessment_context()
+        )
 
+    def _get_detailed_assessment_context(self):
+        context = {"report": self.report, "generated_at": timezone.now()}
         if self.report.framework:
             assessments = (
                 ControlAssessment.objects.filter(control__clauses__framework=self.report.framework)
@@ -580,17 +581,17 @@ class AssessmentReportGenerator:
                 .distinct()
             )
         else:
-            assessments = (
-                self.report.assessments.all()
-                .select_related("control", "assigned_to")
-                .prefetch_related("control__clauses", "evidence_links__evidence")
-            )
-
+            assessments = self.report.assessments.all().select_related("control", "assigned_to").prefetch_related("control__clauses", "evidence_links__evidence")
         context["assessments"] = assessments
-        return render_to_string("exports/reports/detailed_assessment.html", context)
+        return context
 
     def _generate_evidence_portfolio(self):
         """Generate evidence portfolio report HTML."""
+        return render_to_string(
+            "exports/reports/evidence_portfolio.html", self._get_evidence_portfolio_context()
+        )
+
+    def _get_evidence_portfolio_context(self):
         context = {
             "report": self.report,
             "generated_at": timezone.now(),
@@ -628,11 +629,16 @@ class AssessmentReportGenerator:
             if link.is_primary_evidence:
                 evidence_summary[evidence.id]["is_primary_count"] += 1
 
-        context["evidence_summary"] = evidence_summary.values()
-        return render_to_string("exports/reports/evidence_portfolio.html", context)
+        context["evidence_summary"] = list(evidence_summary.values())
+        return context
 
     def _generate_compliance_gap(self):
         """Generate compliance gap analysis report HTML."""
+        return render_to_string(
+            "exports/reports/compliance_gap.html", self._get_compliance_gap_context()
+        )
+
+    def _get_compliance_gap_context(self):
         context = {
             "report": self.report,
             "framework": self.report.framework,
@@ -675,138 +681,22 @@ class AssessmentReportGenerator:
             }
         )
 
-        return render_to_string("exports/reports/compliance_gap.html", context)
+        return context
 
-    def _render_pdf(self, html_content):
-        """Convert HTML to PDF using WeasyPrint."""
-        from weasyprint import CSS, HTML
-        from weasyprint.text.fonts import FontConfiguration
-
-        font_config = FontConfiguration()
-        # Define CSS for styling
-        css_content = """
-        @page {
-            size: A4;
-            margin: 2cm;
-            @bottom-center {
-                content: "Page " counter(page) " of " counter(pages);
-                font-size: 10pt;
-                color: #666;
-            }
-        }
-
-        body {
-            font-family: 'Helvetica', 'Arial', sans-serif;
-            font-size: 11pt;
-            line-height: 1.4;
-            color: #333;
-        }
-
-        .header {
-            border-bottom: 2px solid #0066cc;
-            padding-bottom: 1em;
-            margin-bottom: 2em;
-        }
-
-        .header h1 {
-            color: #0066cc;
-            margin: 0;
-            font-size: 20pt;
-        }
-
-        .header .subtitle {
-            color: #666;
-            font-size: 12pt;
-            margin-top: 0.5em;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1em;
-            margin: 1em 0;
-        }
-
-        .stat-card {
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 1em;
-            text-align: center;
-        }
-
-        .stat-card .number {
-            font-size: 24pt;
-            font-weight: bold;
-            color: #0066cc;
-        }
-
-        .stat-card .label {
-            font-size: 10pt;
-            color: #666;
-            margin-top: 0.5em;
-        }
-
-        .assessment-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1em 0;
-        }
-
-        .assessment-table th,
-        .assessment-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-            font-size: 10pt;
-        }
-
-        .assessment-table th {
-            background-color: #f5f5f5;
-            font-weight: bold;
-        }
-
-        .status-badge {
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 9pt;
-            font-weight: bold;
-            color: white;
-        }
-
-        .status-complete,
-        .status-completed { background-color: #28a745; }
-        .status-in-progress { background-color: #ffc107; color: #333; }
-        .status-not-started { background-color: #6c757d; }
-        .status-overdue { background-color: #dc3545; }
-
-        .page-break {
-            page-break-before: always;
-        }
-
-        .section {
-            margin: 2em 0;
-        }
-
-        .section h2 {
-            color: #0066cc;
-            border-bottom: 1px solid #0066cc;
-            padding-bottom: 0.5em;
-        }
-        """
-
-        css = CSS(string=css_content, font_config=font_config)
-        html = HTML(string=html_content)
-
-        pdf_buffer = io.BytesIO()
-        html.write_pdf(
-            pdf_buffer,
-            stylesheets=[css],
-            font_config=font_config,
-            presentational_hints=False,
-        )
-        pdf_buffer.seek(0)
-
-        return pdf_buffer.getvalue()
+    def _get_risk_analytics_report_context(self):
+        context = {"report": self.report, "generated_at": timezone.now()}
+        context.update(self._get_risk_analytics_context())
+        try:
+            context.update(
+                {
+                    "trend_analysis": RiskAnalyticsService.get_risk_trend_analysis(),
+                    "control_integration": RiskAnalyticsService.get_risk_control_integration_analysis(),
+                    "dashboard_data": RiskReportGenerator.generate_risk_dashboard_data(),
+                }
+            )
+        except Exception as exc:
+            context["analytics_error"] = str(exc)
+        return context
 
     def _generate_filename(self):
         """Generate appropriate filename for the report."""
@@ -935,25 +825,6 @@ class AssessmentReportGenerator:
 
     def _generate_risk_analytics_report(self):
         """Generate comprehensive risk analytics report HTML."""
-        context = {
-            "report": self.report,
-            "generated_at": timezone.now(),
-        }
-
-        # Get comprehensive risk analytics data
-        risk_context = self._get_risk_analytics_context()
-        context.update(risk_context)
-
-        # Get additional risk analytics data for detailed report
-        try:
-            context.update(
-                {
-                    "trend_analysis": RiskAnalyticsService.get_risk_trend_analysis(),
-                    "control_integration": RiskAnalyticsService.get_risk_control_integration_analysis(),
-                    "dashboard_data": RiskReportGenerator.generate_risk_dashboard_data(),
-                }
-            )
-        except Exception as e:
-            context["analytics_error"] = str(e)
-
-        return render_to_string("exports/reports/risk_analytics.html", context)
+        return render_to_string(
+            "exports/reports/risk_analytics.html", self._get_risk_analytics_report_context()
+        )

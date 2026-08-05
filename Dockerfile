@@ -17,8 +17,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     libffi-dev \
-    libcairo2-dev \
-    libpango1.0-dev \
     libmagic1 \
     libxml2-dev \
     libxmlsec1-dev \
@@ -71,9 +69,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     libexpat1 \
     libmagic1 \
-    libcairo2 \
-    libpango-1.0-0 \
-    libpangoft2-1.0-0 \
     libxml2 \
     libxmlsec1 \
     libxmlsec1-openssl \
