@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@eslint/compat": "^2.1.0",
-    "@playwright/test": "^1.62.0",
+    "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -37,7 +37,7 @@
     "@vitejs/plugin-react": "^6.0.5",
     "eslint": "^10.8.0",
     "eslint-config-next": "16.2.12",
-    "jsdom": "^30.0.0",
+    "jsdom": "^30.0.1",
     "openapi-typescript": "^7.13.0",
     "typescript": "^5.6.3",
     "vite": "^8.2.0",
