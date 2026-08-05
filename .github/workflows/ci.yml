@@ -332,7 +332,7 @@ jobs:
 
     - name: Upload coverage reports
       if: always() && hashFiles('app/coverage.xml') != ''
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         files: ./app/coverage.xml
         flags: backend-shard-${{ matrix.shard_number }}
@@ -433,7 +433,7 @@ jobs:
 
     - name: Upload coverage reports
       if: always() && false  # Disabled until tests are configured
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         directory: ./frontend/coverage
         flags: frontend
@@ -490,7 +490,7 @@ jobs:
       # only upload when the GITHUB_TOKEN can write (not forked PRs)
     - name: Upload Trivy scan results to Code Scanning
       if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-      uses: github/codeql-action/upload-sarif@v4
+      uses: github/codeql-action/upload-sarif@v4.37.4
       with:
         sarif_file: trivy-results.sarif
         category: trivy-filesystem
