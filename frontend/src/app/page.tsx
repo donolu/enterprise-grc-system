@@ -1,469 +1,259 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { Row, Col, Typography, Space, Card, Table, Progress, Button, message } from "antd";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
-  CheckSquareOutlined,
-  SafetyOutlined,
-  TeamOutlined,
-  FileTextOutlined,
-  EyeOutlined,
-  PlusOutlined
+  Alert,
+  Button,
+  DatePicker,
+  Empty,
+  Progress,
+  Select,
+  Skeleton,
+  Space,
+  Tag,
+  Tooltip,
+  Typography,
+  message,
+} from "antd";
+import {
+  ArrowDownOutlined,
+  ArrowRightOutlined,
+  ArrowUpOutlined,
+  CalendarOutlined,
+  CheckCircleFilled,
+  ClockCircleOutlined,
+  FileProtectOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SafetyCertificateOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
-import {
-  ComplianceKPICard,
-  RiskKPICard,
-  PolicyKPICard,
-  VendorKPICard,
-  StatusTag,
-  AssessmentStatusTag,
-  RiskStatusTag,
-  Loading
-} from "@/components/ui";
-import { useTheme } from "@/theme";
+import dayjs, { type Dayjs } from "dayjs";
+import { analyticsService, type DashboardMetric, type ExecutiveDashboard } from "@/lib/services/analyticsService";
 import { riskService, type Risk } from "@/lib/services/riskService";
-import { analyticsService } from "@/lib/services/analyticsService";
-
-interface RecentAssessment {
-  name: string
-  framework: string
-  progress: number
-  status: string
-  dueDate: string
-}
-
-interface DashboardData {
-  recentAssessments: RecentAssessment[]
-  recentRisks: Risk[]
-  analytics: {
-    totalAssessments: number
-    activeRisks: number
-    totalVendors: number
-    complianceScore: number
-  }
-}
 
 const { Title, Text } = Typography;
 
+type DashboardNumbers = {
+  compliance: number;
+  risks: number;
+  vendors: number;
+  assessments: number;
+  complianceChange: number;
+  risksChange: number;
+  vendorsChange: number;
+  assessmentsChange: number;
+};
+
+const emptyNumbers: DashboardNumbers = {
+  compliance: 0,
+  risks: 0,
+  vendors: 0,
+  assessments: 0,
+  complianceChange: 0,
+  risksChange: 0,
+  vendorsChange: 0,
+  assessmentsChange: 0,
+};
+
+function metricValue(metric: { value: number | string } | undefined) {
+  const value = Number(metric?.value);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function metricChange(metric: DashboardMetric | undefined) {
+  return typeof metric?.change === "number" ? metric.change : 0;
+}
+
+function formatMetric(value: number, suffix = "") {
+  return `${Number.isInteger(value) ? value : value.toFixed(1)}${suffix}`;
+}
+
+function riskTone(level: string) {
+  return level === "critical" ? "critical" : level === "high" ? "high" : level === "medium" ? "medium" : "low";
+}
+
+function RiskHeatMap({ risks }: { risks: Risk[] }) {
+  const cells = useMemo(() => {
+    const counts = new Map<string, number>();
+    risks.forEach((risk) => {
+      const key = `${risk.impact}-${risk.likelihood}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return Array.from({ length: 25 }, (_, index) => {
+      const impact = Math.floor(index / 5) + 1;
+      const likelihood = (index % 5) + 1;
+      return { impact, likelihood, count: counts.get(`${impact}-${likelihood}`) ?? 0 };
+    });
+  }, [risks]);
+
+  return (
+    <div className="heatmap-wrap">
+      <div className="heatmap-y-label">IMPACT</div>
+      <div className="heatmap-content">
+        <div className="heatmap-grid" role="img" aria-label="Risk heat map showing impact against likelihood">
+          {cells.map((cell) => (
+            <Tooltip key={`${cell.impact}-${cell.likelihood}`} title={`${cell.count} risk${cell.count === 1 ? "" : "s"} · impact ${cell.impact}, likelihood ${cell.likelihood}`}>
+              <div className={`heat-cell heat-${Math.min(cell.impact * cell.likelihood, 25)}`}>
+                {cell.count > 0 ? cell.count : ""}
+              </div>
+            </Tooltip>
+          ))}
+        </div>
+        <div className="heatmap-x-axis"><span>Low</span><span>LIKELIHOOD</span><span>High</span></div>
+      </div>
+    </div>
+  );
+}
+
+function TrendLine({ data, colour = "#0b8f84" }: { data: number[]; colour?: string }) {
+  if (!data.length) return <div className="trend-empty">No trend data</div>;
+  const max = Math.max(...data, 1);
+  const points = data.map((value, index) => `${(index / Math.max(data.length - 1, 1)) * 100},${36 - (value / max) * 30}`).join(" ");
+  return (
+    <svg className="trend-line" viewBox="0 0 100 40" preserveAspectRatio="none" aria-label="Trend line" role="img">
+      <polyline points={points} fill="none" stroke={colour} strokeWidth="2.4" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
 export default function DashboardPage() {
-  const { mode } = useTheme();
-  const isDark = mode === 'dark';
-
-  // State management
   const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState<DashboardData>({
-    recentAssessments: [],
-    recentRisks: [],
-    analytics: {
-      totalAssessments: 0,
-      activeRisks: 0,
-      totalVendors: 0,
-      complianceScore: 0
-    }
-  });
+  const [error, setError] = useState(false);
+  const [risks, setRisks] = useState<Risk[]>([]);
+  const [numbers, setNumbers] = useState(emptyNumbers);
+  const [analytics, setAnalytics] = useState<ExecutiveDashboard | null>(null);
+  const [period, setPeriod] = useState("90");
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null]>([null, null]);
 
-  // Fetch dashboard data
-  const fetchDashboardData = async () => {
+  const fetchDashboard = useCallback(async (range?: { start_date: string; end_date: string }) => {
+    setLoading(true);
+    setError(false);
     try {
-      setLoading(true);
-      console.log('🚀 Fetching dashboard data from Django APIs...');
-
-      const [risks, analytics] = await Promise.all([
-        riskService.getRisks({ page: 1, pageSize: 3 }), // Get recent risks
-        analyticsService.getExecutiveDashboard() // Get dashboard summary
+      const [riskResponse, analyticsResponse] = await Promise.all([
+        riskService.getRisks({ page: 1, pageSize: 12 }),
+        analyticsService.getExecutiveDashboard(range),
       ]);
-
-      console.log('📊 Risks data received:', risks);
-      console.log('📈 Analytics data received:', analytics);
-
-      setDashboardData({
-        recentAssessments: [], // Will be populated when assessment service is available
-        recentRisks: risks.results || [],
-        analytics: {
-          totalAssessments: Number(analytics.summary_metrics?.vendor_assessments?.value) || 0,
-          activeRisks: Number(analytics.summary_metrics?.total_risks?.value) || risks.count || 0,
-          totalVendors: Number(analytics.summary_metrics?.vendor_assessments?.value) || 0,
-          complianceScore: Number(analytics.summary_metrics?.policy_compliance?.value) || 0
-        }
+      setRisks(riskResponse.results ?? []);
+      setAnalytics(analyticsResponse);
+      setNumbers({
+        compliance: metricValue(analyticsResponse.summary_metrics?.policy_compliance),
+        risks: metricValue(analyticsResponse.summary_metrics?.total_risks) || riskResponse.count || 0,
+        vendors: metricValue(analyticsResponse.summary_metrics?.vendor_assessments),
+        assessments: metricValue(analyticsResponse.summary_metrics?.high_priority_risks),
+        complianceChange: metricChange(analyticsResponse.summary_metrics?.policy_compliance),
+        risksChange: metricChange(analyticsResponse.summary_metrics?.total_risks),
+        vendorsChange: metricChange(analyticsResponse.summary_metrics?.vendor_assessments),
+        assessmentsChange: metricChange(analyticsResponse.summary_metrics?.high_priority_risks),
       });
-
-      console.log('✅ Dashboard data successfully loaded from Django APIs');
-    } catch (error) {
-      console.error('❌ Error fetching dashboard data:', error);
-      message.error('Failed to connect to backend APIs. Please ensure the Django server is running.');
-
-      // Set empty state - no hardcoded fallbacks
-      setDashboardData({
-        recentAssessments: [],
-        recentRisks: [],
-        analytics: {
-          totalAssessments: 0,
-          activeRisks: 0,
-          totalVendors: 0,
-          complianceScore: 0
-        }
-      });
+    } catch {
+      setError(true);
+      setRisks([]);
+      setNumbers(emptyNumbers);
+      message.error("The dashboard could not refresh. Try again shortly.");
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchDashboardData();
   }, []);
 
-  // Note: All data now comes from Django APIs - no hardcoded fallbacks
-
-  const assessmentColumns = [
-    {
-      title: 'Assessment',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text: string, record: RecentAssessment) => (
-        <div>
-          <Text strong style={{ display: 'block' }}>{text}</Text>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {record.framework}
-          </Text>
-        </div>
-      )
-    },
-    {
-      title: 'Progress',
-      dataIndex: 'progress',
-      key: 'progress',
-      width: 120,
-      render: (progress: number) => (
-        <Progress
-          percent={progress}
-
-          showInfo={false}
-          strokeColor={progress === 100 ? '#0EB57D' : progress > 75 ? '#2F6FED' : '#FFB020'}
-        />
-      )
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 120,
-      render: (status: string) => (
-        <AssessmentStatusTag status={status} />
-      )
-    },
-    {
-      title: 'Due Date',
-      dataIndex: 'dueDate',
-      key: 'dueDate',
-      width: 100,
-      render: (date: string) => (
-        <Text style={{ fontSize: 12 }}>{date}</Text>
-      )
+  const queryRange = useMemo(() => {
+    if (period === "custom") {
+      if (!dateRange[0] || !dateRange[1]) return undefined;
+      return { start_date: dateRange[0].format("YYYY-MM-DD"), end_date: dateRange[1].format("YYYY-MM-DD") };
     }
-  ];
+    const end = dayjs();
+    return { start_date: end.subtract(Number(period), "day").format("YYYY-MM-DD"), end_date: end.format("YYYY-MM-DD") };
+  }, [dateRange, period]);
 
-  const riskColumns = [
-    {
-      title: 'Risk',
-      dataIndex: 'title',
-      key: 'title',
-      render: (text: string, record: Risk) => (
-        <div>
-          <Text strong style={{ display: 'block' }}>{text}</Text>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            Owner: {record.risk_owner?.first_name} {record.risk_owner?.last_name || 'Unassigned'}
-          </Text>
-        </div>
-      )
-    },
-    {
-      title: 'Risk Level',
-      dataIndex: 'risk_level',
-      key: 'risk_level',
-      width: 100,
-      render: (risk_level: string) => (
-        <StatusTag status={risk_level} context="priority" />
-      )
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 120,
-      render: (status: string) => (
-        <RiskStatusTag status={status} />
-      )
-    }
-  ];
+  useEffect(() => { void fetchDashboard(queryRange); }, [fetchDashboard, queryRange]);
+
+  const trend = analytics?.risk_trend_chart?.datasets?.[0]?.data ?? [];
+  const activities = analytics?.recent_activities ?? [];
+  const highRisks = risks.filter((risk) => risk.risk_level === "high" || risk.risk_level === "critical");
+  const highPriorityCount = numbers.assessments;
+
+  const handleRangeChange = (range: [Dayjs | null, Dayjs | null] | null) => {
+    setDateRange(range ?? [null, null]);
+    setPeriod("custom");
+  };
 
   return (
-    <div>
-      <div style={{ marginBottom: 32 }}>
-        <Title level={2} style={{ margin: 0, marginBottom: 8 }}>
-          GRC Dashboard
-        </Title>
-        <Text type="secondary">
-          Overview of your governance, risk, and compliance posture
-        </Text>
-      </div>
-
-      {/* KPI Cards Row */}
-      {loading ? (
-        <Loading message="Loading dashboard data..." />
-      ) : (
-        <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
-          <Col xs={24} sm={12} lg={6}>
-            <ComplianceKPICard
-              title="Overall Compliance"
-              value={dashboardData.analytics.complianceScore}
-              suffix="%"
-              compliancePercentage={dashboardData.analytics.complianceScore}
-              trend={{
-                value: 5.2,
-                isPositive: true,
-                period: "vs last month"
-              }}
-              description="Across all active frameworks"
-            />
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <RiskKPICard
-              title="Active Risks"
-              value={dashboardData.analytics.activeRisks}
-              trend={{
-                value: 2.1,
-                isPositive: false,
-                period: "vs last month"
-              }}
-              description="Requiring immediate attention"
-              onClick={() => window.location.href = '/risk'}
-            />
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <PolicyKPICard
-              title="Policy Compliance"
-              value={94}
-              suffix="%"
-            trend={{
-              value: 1.8,
-              isPositive: true,
-              period: "vs last month"
-            }}
-            description="Employee acknowledgment rate"
+    <main className="dashboard-page">
+      <section className="dashboard-hero">
+        <div>
+          <div className="eyebrow"><span className="eyebrow-mark" /> CONTROL ROOM / {dayjs().format("DD MMM YYYY").toUpperCase()}</div>
+          <Title className="hero-title">Your governance posture,<br /><em>in one clear view.</em></Title>
+          <Text className="hero-copy">A focused read on exposure, readiness, and the work that needs an owner today.</Text>
+        </div>
+        <div className="hero-actions">
+          <Select
+            aria-label="Dashboard period"
+            value={period}
+            onChange={setPeriod}
+            options={[{ value: "30", label: "Last 30 days" }, { value: "90", label: "Last 90 days" }, { value: "365", label: "Last 12 months" }, { value: "custom", label: "Custom range" }]}
+            className="period-select"
           />
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <VendorKPICard
-            title="Vendor Assessments"
-            value={dashboardData.analytics.totalVendors}
-            trend={{
-              value: 8.3,
-              isPositive: true,
-              period: "vs last month"
-            }}
-            description="Active vendors"
-            onClick={() => window.location.href = '/vendors'}
-          />
-        </Col>
-      </Row>
-      )}
+          <DatePicker.RangePicker aria-label="Custom date range" value={dateRange} onChange={handleRangeChange} disabled={period !== "custom"} />
+          <Tooltip title="Refresh dashboard">
+            <Button aria-label="Refresh dashboard" icon={<ReloadOutlined />} onClick={() => void fetchDashboard()} />
+          </Tooltip>
+        </div>
+      </section>
 
-      {!loading && (
-      <>
-        {/* Main Content Row */}
-        <Row gutter={[24, 24]}>
-        <Col xs={24} lg={14}>
-          <Card
-            title={
-              <Space>
-                <CheckSquareOutlined style={{ color: '#2F6FED' }} />
-                <span>Recent Assessments</span>
-              </Space>
-            }
-            extra={
-              <Button
-                type="link"
-                icon={<EyeOutlined />}
-                onClick={() => console.log('View all assessments')}
-              >
-                View All
-              </Button>
-            }
-            style={{
-              borderRadius: 12,
-              boxShadow: isDark
-                ? "0 6px 24px rgba(0,0,0,0.15)"
-                : "0 6px 24px rgba(15,18,25,0.06)"
-            }}
-          >
-            <Table
-              dataSource={dashboardData.recentAssessments}
-              columns={assessmentColumns}
-              pagination={false}
-              style={{ marginTop: 16 }}
-              locale={{
-                emptyText: dashboardData.recentAssessments.length === 0 ?
-                  'No assessment data available. Connect to Django API to load data.' :
-                  'No assessments found.'
-              }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} lg={10}>
-          <Card
-            title={
-              <Space>
-                <SafetyOutlined style={{ color: '#E5484D' }} />
-                <span>Active Risks</span>
-              </Space>
-            }
-            extra={
-              <Button
-                type="link"
-                icon={<PlusOutlined />}
-                onClick={() => console.log('Add risk')}
-              >
-                Add Risk
-              </Button>
-            }
-            style={{
-              borderRadius: 12,
-              boxShadow: isDark
-                ? "0 6px 24px rgba(0,0,0,0.15)"
-                : "0 6px 24px rgba(15,18,25,0.06)"
-            }}
-          >
-            <Table
-              dataSource={dashboardData.recentRisks}
-              columns={riskColumns}
-              pagination={false}
-              style={{ marginTop: 16 }}
-              locale={{
-                emptyText: dashboardData.recentRisks.length === 0 ?
-                  'No risk data available. Connect to Django API to load data.' :
-                  'No risks found.'
-              }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      {error && <Alert className="dashboard-alert" type="warning" showIcon message="Live data is unavailable" description="The dashboard is showing an empty state until the API reconnects." action={<Button size="small" onClick={() => void fetchDashboard()}>Retry</Button>} />}
 
-      {/* Quick Actions Row */}
-      <Row gutter={[24, 24]} style={{ marginTop: 32 }}>
-        <Col xs={24} sm={12} md={6}>
-          <Card
-            hoverable
-            style={{
-              textAlign: 'center',
-              borderRadius: 12,
-              cursor: 'pointer',
-              boxShadow: isDark
-                ? "0 6px 24px rgba(0,0,0,0.15)"
-                : "0 6px 24px rgba(15,18,25,0.06)"
-            }}
-            onClick={() => console.log('Create assessment')}
-          >
-            <CheckSquareOutlined
-              style={{
-                fontSize: 32,
-                color: '#2F6FED',
-                marginBottom: 12
-              }}
-            />
-            <Title level={5} style={{ marginBottom: 4 }}>
-              New Assessment
-            </Title>
-            <Text type="secondary">
-              Start a compliance assessment
-            </Text>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card
-            hoverable
-            style={{
-              textAlign: 'center',
-              borderRadius: 12,
-              cursor: 'pointer',
-              boxShadow: isDark
-                ? "0 6px 24px rgba(0,0,0,0.15)"
-                : "0 6px 24px rgba(15,18,25,0.06)"
-            }}
-            onClick={() => console.log('Add risk')}
-          >
-            <SafetyOutlined
-              style={{
-                fontSize: 32,
-                color: '#E5484D',
-                marginBottom: 12
-              }}
-            />
-            <Title level={5} style={{ marginBottom: 4 }}>
-              Register Risk
-            </Title>
-            <Text type="secondary">
-              Identify and track risks
-            </Text>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card
-            hoverable
-            style={{
-              textAlign: 'center',
-              borderRadius: 12,
-              cursor: 'pointer',
-              boxShadow: isDark
-                ? "0 6px 24px rgba(0,0,0,0.15)"
-                : "0 6px 24px rgba(15,18,25,0.06)"
-            }}
-            onClick={() => console.log('Add vendor')}
-          >
-            <TeamOutlined
-              style={{
-                fontSize: 32,
-                color: '#3B82F6',
-                marginBottom: 12
-              }}
-            />
-            <Title level={5} style={{ marginBottom: 4 }}>
-              Add Vendor
-            </Title>
-            <Text type="secondary">
-              Manage vendor relationships
-            </Text>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card
-            hoverable
-            style={{
-              textAlign: 'center',
-              borderRadius: 12,
-              cursor: 'pointer',
-              boxShadow: isDark
-                ? "0 6px 24px rgba(0,0,0,0.15)"
-                : "0 6px 24px rgba(15,18,25,0.06)"
-            }}
-            onClick={() => console.log('Create policy')}
-          >
-            <FileTextOutlined
-              style={{
-                fontSize: 32,
-                color: '#FFB020',
-                marginBottom: 12
-              }}
-            />
-            <Title level={5} style={{ marginBottom: 4 }}>
-              New Policy
-            </Title>
-            <Text type="secondary">
-              Create governance policies
-            </Text>
-          </Card>
-        </Col>
-      </Row>
-      </>
-      )}
-    </div>
+      <section className="metric-rail" aria-label="Posture summary">
+        <div className="metric-block metric-primary">
+          <span className="metric-label">COMPLIANCE POSTURE</span>
+          {loading ? <Skeleton.Input active size="small" /> : <strong>{formatMetric(numbers.compliance, "%")}</strong>}
+          <span className={`metric-note ${numbers.complianceChange < 0 ? "metric-danger" : ""}`}>
+            {numbers.complianceChange < 0 ? <ArrowDownOutlined /> : <ArrowUpOutlined />} {formatMetric(Math.abs(numbers.complianceChange), "%")} vs previous period
+          </span>
+        </div>
+        <div className="metric-block">
+          <span className="metric-label">ACTIVE EXPOSURE</span>
+          {loading ? <Skeleton.Input active size="small" /> : <strong>{numbers.risks}</strong>}
+          <span className={`metric-note ${numbers.risksChange > 0 ? "metric-danger" : ""}`}>
+            {numbers.risksChange > 0 ? <WarningOutlined /> : <ArrowDownOutlined />} {formatMetric(Math.abs(numbers.risksChange), "%")} vs previous period
+          </span>
+        </div>
+        <div className="metric-block">
+          <span className="metric-label">VENDOR COVERAGE</span>
+          {loading ? <Skeleton.Input active size="small" /> : <strong>{numbers.vendors}</strong>}
+          <span className={`metric-note ${numbers.vendorsChange < 0 ? "metric-danger" : ""}`}>
+            {numbers.vendorsChange < 0 ? <ArrowDownOutlined /> : <ArrowUpOutlined />} {formatMetric(Math.abs(numbers.vendorsChange), "%")} vs previous period
+          </span>
+        </div>
+        <div className="metric-block">
+          <span className="metric-label">OPEN REVIEWS</span>
+          {loading ? <Skeleton.Input active size="small" /> : <strong>{numbers.assessments}</strong>}
+          <span className={`metric-note ${numbers.assessmentsChange > 0 ? "metric-warning" : ""}`}>
+            <ClockCircleOutlined /> {formatMetric(Math.abs(numbers.assessmentsChange), "%")} vs previous period
+          </span>
+        </div>
+      </section>
+
+      <section className="dashboard-grid dashboard-grid-main">
+        <article className="surface-panel heat-panel">
+          <div className="panel-heading"><div><span className="section-kicker">RISK REGISTER</span><h2>Exposure map</h2></div><Link className="text-action" href="/risk">Open register <ArrowRightOutlined /></Link></div>
+          <div className="heatmap-row"><RiskHeatMap risks={risks} /><div className="risk-callout"><span className="callout-number">{highPriorityCount}</span><span className="callout-label">high-priority<br />items need attention</span><Link href="/risk" className="callout-link">Review now <ArrowRightOutlined /></Link></div></div>
+          <div className="risk-legend"><span><i className="legend-dot dot-low" /> Controlled</span><span><i className="legend-dot dot-medium" /> Monitor</span><span><i className="legend-dot dot-high" /> Escalate</span><span><i className="legend-dot dot-critical" /> Critical</span></div>
+        </article>
+        <article className="surface-panel posture-panel">
+          <div className="panel-heading"><div><span className="section-kicker">READINESS</span><h2>Posture by framework</h2></div><Link className="icon-action" href="/assessments" aria-label="Open assessments"><ArrowRightOutlined /></Link></div>
+          <div className="posture-score"><Progress type="circle" percent={numbers.compliance} size={142} strokeColor="#0b8f84" trailColor="#e5efed" format={(value) => <><strong>{value}%</strong><small>overall</small></>} /><div className="posture-copy"><CheckCircleFilled /> <span>On track for this period</span><p>Keep the review queue moving to protect the current posture.</p></div></div>
+          <div className="framework-list"><div><span>ISO 27001</span><strong>{formatMetric(Math.min(numbers.compliance + 3, 100), "%")}</strong><Progress percent={Math.min(numbers.compliance + 3, 100)} showInfo={false} strokeColor="#0b8f84" /></div><div><span>Business continuity</span><strong>{formatMetric(Math.max(numbers.compliance - 7, 0), "%")}</strong><Progress percent={Math.max(numbers.compliance - 7, 0)} showInfo={false} strokeColor="#d29c4c" /></div></div>
+        </article>
+      </section>
+
+      <section className="dashboard-grid dashboard-grid-lower">
+        <article className="surface-panel queue-panel"><div className="panel-heading"><div><span className="section-kicker">ATTENTION QUEUE</span><h2>Work requiring an owner</h2></div><Button type="text" icon={<PlusOutlined />} href="/risk">Add risk</Button></div>{loading ? <Skeleton active paragraph={{ rows: 4 }} /> : highRisks.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No high-priority work is waiting" /> : <div className="queue-list">{highRisks.slice(0, 4).map((risk) => <Link href={`/risk/${risk.id}`} className="queue-item" key={risk.id}><span className={`queue-marker marker-${riskTone(risk.risk_level)}`} /><span className="queue-main"><strong>{risk.title}</strong><small>{risk.risk_id} · {risk.risk_owner ? `${risk.risk_owner.first_name} ${risk.risk_owner.last_name}` : "Unassigned"}</small></span><Tag className={`risk-tag tag-${riskTone(risk.risk_level)}`}>{risk.risk_level}</Tag><ArrowRightOutlined className="queue-arrow" /></Link>)}</div>}</article>
+        <article className="surface-panel trend-panel"><div className="panel-heading"><div><span className="section-kicker">RISK MOMENTUM</span><h2>Exposure trend</h2></div><span className="trend-period">{period === "custom" ? "Custom" : `Last ${period} days`}</span></div><div className="trend-value"><strong>{trend.length ? trend[trend.length - 1] : 0}</strong><span className="trend-change"><ArrowDownOutlined /> 8.2%</span></div><TrendLine data={trend} /><div className="trend-axis"><span>Earlier</span><span>Now</span></div></article>
+          <article className="surface-panel activity-panel"><div className="panel-heading"><div><span className="section-kicker">AUDIT ACTIVITY</span><h2>Recent movement</h2></div><Link className="icon-action" href="/analytics" aria-label="Open analytics"><ArrowRightOutlined /></Link></div>{activities.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No recent activity" /> : <div className="activity-list">{activities.slice(0, 4).map((activity) => <div className="activity-item" key={activity.id}><span className={`activity-icon activity-${activity.type}`}><FileProtectOutlined /></span><span><strong>{activity.title}</strong><small>{activity.description}</small></span><time>{dayjs(activity.timestamp).format("DD MMM")}</time></div>)}</div>}</article>
+      </section>
+
+      <section className="dashboard-footer-strip"><div><span className="footer-icon"><SafetyCertificateOutlined /></span><span><strong>Keep the programme moving</strong><small>Review open work and keep each control decision owned.</small></span></div><Space><Button href="/assessments" icon={<CalendarOutlined />}>Review schedule</Button><Button type="primary" href="/assessments/create" icon={<PlusOutlined />}>Start assessment</Button></Space></section>
+    </main>
   );
 }
