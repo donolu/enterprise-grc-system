@@ -453,7 +453,9 @@ class AssessmentReportGenerator:
             if self.report.report_type == "assessment_summary":
                 pdf_content = self.pdf_renderer.render(summary_context)
             else:
-                pdf_content = self.report_pdf_renderer.render(self.report.report_type, summary_context)
+                pdf_content = self.report_pdf_renderer.render(
+                    self.report.report_type, summary_context
+                )
 
             # Save PDF as Document
             filename = self._generate_filename()
@@ -581,7 +583,11 @@ class AssessmentReportGenerator:
                 .distinct()
             )
         else:
-            assessments = self.report.assessments.all().select_related("control", "assigned_to").prefetch_related("control__clauses", "evidence_links__evidence")
+            assessments = (
+                self.report.assessments.all()
+                .select_related("control", "assigned_to")
+                .prefetch_related("control__clauses", "evidence_links__evidence")
+            )
         context["assessments"] = assessments
         return context
 

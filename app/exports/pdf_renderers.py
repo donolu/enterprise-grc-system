@@ -46,13 +46,19 @@ class ReportPDFRenderer:
         styles = getSampleStyleSheet()
         body = ParagraphStyle("ReportBody", parent=styles["BodyText"], fontSize=9, leading=12)
         heading = ParagraphStyle(
-            "ReportHeading", parent=styles["Heading2"], fontSize=14, leading=18, textColor=self._BLUE
+            "ReportHeading",
+            parent=styles["Heading2"],
+            fontSize=14,
+            leading=18,
+            textColor=self._BLUE,
         )
         title = ParagraphStyle(
             "ReportTitle", parent=styles["Title"], fontSize=20, leading=24, textColor=self._BLUE
         )
         cell = ParagraphStyle("ReportCell", parent=body, fontSize=7.5, leading=9)
-        header = ParagraphStyle("ReportHeader", parent=cell, fontName="Helvetica-Bold", textColor=colors.white)
+        header = ParagraphStyle(
+            "ReportHeader", parent=cell, fontName="Helvetica-Bold", textColor=colors.white
+        )
 
         report = context["report"]
         requested_by = report.requested_by.get_full_name() or report.requested_by.username
@@ -82,9 +88,15 @@ class ReportPDFRenderer:
         for index, assessment in enumerate(assessments):
             if index:
                 story.append(PageBreak())
-            story.append(Paragraph(escape(f"{assessment.control.control_id}: {assessment.control.name}"), heading))
+            story.append(
+                Paragraph(
+                    escape(f"{assessment.control.control_id}: {assessment.control.name}"), heading
+                )
+            )
             assigned = assessment.assigned_to
-            assigned_name = (assigned.get_full_name() or assigned.username) if assigned else "Unassigned"
+            assigned_name = (
+                (assigned.get_full_name() or assigned.username) if assigned else "Unassigned"
+            )
             details = [
                 ["Status", assessment.get_status_display()],
                 ["Assigned To", assigned_name],
@@ -93,63 +105,103 @@ class ReportPDFRenderer:
             ]
             story.append(self._key_value_table(details, cell))
             if assessment.control.description:
-                story.extend([Paragraph("Control Description", heading), Paragraph(escape(str(assessment.control.description)), body)])
+                story.extend(
+                    [
+                        Paragraph("Control Description", heading),
+                        Paragraph(escape(str(assessment.control.description)), body),
+                    ]
+                )
             report = context["report"]
             if report.include_implementation_notes and assessment.implementation_approach:
                 approach = escape(str(assessment.implementation_approach)).replace("\n", "<br/>")
-                story.extend([Paragraph("Implementation Approach", heading), Paragraph(approach, body)])
+                story.extend(
+                    [Paragraph("Implementation Approach", heading), Paragraph(approach, body)]
+                )
             if report.include_evidence_summary:
                 links = list(assessment.evidence_links.all())
                 story.append(Paragraph(f"Evidence Summary ({len(links)} items)", heading))
                 rows = [["Evidence Title", "Type", "Purpose", "Primary", "Date"]]
-                rows.extend([
+                rows.extend(
                     [
-                        link.evidence.title,
-                        link.evidence.get_evidence_type_display(),
-                        link.evidence_purpose or "General Evidence",
-                        "Yes" if link.is_primary_evidence else "No",
-                        link.evidence.evidence_date.isoformat() if link.evidence.evidence_date else "Not set",
-                    ] for link in links
-                ])
-                story.append(self._table(rows, [4.0 * cm, 3.0 * cm, 5.0 * cm, 2.0 * cm, 2.5 * cm], cell, header))
+                        [
+                            link.evidence.title,
+                            link.evidence.get_evidence_type_display(),
+                            link.evidence_purpose or "General Evidence",
+                            "Yes" if link.is_primary_evidence else "No",
+                            link.evidence.evidence_date.isoformat()
+                            if link.evidence.evidence_date
+                            else "Not set",
+                        ]
+                        for link in links
+                    ]
+                )
+                story.append(
+                    self._table(
+                        rows, [4.0 * cm, 3.0 * cm, 5.0 * cm, 2.0 * cm, 2.5 * cm], cell, header
+                    )
+                )
         if not assessments:
             story.append(Paragraph("No assessments found for the specified criteria.", body))
         return story
 
     def _evidence_portfolio(self, context, heading, body, cell, header):
         summary = list(context.get("evidence_summary", []))
-        story = [Paragraph("Evidence Overview", heading), Paragraph(f"Unique evidence items: {len(summary)}", body)]
+        story = [
+            Paragraph("Evidence Overview", heading),
+            Paragraph(f"Unique evidence items: {len(summary)}", body),
+        ]
         rows = [["Evidence Title", "Type", "Assessments", "Primary", "Validated"]]
         for info in summary:
             evidence = info["evidence"]
-            rows.append([
-                evidence.title,
-                evidence.get_evidence_type_display(),
-                str(len(info["assessments"])),
-                str(info["is_primary_count"]),
-                "Yes" if evidence.is_validated else "No",
-            ])
-        story.extend([Paragraph("Evidence Inventory", heading), self._table(rows, [5.0 * cm, 3.5 * cm, 3.0 * cm, 2.5 * cm, 2.5 * cm], cell, header)])
+            rows.append(
+                [
+                    evidence.title,
+                    evidence.get_evidence_type_display(),
+                    str(len(info["assessments"])),
+                    str(info["is_primary_count"]),
+                    "Yes" if evidence.is_validated else "No",
+                ]
+            )
+        story.extend(
+            [
+                Paragraph("Evidence Inventory", heading),
+                self._table(rows, [5.0 * cm, 3.5 * cm, 3.0 * cm, 2.5 * cm, 2.5 * cm], cell, header),
+            ]
+        )
         if not summary:
             story.append(Paragraph("No evidence items found for the specified criteria.", body))
         return story
 
     def _compliance_gap(self, context, heading, body, cell, header):
-        story = [Paragraph("Executive Summary", heading), Paragraph(f"Total compliance gaps: {context.get('total_gaps', 0)}", body)]
-        for key, label in (("not_started", "Assessments Not Started"), ("in_progress_overdue", "In Progress but Overdue"), ("missing_evidence", "Completed but Missing Evidence"), ("no_primary_evidence", "Missing Primary Evidence Designation")):
+        story = [
+            Paragraph("Executive Summary", heading),
+            Paragraph(f"Total compliance gaps: {context.get('total_gaps', 0)}", body),
+        ]
+        for key, label in (
+            ("not_started", "Assessments Not Started"),
+            ("in_progress_overdue", "In Progress but Overdue"),
+            ("missing_evidence", "Completed but Missing Evidence"),
+            ("no_primary_evidence", "Missing Primary Evidence Designation"),
+        ):
             queryset = list(context.get(key, []))
             story.append(Paragraph(f"{label} ({len(queryset)})", heading))
             rows = [["Control ID", "Control Title", "Assigned To", "Due Date", "Status"]]
             for assessment in queryset:
                 assigned = assessment.assigned_to
-                rows.append([
-                    assessment.control.control_id,
-                    assessment.control.name,
-                    (assigned.get_full_name() or assigned.username) if assigned else "Unassigned",
-                    assessment.due_date.isoformat() if assessment.due_date else "Not set",
-                    assessment.get_status_display(),
-                ])
-            story.append(self._table(rows, [2.5 * cm, 6.0 * cm, 4.0 * cm, 2.5 * cm, 2.5 * cm], cell, header))
+                rows.append(
+                    [
+                        assessment.control.control_id,
+                        assessment.control.name,
+                        (assigned.get_full_name() or assigned.username)
+                        if assigned
+                        else "Unassigned",
+                        assessment.due_date.isoformat() if assessment.due_date else "Not set",
+                        assessment.get_status_display(),
+                    ]
+                )
+            story.append(
+                self._table(rows, [2.5 * cm, 6.0 * cm, 4.0 * cm, 2.5 * cm, 2.5 * cm], cell, header)
+            )
         return story
 
     def _risk_analytics(self, context, heading, body, cell, header):
@@ -157,21 +209,65 @@ class ReportPDFRenderer:
         overview = analytics.get("overview", {})
         actions = analytics.get("actions", {})
         story = [Paragraph("Executive Risk Summary", heading)]
-        rows = [["Metric", "Value"], ["Total Risks", overview.get("total_risks", 0)], ["Active Risks", overview.get("active_risks", 0)], ["Critical Risks", overview.get("critical_risks", 0)], ["High Risks", overview.get("high_risks", 0)], ["Mitigation Actions", actions.get("total_actions", 0)], ["Completed Actions", actions.get("completed_actions", 0)]]
+        rows = [
+            ["Metric", "Value"],
+            ["Total Risks", overview.get("total_risks", 0)],
+            ["Active Risks", overview.get("active_risks", 0)],
+            ["Critical Risks", overview.get("critical_risks", 0)],
+            ["High Risks", overview.get("high_risks", 0)],
+            ["Mitigation Actions", actions.get("total_actions", 0)],
+            ["Completed Actions", actions.get("completed_actions", 0)],
+        ]
         story.append(self._table(rows, [8 * cm, 8 * cm], cell, header))
         distribution = overview.get("risk_level_distribution", {})
         if distribution:
-            story.extend([Paragraph("Risk Level Distribution", heading), self._table([["Level", "Count"], *[[str(k).title(), v] for k, v in distribution.items()]], [8 * cm, 8 * cm], cell, header)])
+            story.extend(
+                [
+                    Paragraph("Risk Level Distribution", heading),
+                    self._table(
+                        [
+                            ["Level", "Count"],
+                            *[[str(k).title(), v] for k, v in distribution.items()],
+                        ],
+                        [8 * cm, 8 * cm],
+                        cell,
+                        header,
+                    ),
+                ]
+            )
         return story
 
     @staticmethod
     def _key_value_table(rows, cell):
-        return Table([[Paragraph(escape(str(k)), cell), Paragraph(escape(str(v)), cell)] for k, v in rows], colWidths=[4 * cm, 12 * cm], style=TableStyle([("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#DDDDDD")), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
+        return Table(
+            [[Paragraph(escape(str(k)), cell), Paragraph(escape(str(v)), cell)] for k, v in rows],
+            colWidths=[4 * cm, 12 * cm],
+            style=TableStyle(
+                [
+                    ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#DDDDDD")),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            ),
+        )
 
     @staticmethod
     def _table(rows, widths, cell, header):
-        formatted = [[Paragraph(escape(str(value)), header if row_index == 0 else cell) for value in row] for row_index, row in enumerate(rows)]
-        return Table(formatted, repeatRows=1, colWidths=widths, style=TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0066CC")), ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#DDDDDD")), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
+        formatted = [
+            [Paragraph(escape(str(value)), header if row_index == 0 else cell) for value in row]
+            for row_index, row in enumerate(rows)
+        ]
+        return Table(
+            formatted,
+            repeatRows=1,
+            colWidths=widths,
+            style=TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0066CC")),
+                    ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#DDDDDD")),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            ),
+        )
 
     @staticmethod
     def _subtitle(report_type, context):

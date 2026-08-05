@@ -12,6 +12,14 @@ class EvidenceLinks:
         return self._count
 
 
+class RelatedLinks:
+    def __init__(self, links=()):
+        self._links = list(links)
+
+    def all(self):
+        return self._links
+
+
 def test_assessment_summary_renderer_returns_pdf():
     user = SimpleNamespace(username="owner", get_full_name=lambda: "Report Owner")
     control = SimpleNamespace(control_id="AC-1", name="Access control")
@@ -58,7 +66,7 @@ def test_report_renderer_supports_all_remaining_report_types():
         assigned_to=assigned,
         due_date=date.today(),
         implementation_approach="Document the control.",
-        evidence_links=[],
+        evidence_links=RelatedLinks(),
     )
     report = SimpleNamespace(
         title="Report",

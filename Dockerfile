@@ -15,6 +15,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    zlib1g-dev \
     libpq-dev \
     libffi-dev \
     libmagic1 \
