@@ -290,7 +290,7 @@ jobs:
         output: trivy-image-results.sarif
 
     - name: Upload image scan SARIF to Code Scanning
-      uses: github/codeql-action/upload-sarif@v4
+      uses: github/codeql-action/upload-sarif@v4.37.4
       with:
         sarif_file: trivy-image-results.sarif
         category: trivy-image
