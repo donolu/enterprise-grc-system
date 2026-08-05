@@ -13,14 +13,12 @@ from django.core.files.base import ContentFile
 from django.apps import apps
 from django.db import models
 from openpyxl import Workbook
-from weasyprint import HTML, CSS
-from weasyprint.text.fonts import FontConfiguration
-
 from core.models import Document
 from catalogs.models import ControlAssessment, Framework, AssessmentEvidence
 from risk.analytics import RiskAnalyticsService, RiskReportGenerator
 from risk.models import Risk, RiskAction
 from .models import AssessmentReport, TenantDataExport
+from .pdf_renderers import AssessmentSummaryPDFRenderer
 from .audit import (
     assessment_report_display,
     audit_export_change,
@@ -423,7 +421,7 @@ class AssessmentReportGenerator:
 
     def __init__(self, report: AssessmentReport):
         self.report = report
-        self.font_config = FontConfiguration()
+        self.pdf_renderer = AssessmentSummaryPDFRenderer()
 
     def generate_report(self):
         """Generate the PDF report based on report type."""
@@ -431,10 +429,14 @@ class AssessmentReportGenerator:
             self.report.status = "processing"
             self.report.generation_started_at = timezone.now()
             self.report.save()
+            summary_context = None
 
             # Generate report based on type
             if self.report.report_type == "assessment_summary":
-                html_content = self._generate_assessment_summary()
+                summary_context = self._get_assessment_summary_context()
+                html_content = render_to_string(
+                    "exports/reports/assessment_summary.html", summary_context
+                )
             elif self.report.report_type == "detailed_assessment":
                 html_content = self._generate_detailed_assessment()
             elif self.report.report_type == "evidence_portfolio":
@@ -447,7 +449,11 @@ class AssessmentReportGenerator:
                 raise ValueError(f"Unknown report type: {self.report.report_type}")
 
             # Generate PDF
-            pdf_content = self._render_pdf(html_content)
+            pdf_content = (
+                self.pdf_renderer.render(summary_context)
+                if summary_context is not None
+                else self._render_pdf(html_content)
+            )
 
             # Save PDF as Document
             filename = self._generate_filename()
@@ -495,6 +501,11 @@ class AssessmentReportGenerator:
 
     def _generate_assessment_summary(self):
         """Generate assessment summary report HTML."""
+        return render_to_string(
+            "exports/reports/assessment_summary.html", self._get_assessment_summary_context()
+        )
+
+    def _get_assessment_summary_context(self):
         context = {
             "report": self.report,
             "framework": self.report.framework,
@@ -552,7 +563,7 @@ class AssessmentReportGenerator:
             assessments = self.report.assessments.all()
             context["assessments"] = assessments
 
-        return render_to_string("exports/reports/assessment_summary.html", context)
+        return context
 
     def _generate_detailed_assessment(self):
         """Generate detailed assessment report HTML."""
@@ -668,6 +679,10 @@ class AssessmentReportGenerator:
 
     def _render_pdf(self, html_content):
         """Convert HTML to PDF using WeasyPrint."""
+        from weasyprint import CSS, HTML
+        from weasyprint.text.fonts import FontConfiguration
+
+        font_config = FontConfiguration()
         # Define CSS for styling
         css_content = """
         @page {
@@ -779,14 +794,14 @@ class AssessmentReportGenerator:
         }
         """
 
-        css = CSS(string=css_content, font_config=self.font_config)
+        css = CSS(string=css_content, font_config=font_config)
         html = HTML(string=html_content)
 
         pdf_buffer = io.BytesIO()
         html.write_pdf(
             pdf_buffer,
             stylesheets=[css],
-            font_config=self.font_config,
+            font_config=font_config,
             presentational_hints=False,
         )
         pdf_buffer.seek(0)
