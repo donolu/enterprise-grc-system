@@ -380,14 +380,10 @@ class AssessmentReportGeneratorTest(TestCase):
             assessment=self.assessment, evidence=self.evidence, is_primary_evidence=True
         )
 
-    @patch("exports.services.HTML")
-    @patch("exports.services.CSS")
-    def test_generate_assessment_summary(self, mock_css, mock_html):
+    @patch("exports.services.AssessmentSummaryPDFRenderer.render")
+    def test_generate_assessment_summary(self, mock_render):
         """Test generating assessment summary report."""
-        # Mock WeasyPrint components
-        mock_html_instance = MagicMock()
-        mock_html.return_value = mock_html_instance
-        mock_html_instance.write_pdf.return_value = None
+        mock_render.return_value = b"%PDF-1.4\nassessment summary\n%%EOF"
 
         report = AssessmentReport.objects.create(
             report_type="assessment_summary",
@@ -411,9 +407,10 @@ class AssessmentReportGeneratorTest(TestCase):
             self.assertEqual(event.details["actor"]["email"], self.user.email)
             self.assertEqual(event.details["new"]["status"], "completed")
             self.assertEqual(event.details["new"]["generated_file_id"], mock_document.id)
-            mock_html_instance.write_pdf.assert_called_once()
-            _, write_pdf_kwargs = mock_html_instance.write_pdf.call_args
-            self.assertFalse(write_pdf_kwargs["presentational_hints"])
+            mock_render.assert_called_once()
+            render_context = mock_render.call_args.args[0]
+            self.assertEqual(render_context["report"], report)
+            self.assertEqual(render_context["framework"], self.framework)
 
     def test_generate_detailed_assessment(self):
         """Test generating detailed assessment report HTML."""
