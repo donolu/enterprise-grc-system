@@ -4,11 +4,11 @@ import React, { useCallback, useRef, useState, useEffect } from 'react'
 import { Card, Typography, Space, Button, Row, Col, Progress, Table, Tag, message, Modal, Form, Input, Select } from 'antd'
 import { SafetyOutlined, PlusOutlined, ExclamationCircleOutlined, WarningOutlined, CheckCircleOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
-import { Breadcrumb, KPICard, RiskKPICard, StatusTag, PriorityTag, Loading, ExportButton, FilterPanel } from '@/components/ui'
+import { Breadcrumb, KPICard, RiskKPICard, StatusTag, PriorityTag, Loading, ExportButton, FilterPanel, PageHeader } from '@/components/ui'
 import type { FilterValues } from '@/components/ui/FilterPanel'
 import { riskService, type Risk, type RiskCategory, type RiskFilters } from '@/lib/services/riskService'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 interface RiskAnalytics {
   totalRisks: number
@@ -315,15 +315,7 @@ export default function RiskPage() {
         ]}
       />
 
-      <div style={{ marginBottom: 24 }}>
-        <Title level={2}>
-          <SafetyOutlined style={{ marginRight: 8 }} />
-          Risk Management
-        </Title>
-        <Text type="secondary">
-          Identify, assess, and manage organizational risks across the enterprise
-        </Text>
-      </div>
+      <PageHeader eyebrow="RISK & RESILIENCE" title="Risk management" description="Identify, assess, and manage organisational risks across the enterprise." icon={<SafetyOutlined />} />
 
       {/* KPI Cards */}
       <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>

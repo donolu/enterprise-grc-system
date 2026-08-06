@@ -4,11 +4,11 @@ import React, { useCallback, useState, useEffect } from 'react'
 import { Card, Typography, Space, Button, Row, Col, Table, Tag, Progress, Avatar, message, Modal, Form, Input, Select } from 'antd'
 import { TeamOutlined, PlusOutlined, WarningOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
-import { Breadcrumb, VendorKPICard, KPICard, StatusTag, PriorityTag, Loading, ExportButton, FilterPanel } from '@/components/ui'
+import { Breadcrumb, VendorKPICard, KPICard, StatusTag, PriorityTag, Loading, ExportButton, FilterPanel, PageHeader } from '@/components/ui'
 import type { FilterValues } from '@/components/ui/FilterPanel'
 import { vendorService, type Vendor, type VendorCategory, type VendorFilters } from '@/lib/services/vendorService'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 interface VendorAnalytics {
   totalVendors: number
@@ -318,15 +318,7 @@ export default function VendorsPage() {
         ]}
       />
 
-      <div style={{ marginBottom: 24 }}>
-        <Title level={2}>
-          <TeamOutlined style={{ marginRight: 8 }} />
-          Vendor Management
-        </Title>
-        <Text type="secondary">
-          Manage vendor relationships, assessments, and risk profiles across the organization
-        </Text>
-      </div>
+      <PageHeader eyebrow="THIRD-PARTY ASSURANCE" title="Vendor management" description="Manage vendor relationships, assessments, and risk profiles across the organisation." icon={<TeamOutlined />} />
 
       {/* KPI Cards */}
       <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
