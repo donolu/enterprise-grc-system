@@ -21,11 +21,11 @@ export const useTheme = () => {
 
 // Professional color palette
 const colors = {
-  primary: "#2F6FED",
+  primary: "#0B8F84",
   success: "#0EB57D",
   warning: "#FFB020",
   error: "#E5484D",
-  info: "#3B82F6",
+  info: "#256D8A",
   light: {
     bg: "#FFFFFF",
     bgLayout: "#F7F8FA",
@@ -101,8 +101,8 @@ export const AppTheme = ({ children }: { children: React.ReactNode }) => {
             colorWarning: colors.warning,
             colorError: colors.error,
             colorInfo: colors.info,
-            borderRadius: 10,
-            borderRadiusLG: 12,
+            borderRadius: 8,
+            borderRadiusLG: 8,
             borderRadiusSM: 6,
             colorBorder: colorScheme.border,
             colorBgLayout: colorScheme.bgLayout,
@@ -134,14 +134,14 @@ export const AppTheme = ({ children }: { children: React.ReactNode }) => {
               triggerColor: colorScheme.text,
             },
             Card: {
-              borderRadiusLG: 12,
+              borderRadiusLG: 8,
               boxShadow: isDark
                 ? "0 6px 24px rgba(0,0,0,0.15)"
                 : "0 6px 24px rgba(15,18,25,0.06)",
               headerBg: "transparent",
             },
             Button: {
-              borderRadius: 8,
+              borderRadius: 6,
               controlHeight: 40,
               fontWeight: 600,
             },
@@ -160,7 +160,7 @@ export const AppTheme = ({ children }: { children: React.ReactNode }) => {
               borderRadius: 8,
             },
             Modal: {
-              borderRadiusLG: 16,
+              borderRadiusLG: 8,
             },
             Tooltip: {
               colorBgSpotlight: colorScheme.sider,
@@ -168,13 +168,13 @@ export const AppTheme = ({ children }: { children: React.ReactNode }) => {
             Menu: {
               itemBg: "transparent",
               subMenuItemBg: "transparent",
-              itemSelectedBg: isDark ? "rgba(47,111,237,0.15)" : "rgba(47,111,237,0.1)",
+              itemSelectedBg: isDark ? "rgba(97,194,181,0.15)" : "rgba(11,143,132,0.1)",
               itemHoverBg: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
-              itemActiveBg: isDark ? "rgba(47,111,237,0.2)" : "rgba(47,111,237,0.15)",
+              itemActiveBg: isDark ? "rgba(97,194,181,0.2)" : "rgba(11,143,132,0.15)",
               iconSize: 16,
             },
             Dropdown: {
-              borderRadiusLG: 12,
+              borderRadiusLG: 8,
             },
             Avatar: {
               borderRadius: 10,
