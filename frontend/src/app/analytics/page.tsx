@@ -18,8 +18,10 @@ import {
   RiskKPICard,
   VendorKPICard,
   PolicyKPICard
+  ,PageHeader
 } from '@/components/ui'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { api } from '@/lib/api'
 
 const { Title, Text, Paragraph } = Typography
 const { TabPane } = Tabs
@@ -143,6 +145,7 @@ export default function AnalyticsPage() {
   const [policyData, setPolicyData] = useState<PolicyData | null>(null)
   const [trainingData, setTrainingData] = useState<TrainingData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [activeTab, setActiveTab] = useState('executive')
 
   useEffect(() => {
@@ -152,171 +155,23 @@ export default function AnalyticsPage() {
   const fetchAnalyticsData = async () => {
     try {
       setLoading(true)
-
-      // Mock data for development - replace with real API calls when backend is ready
-      const mockExecutiveData = {
-        risk_summary: {
-          total_risks: 42,
-          active_risks: 38,
-          critical_high_risks: 8,
-          overdue_actions: 3,
-        },
-        compliance_summary: {
-          total_assessments: 156,
-          active_assessments: 23,
-          completed_assessments: 128,
-          overdue_assessments: 5,
-          avg_completion_rate: 87.2,
-        },
-        policy_summary: {
-          total_policies: 24,
-          active_policies: 22,
-          pending_acknowledgments: 15,
-          overdue_acknowledgments: 2,
-          acknowledgment_rate: 92.5,
-        },
-        vendor_summary: {
-          total_vendors: 89,
-          active_vendors: 82,
-          high_risk_vendors: 6,
-          contracts_expiring_soon: 4,
-          overdue_tasks: 7,
-        },
-        training_summary: {
-          total_videos: 45,
-          total_views: 1247,
-          unique_viewers: 156,
-          completion_rate: 78.3,
-          active_campaigns: 3,
-        },
-        generated_at: new Date().toISOString(),
-      }
-
-      const mockComplianceData = {
-        framework_statistics: [
-          {
-            name: 'SOC 2 Type II',
-            framework_type: 'security',
-            total_assessments: 45,
-            completed_assessments: 38,
-            in_progress_assessments: 5,
-            overdue_assessments: 2,
-            completion_rate: 84.4,
-            avg_score: 87.2,
-          },
-          {
-            name: 'ISO 27001',
-            framework_type: 'security',
-            total_assessments: 67,
-            completed_assessments: 59,
-            in_progress_assessments: 6,
-            overdue_assessments: 2,
-            completion_rate: 88.1,
-            avg_score: 91.3,
-          },
-          {
-            name: 'NIST CSF',
-            framework_type: 'cybersecurity',
-            total_assessments: 44,
-            completed_assessments: 31,
-            in_progress_assessments: 12,
-            overdue_assessments: 1,
-            completion_rate: 70.5,
-            avg_score: 82.7,
-          },
-        ],
-        overall_metrics: {
-          total_frameworks: 5,
-          active_frameworks: 5,
-          total_controls: 234,
-          automated_controls: 89,
-          avg_maturity_score: 3.2,
-        },
-      }
-
-      const mockVendorData = {
-        vendor_risk_statistics: {
-          risk_distribution: { low: 35, medium: 28, high: 15, critical: 3 },
-          total_vendors: 89,
-          active_vendors: 82,
-          total_annual_spend: 2400000,
-          avg_performance_score: 87.3,
-        },
-        contract_management: {
-          expiring_30_days: 2,
-          expiring_90_days: 8,
-          expired_contracts: 1,
-          renewals_needed: 12,
-        },
-        task_analytics: {
-          total_tasks: 156,
-          overdue_tasks: 7,
-          due_this_week: 18,
-          completion_rate: 84.2,
-        },
-      }
-
-      const mockPolicyData = {
-        policy_statistics: {
-          total_policies: 24,
-          active_policies: 22,
-          policies_requiring_acknowledgment: 18,
-          draft_policies: 2,
-        },
-        acknowledgment_analytics: {
-          total_distributions: 287,
-          acknowledged_distributions: 265,
-          pending_acknowledgments: 22,
-          overdue_acknowledgments: 4,
-          acknowledgment_rate: 92.3,
-        },
-      }
-
-      const mockTrainingData = {
-        video_engagement: {
-          total_videos: 45,
-          total_views: 1247,
-          unique_viewers: 156,
-          total_watch_time: 8450,
-          avg_completion_rate: 78.3,
-        },
-        user_engagement: {
-          active_learners_30_days: 89,
-          completed_videos_30_days: 234,
-          avg_videos_per_user: 2.8,
-          completion_rate: 78.3,
-        },
-      }
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800))
-
-      setExecutiveData(mockExecutiveData)
-      setComplianceData(mockComplianceData)
-      setVendorData(mockVendorData)
-      setPolicyData(mockPolicyData)
-      setTrainingData(mockTrainingData)
-
-      // Uncomment when backend API is ready:
-      /*
       const [executiveResponse, complianceResponse, vendorResponse, policyResponse, trainingResponse] = await Promise.all([
-        api.get('/analytics/executive/'),
-        api.get('/analytics/compliance/'),
-        api.get('/analytics/vendor-risk/'),
-        api.get('/analytics/policy-management/'),
-        api.get('/analytics/training-effectiveness/')
+        api.get<ExecutiveDashboardData>('/analytics/executive/'),
+        api.get<ComplianceDashboardData>('/analytics/compliance/'),
+        api.get<VendorRiskData>('/analytics/vendor-risk/'),
+        api.get<PolicyData>('/analytics/policy-management/'),
+        api.get<TrainingData>('/analytics/training-effectiveness/')
       ])
-
+      setLoadError(false)
       setExecutiveData(executiveResponse.data)
       setComplianceData(complianceResponse.data)
       setVendorData(vendorResponse.data)
       setPolicyData(policyResponse.data)
       setTrainingData(trainingResponse.data)
-      */
-
     } catch (error) {
       console.error('Failed to fetch analytics data:', error)
-      message.error('Backend not available - showing demo data')
+      setLoadError(true)
+      message.error('Analytics could not be loaded')
     } finally {
       setLoading(false)
     }
@@ -331,6 +186,10 @@ export default function AnalyticsPage() {
         </div>
       </div>
     )
+  }
+
+  if (loadError) {
+    return <EmptyState type="error" title="Analytics unavailable" description="We could not retrieve the current analytics for this tenant." action={{ text: 'Retry', onClick: () => void fetchAnalyticsData() }} />
   }
 
   const renderExecutiveDashboard = () => (
@@ -776,15 +635,7 @@ export default function AnalyticsPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <Title level={2}>
-          <BarChartOutlined style={{ marginRight: 8 }} />
-          Analytics & Reporting
-        </Title>
-        <Text type="secondary">
-          Comprehensive GRC platform analytics with executive insights and operational metrics
-        </Text>
-      </div>
+      <PageHeader eyebrow="GOVERNANCE INTELLIGENCE" title="Analytics & reporting" description="A decision-ready view of exposure, readiness, and operational performance." icon={<BarChartOutlined />} />
 
       <Tabs
         activeKey={activeTab}
