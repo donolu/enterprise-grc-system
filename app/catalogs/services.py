@@ -11,6 +11,39 @@ from .models import AssessmentEvidence, Control, ControlAssessment, Framework
 ASSESSMENT_OPEN_STATUSES = ["not_started", "in_progress"]
 
 
+class CatalogueReportQueryService:
+    """Read-only catalogue queries used by report and export workflows."""
+
+    @staticmethod
+    def active_framework_options():
+        return Framework.objects.filter(status="active").values(
+            "id", "name", "short_name", "description"
+        )
+
+    @staticmethod
+    def assessment_options(*, framework_id=None, search="", limit=100):
+        assessments = ControlAssessment.objects.select_related("control").prefetch_related(
+            "control__clauses__framework"
+        )
+        if framework_id:
+            assessments = assessments.filter(control__clauses__framework_id=framework_id)
+        if search:
+            assessments = assessments.filter(
+                Q(control__control_id__icontains=search) | Q(control__name__icontains=search)
+            )
+        return assessments.distinct()[:limit]
+
+    @staticmethod
+    def existing_assessment_ids(assessment_ids):
+        return set(
+            ControlAssessment.objects.filter(id__in=assessment_ids).values_list("id", flat=True)
+        )
+
+    @staticmethod
+    def assessments_for_ids(assessment_ids):
+        return ControlAssessment.objects.filter(id__in=assessment_ids)
+
+
 def _maturity_score():
     return Case(
         When(assessments__maturity_level="ad_hoc", then=Value(1.0)),

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
-from catalogs.models import Framework, ControlAssessment
+from catalogs.services import CatalogueReportQueryService
 from core.serializers import DocumentSerializer
 from .models import AssessmentReport, TenantDataExport
 from .services import get_export_coverage_manifest
@@ -91,9 +91,7 @@ class AssessmentReportCreateSerializer(serializers.ModelSerializer):
             request = self.context.get("request")
             if request and hasattr(request, "user"):
                 # In a multi-tenant system, assessments are automatically scoped
-                existing_ids = set(
-                    ControlAssessment.objects.filter(id__in=value).values_list("id", flat=True)
-                )
+                existing_ids = CatalogueReportQueryService.existing_assessment_ids(value)
                 invalid_ids = set(value) - existing_ids
                 if invalid_ids:
                     raise serializers.ValidationError(
@@ -123,7 +121,7 @@ class AssessmentReportCreateSerializer(serializers.ModelSerializer):
 
         # Add specific assessments if provided
         if assessment_ids:
-            assessments = ControlAssessment.objects.filter(id__in=assessment_ids)
+            assessments = CatalogueReportQueryService.assessments_for_ids(assessment_ids)
             report.assessments.set(assessments)
 
         return report
