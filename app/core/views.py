@@ -15,12 +15,14 @@ from .document_audit import (
     document_display,
     snapshot_document,
 )
+from .audit import log_audit_event
 from .models import AuditEvent, Document, DocumentAccess, Tenant
 from .serializers import (
     AuditEventSerializer,
     DocumentSerializer,
     DocumentListSerializer,
     DocumentAccessSerializer,
+    TenantEmailSettingsSerializer,
 )
 from billing.decorators import check_document_limits
 from billing.services import PlanEnforcementService
@@ -32,6 +34,47 @@ from drf_spectacular.utils import (
     OpenApiExample,
 )
 from drf_spectacular.types import OpenApiTypes
+from rest_framework.views import APIView
+
+
+class TenantEmailSettingsView(APIView):
+    """Read and update the current tenant's outbound email identity settings."""
+
+    permission_classes = [permissions.IsAdminUser]
+
+    @extend_schema(
+        responses=TenantEmailSettingsSerializer,
+        tags=["Tenant settings"],
+    )
+    def get(self, request):
+        return Response(TenantEmailSettingsSerializer(request.tenant).data)
+
+    @extend_schema(
+        request=TenantEmailSettingsSerializer,
+        responses=TenantEmailSettingsSerializer,
+        tags=["Tenant settings"],
+    )
+    def patch(self, request):
+        tenant = request.tenant
+        serializer = TenantEmailSettingsSerializer(
+            tenant,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        changed_fields = list(serializer.validated_data)
+        previous = {field: getattr(tenant, field) for field in changed_fields}
+        serializer.save()
+        log_audit_event(
+            event="TENANT_EMAIL_SETTINGS_UPDATED",
+            actor=request.user,
+            target=tenant,
+            object_display=tenant.slug,
+            previous=previous,
+            new={field: getattr(tenant, field) for field in changed_fields},
+            request=request,
+        )
+        return Response(TenantEmailSettingsSerializer(tenant).data)
 
 
 @extend_schema_view(

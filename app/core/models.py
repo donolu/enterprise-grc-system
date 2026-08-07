@@ -16,6 +16,10 @@ class Tenant(TenantMixin):
         default="free",
         choices=[("free", "Free"), ("basic", "Basic"), ("enterprise", "Enterprise")],
     )
+    email_sender_name = models.CharField(max_length=200, blank=True)
+    email_sender_address = models.EmailField(blank=True)
+    email_reply_to = models.EmailField(blank=True)
+    email_sender_verified_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.name} ({self.schema_name})"

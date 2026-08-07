@@ -3,7 +3,7 @@ Serializers for core models including document upload functionality.
 """
 
 from rest_framework import serializers
-from .models import AuditEvent, Document, DocumentAccess, User
+from .models import AuditEvent, Document, DocumentAccess, Tenant, User
 
 
 class DocumentSerializer(serializers.ModelSerializer):
@@ -124,3 +124,23 @@ class AuditEventSerializer(serializers.ModelSerializer):
         model = AuditEvent
         fields = ["id", "event", "user", "user_email", "details", "at"]
         read_only_fields = ["id", "event", "user", "user_email", "details", "at"]
+
+
+class TenantEmailSettingsSerializer(serializers.ModelSerializer):
+    sender_email_verified = serializers.BooleanField(
+        source="email_sender_verified_at", read_only=True
+    )
+    sender_email_verified_at = serializers.DateTimeField(
+        source="email_sender_verified_at", read_only=True
+    )
+
+    class Meta:
+        model = Tenant
+        fields = [
+            "email_sender_name",
+            "email_sender_address",
+            "email_reply_to",
+            "sender_email_verified",
+            "sender_email_verified_at",
+        ]
+        read_only_fields = ["sender_email_verified", "sender_email_verified_at"]
