@@ -9,7 +9,7 @@ from django.utils import timezone
 from assets.models import Asset
 from catalogs.services import CatalogueCalendarProvider
 from policies.models import Policy
-from risk.models import Risk, RiskAction
+from risk.services import RiskCalendarProvider
 from vendors.models import Vendor, VendorTask
 
 from .models import (
@@ -113,50 +113,12 @@ def list_assessment_events(start_date=None, end_date=None, owner=None):
 
 
 def list_risk_events(start_date=None, end_date=None, owner=None):
-    review_queryset = (
-        Risk.objects.filter(next_review_date__isnull=False)
-        .exclude(status__in=["closed", "transferred"])
-        .select_related("risk_owner")
+    return RiskCalendarProvider.list_events(
+        CalendarSourceEvent,
+        start_date=start_date,
+        end_date=end_date,
+        owner=owner,
     )
-    review_queryset = _date_filter(review_queryset, "next_review_date", start_date, end_date)
-    action_queryset = RiskAction.objects.exclude(
-        status__in=["completed", "cancelled"]
-    ).select_related("assigned_to", "risk")
-    action_queryset = _date_filter(action_queryset, "due_date", start_date, end_date)
-    if owner:
-        review_queryset = review_queryset.filter(risk_owner=owner)
-        action_queryset = action_queryset.filter(assigned_to=owner)
-
-    return [
-        *[
-            CalendarSourceEvent(
-                source_type="risk_review",
-                source_id=str(risk.id),
-                title=f"Risk review due: {risk.title}",
-                due_date=risk.next_review_date,
-                owner=risk.risk_owner,
-                source_url=f"/api/risk/risks/{risk.id}/",
-                status=risk.status,
-                module="risk",
-                metadata={"risk_id": risk.risk_id, "risk_level": risk.risk_level},
-            )
-            for risk in review_queryset
-        ],
-        *[
-            CalendarSourceEvent(
-                source_type="risk_action",
-                source_id=str(action.id),
-                title=f"Risk action due: {action.title}",
-                due_date=action.due_date,
-                owner=action.assigned_to,
-                source_url=f"/api/risk/actions/{action.id}/",
-                status=action.status,
-                module="risk",
-                metadata={"action_id": action.action_id, "risk_id": action.risk.risk_id},
-            )
-            for action in action_queryset
-        ],
-    ]
 
 
 def list_vendor_events(start_date=None, end_date=None, owner=None):

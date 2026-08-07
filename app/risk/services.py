@@ -13,6 +13,62 @@ OPEN_RISK_STATUSES = ["closed", "transferred"]
 OPEN_ACTION_STATUSES = ["pending", "in_progress", "deferred"]
 
 
+class RiskCalendarProvider:
+    """Provide risk-owned review and action due dates to calendar aggregation."""
+
+    @staticmethod
+    def list_events(event_factory, *, start_date=None, end_date=None, owner=None):
+        review_queryset = (
+            Risk.objects.filter(next_review_date__isnull=False)
+            .exclude(status__in=["closed", "transferred"])
+            .select_related("risk_owner")
+        )
+        action_queryset = RiskAction.objects.exclude(
+            status__in=["completed", "cancelled"]
+        ).select_related("assigned_to", "risk")
+
+        if start_date:
+            review_queryset = review_queryset.filter(next_review_date__gte=start_date)
+            action_queryset = action_queryset.filter(due_date__gte=start_date)
+        if end_date:
+            review_queryset = review_queryset.filter(next_review_date__lte=end_date)
+            action_queryset = action_queryset.filter(due_date__lte=end_date)
+        if owner:
+            review_queryset = review_queryset.filter(risk_owner=owner)
+            action_queryset = action_queryset.filter(assigned_to=owner)
+
+        return [
+            *[
+                event_factory(
+                    source_type="risk_review",
+                    source_id=str(risk.id),
+                    title=f"Risk review due: {risk.title}",
+                    due_date=risk.next_review_date,
+                    owner=risk.risk_owner,
+                    source_url=f"/api/risk/risks/{risk.id}/",
+                    status=risk.status,
+                    module="risk",
+                    metadata={"risk_id": risk.risk_id, "risk_level": risk.risk_level},
+                )
+                for risk in review_queryset
+            ],
+            *[
+                event_factory(
+                    source_type="risk_action",
+                    source_id=str(action.id),
+                    title=f"Risk action due: {action.title}",
+                    due_date=action.due_date,
+                    owner=action.assigned_to,
+                    source_url=f"/api/risk/actions/{action.id}/",
+                    status=action.status,
+                    module="risk",
+                    metadata={"action_id": action.action_id, "risk_id": action.risk.risk_id},
+                )
+                for action in action_queryset
+            ],
+        ]
+
+
 class RiskDomainAnalyticsService:
     """Read-side analytics owned by the risk domain."""
 
