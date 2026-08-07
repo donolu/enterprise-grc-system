@@ -6,7 +6,7 @@ from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from assets.models import Asset
+from assets.services import AssetCalendarProvider
 from catalogs.services import CatalogueCalendarProvider
 from policies.services import PolicyCalendarProvider
 from risk.services import RiskCalendarProvider
@@ -140,28 +140,12 @@ def list_policy_events(start_date=None, end_date=None, owner=None):
 
 
 def list_asset_events(start_date=None, end_date=None, owner=None):
-    queryset = (
-        Asset.objects.filter(next_review_date__isnull=False)
-        .exclude(lifecycle_status__in=["retired", "disposed"])
-        .select_related("owner")
+    return AssetCalendarProvider.list_events(
+        CalendarSourceEvent,
+        start_date=start_date,
+        end_date=end_date,
+        owner=owner,
     )
-    queryset = _date_filter(queryset, "next_review_date", start_date, end_date)
-    if owner:
-        queryset = queryset.filter(owner=owner)
-    return [
-        CalendarSourceEvent(
-            source_type="asset_review",
-            source_id=str(asset.id),
-            title=f"Asset review due: {asset.name}",
-            due_date=asset.next_review_date,
-            owner=asset.owner,
-            source_url=f"/api/assets/assets/{asset.id}/",
-            status=asset.lifecycle_status,
-            module="assets",
-            metadata={"asset_id": asset.asset_id, "criticality": asset.criticality},
-        )
-        for asset in queryset
-    ]
 
 
 def send_due_reminders(reference_date=None):
