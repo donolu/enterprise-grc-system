@@ -7,7 +7,6 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Q
 from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
@@ -17,7 +16,7 @@ from drf_spectacular.utils import (
 )
 from drf_spectacular.types import OpenApiTypes
 
-from catalogs.models import Framework, ControlAssessment
+from catalogs.services import CatalogueReportQueryService
 from .models import AssessmentReport
 from .models import TenantDataExport
 from .audit import (
@@ -394,9 +393,7 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def framework_options(self, request):
         """Get available frameworks for report generation."""
-        frameworks = Framework.objects.filter(status="active").values(
-            "id", "name", "short_name", "description"
-        )
+        frameworks = CatalogueReportQueryService.active_framework_options()
 
         return Response({"frameworks": list(frameworks)})
 
@@ -406,20 +403,9 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
         framework_id = request.query_params.get("framework_id")
         search = request.query_params.get("search", "")
 
-        assessments = ControlAssessment.objects.select_related("control").prefetch_related(
-            "control__clauses__framework"
+        assessments = CatalogueReportQueryService.assessment_options(
+            framework_id=framework_id, search=search
         )
-
-        if framework_id:
-            assessments = assessments.filter(control__clauses__framework_id=framework_id)
-
-        if search:
-            assessments = assessments.filter(
-                Q(control__control_id__icontains=search) | Q(control__name__icontains=search)
-            )
-
-        # Limit results to prevent large responses
-        assessments = assessments.distinct()[:100]
 
         assessment_data = [
             {
