@@ -1,6 +1,5 @@
 """Asset-owned read services used by cross-domain workflows."""
 
-
 from .models import Asset
 
 
