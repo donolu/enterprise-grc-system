@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from assets.models import Asset
 from catalogs.services import CatalogueCalendarProvider
-from policies.models import Policy
+from policies.services import PolicyCalendarProvider
 from risk.services import RiskCalendarProvider
 from vendors.services import VendorCalendarProvider
 
@@ -131,28 +131,12 @@ def list_vendor_events(start_date=None, end_date=None, owner=None):
 
 
 def list_policy_events(start_date=None, end_date=None, owner=None):
-    queryset = (
-        Policy.objects.filter(next_review_date__isnull=False)
-        .exclude(status="archived")
-        .select_related("owner")
+    return PolicyCalendarProvider.list_events(
+        CalendarSourceEvent,
+        start_date=start_date,
+        end_date=end_date,
+        owner=owner,
     )
-    queryset = _date_filter(queryset, "next_review_date", start_date, end_date)
-    if owner:
-        queryset = queryset.filter(owner=owner)
-    return [
-        CalendarSourceEvent(
-            source_type="policy_review",
-            source_id=str(policy.id),
-            title=f"Policy review due: {policy.title}",
-            due_date=policy.next_review_date,
-            owner=policy.owner,
-            source_url=f"/api/policies/policies/{policy.id}/",
-            status=policy.status,
-            module="policies",
-            metadata={"policy_code": policy.policy_code, "policy_type": policy.policy_type},
-        )
-        for policy in queryset
-    ]
 
 
 def list_asset_events(start_date=None, end_date=None, owner=None):
