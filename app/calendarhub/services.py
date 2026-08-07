@@ -10,7 +10,7 @@ from assets.models import Asset
 from catalogs.services import CatalogueCalendarProvider
 from policies.models import Policy
 from risk.services import RiskCalendarProvider
-from vendors.models import Vendor, VendorTask
+from vendors.services import VendorCalendarProvider
 
 from .models import (
     CalendarAuditLog,
@@ -122,50 +122,12 @@ def list_risk_events(start_date=None, end_date=None, owner=None):
 
 
 def list_vendor_events(start_date=None, end_date=None, owner=None):
-    vendor_queryset = (
-        Vendor.objects.filter(contract_end_date__isnull=False)
-        .exclude(status__in=["terminated", "inactive"])
-        .select_related("assigned_to")
+    return VendorCalendarProvider.list_events(
+        CalendarSourceEvent,
+        start_date=start_date,
+        end_date=end_date,
+        owner=owner,
     )
-    vendor_queryset = _date_filter(vendor_queryset, "contract_end_date", start_date, end_date)
-    task_queryset = VendorTask.objects.exclude(
-        status__in=["completed", "cancelled"]
-    ).select_related("assigned_to", "vendor")
-    task_queryset = _date_filter(task_queryset, "due_date", start_date, end_date)
-    if owner:
-        vendor_queryset = vendor_queryset.filter(assigned_to=owner)
-        task_queryset = task_queryset.filter(assigned_to=owner)
-
-    return [
-        *[
-            CalendarSourceEvent(
-                source_type="vendor_contract",
-                source_id=str(vendor.id),
-                title=f"Vendor contract expires: {vendor.name}",
-                due_date=vendor.contract_end_date,
-                owner=vendor.assigned_to,
-                source_url=f"/api/vendors/vendors/{vendor.id}/",
-                status=vendor.status,
-                module="vendors",
-                metadata={"vendor_id": vendor.vendor_id},
-            )
-            for vendor in vendor_queryset
-        ],
-        *[
-            CalendarSourceEvent(
-                source_type="vendor_task",
-                source_id=str(task.id),
-                title=f"Vendor task due: {task.title}",
-                due_date=task.due_date,
-                owner=task.assigned_to,
-                source_url=f"/api/vendors/tasks/{task.id}/",
-                status=task.status,
-                module="vendors",
-                metadata={"task_id": task.task_id, "vendor_id": task.vendor.vendor_id},
-            )
-            for task in task_queryset
-        ],
-    ]
 
 
 def list_policy_events(start_date=None, end_date=None, owner=None):

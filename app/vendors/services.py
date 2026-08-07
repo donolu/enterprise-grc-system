@@ -11,6 +11,62 @@ from .models import Vendor, VendorTask
 OPEN_VENDOR_TASK_STATUSES = ["pending", "in_progress"]
 
 
+class VendorCalendarProvider:
+    """Provide vendor-owned contract and task dates to calendar aggregation."""
+
+    @staticmethod
+    def list_events(event_factory, *, start_date=None, end_date=None, owner=None):
+        vendor_queryset = (
+            Vendor.objects.filter(contract_end_date__isnull=False)
+            .exclude(status__in=["terminated", "inactive"])
+            .select_related("assigned_to")
+        )
+        task_queryset = VendorTask.objects.exclude(
+            status__in=["completed", "cancelled"]
+        ).select_related("assigned_to", "vendor")
+
+        if start_date:
+            vendor_queryset = vendor_queryset.filter(contract_end_date__gte=start_date)
+            task_queryset = task_queryset.filter(due_date__gte=start_date)
+        if end_date:
+            vendor_queryset = vendor_queryset.filter(contract_end_date__lte=end_date)
+            task_queryset = task_queryset.filter(due_date__lte=end_date)
+        if owner:
+            vendor_queryset = vendor_queryset.filter(assigned_to=owner)
+            task_queryset = task_queryset.filter(assigned_to=owner)
+
+        return [
+            *[
+                event_factory(
+                    source_type="vendor_contract",
+                    source_id=str(vendor.id),
+                    title=f"Vendor contract expires: {vendor.name}",
+                    due_date=vendor.contract_end_date,
+                    owner=vendor.assigned_to,
+                    source_url=f"/api/vendors/vendors/{vendor.id}/",
+                    status=vendor.status,
+                    module="vendors",
+                    metadata={"vendor_id": vendor.vendor_id},
+                )
+                for vendor in vendor_queryset
+            ],
+            *[
+                event_factory(
+                    source_type="vendor_task",
+                    source_id=str(task.id),
+                    title=f"Vendor task due: {task.title}",
+                    due_date=task.due_date,
+                    owner=task.assigned_to,
+                    source_url=f"/api/vendors/tasks/{task.id}/",
+                    status=task.status,
+                    module="vendors",
+                    metadata={"task_id": task.task_id, "vendor_id": task.vendor.vendor_id},
+                )
+                for task in task_queryset
+            ],
+        ]
+
+
 class VendorAnalyticsService:
     """Read-side analytics owned by the vendor domain."""
 
