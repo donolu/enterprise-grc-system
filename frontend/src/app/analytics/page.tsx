@@ -17,8 +17,11 @@ import {
   ComplianceKPICard,
   RiskKPICard,
   VendorKPICard,
-  PolicyKPICard
-  ,PageHeader
+  PolicyKPICard,
+  ControlCoverage,
+  FrameworkReadiness,
+  TrendPanel,
+  PageHeader,
 } from '@/components/ui'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { api } from '@/lib/api'
@@ -82,6 +85,7 @@ interface ComplianceDashboardData {
     automated_controls: number
     avg_maturity_score: number
   }
+  assessment_trends?: Array<{ month: string; created: number; completed: number; avg_score: number | null }>
 }
 
 interface VendorRiskData {
@@ -370,6 +374,18 @@ export default function AnalyticsPage() {
       </Row>
 
       {/* Framework Performance */}
+      <div className="grc-viz-grid">
+        <FrameworkReadiness frameworks={(complianceData?.framework_statistics || []).map((framework) => ({
+          name: framework.name,
+          completionRate: framework.completion_rate,
+          averageScore: framework.avg_score,
+          overdue: framework.overdue_assessments,
+        }))} />
+        <div style={{ display: 'grid', gap: 16 }}>
+          <ControlCoverage total={complianceData?.overall_metrics.total_controls || 0} automated={complianceData?.overall_metrics.automated_controls || 0} />
+          <TrendPanel heading="Assessment momentum" label="Assessment completion trend" values={(complianceData?.assessment_trends || []).map((trend) => trend.completed)} />
+        </div>
+      </div>
       <Card title="Framework Performance" style={{ marginBottom: 24 }}>
         {complianceData?.framework_statistics.length === 0 ? (
           <EmptyState description="No framework data available" />
