@@ -127,9 +127,7 @@ class AuditEventSerializer(serializers.ModelSerializer):
 
 
 class TenantEmailSettingsSerializer(serializers.ModelSerializer):
-    sender_email_verified = serializers.BooleanField(
-        source="email_sender_verified_at", read_only=True
-    )
+    sender_email_verified = serializers.SerializerMethodField()
     sender_email_verified_at = serializers.DateTimeField(
         source="email_sender_verified_at", read_only=True
     )
@@ -144,3 +142,6 @@ class TenantEmailSettingsSerializer(serializers.ModelSerializer):
             "sender_email_verified_at",
         ]
         read_only_fields = ["sender_email_verified", "sender_email_verified_at"]
+
+    def get_sender_email_verified(self, obj) -> bool:
+        return bool(obj.email_sender_verified_at)
