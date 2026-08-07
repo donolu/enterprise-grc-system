@@ -7,7 +7,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from assets.models import Asset
-from catalogs.models import ControlAssessment
+from catalogs.services import CatalogueCalendarProvider
 from policies.models import Policy
 from risk.models import Risk, RiskAction
 from vendors.models import Vendor, VendorTask
@@ -104,36 +104,12 @@ def list_custom_events(start_date=None, end_date=None, owner=None):
 
 
 def list_assessment_events(start_date=None, end_date=None, owner=None):
-    queryset = (
-        ControlAssessment.objects.filter(due_date__isnull=False)
-        .exclude(status__in=["complete", "not_applicable"])
-        .select_related("assigned_to", "control")
+    return CatalogueCalendarProvider.list_events(
+        CalendarSourceEvent,
+        start_date=start_date,
+        end_date=end_date,
+        owner=owner,
     )
-    queryset = _date_filter(queryset, "due_date", start_date, end_date)
-    if owner:
-        queryset = queryset.filter(assigned_to=owner)
-    return [
-        CalendarSourceEvent(
-            source_type="control_assessment",
-            source_id=str(assessment.id),
-            title=f"Control assessment due: {assessment.control.control_id}",
-            due_date=assessment.due_date,
-            owner=assessment.assigned_to,
-            source_url=f"/api/catalogs/assessments/{assessment.id}/",
-            status=assessment.status,
-            module="frameworks",
-            metadata={
-                "assessment_id": assessment.assessment_id,
-                "control_id": assessment.control.control_id,
-                "remediation_due_date": (
-                    assessment.remediation_due_date.isoformat()
-                    if assessment.remediation_due_date
-                    else None
-                ),
-            },
-        )
-        for assessment in queryset
-    ]
 
 
 def list_risk_events(start_date=None, end_date=None, owner=None):

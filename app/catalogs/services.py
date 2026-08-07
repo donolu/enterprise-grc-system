@@ -44,6 +44,47 @@ class CatalogueReportQueryService:
         return ControlAssessment.objects.filter(id__in=assessment_ids)
 
 
+class CatalogueCalendarProvider:
+    """Provide catalogue-owned due dates to the calendar aggregation layer."""
+
+    @staticmethod
+    def list_events(event_factory, *, start_date=None, end_date=None, owner=None):
+        queryset = (
+            ControlAssessment.objects.filter(due_date__isnull=False)
+            .exclude(status__in=["complete", "not_applicable"])
+            .select_related("assigned_to", "control")
+        )
+        if start_date:
+            queryset = queryset.filter(due_date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(due_date__lte=end_date)
+        if owner:
+            queryset = queryset.filter(assigned_to=owner)
+
+        return [
+            event_factory(
+                source_type="control_assessment",
+                source_id=str(assessment.id),
+                title=f"Control assessment due: {assessment.control.control_id}",
+                due_date=assessment.due_date,
+                owner=assessment.assigned_to,
+                source_url=f"/api/catalogs/assessments/{assessment.id}/",
+                status=assessment.status,
+                module="frameworks",
+                metadata={
+                    "assessment_id": assessment.assessment_id,
+                    "control_id": assessment.control.control_id,
+                    "remediation_due_date": (
+                        assessment.remediation_due_date.isoformat()
+                        if assessment.remediation_due_date
+                        else None
+                    ),
+                },
+            )
+            for assessment in queryset
+        ]
+
+
 def _maturity_score():
     return Case(
         When(assessments__maturity_level="ad_hoc", then=Value(1.0)),
