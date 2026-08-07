@@ -11,7 +11,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from risk.models import Risk, RiskAction
+from risk.services import RiskIntakeService
 
 from .models import ScanJob, ScanTarget, VulnerabilityFinding
 
@@ -242,14 +242,10 @@ def store_findings(job, findings):
 
 
 def create_risk_from_finding(finding, user=None):
-    impact, likelihood = _severity_to_risk_rating(finding.severity)
-    risk = Risk.objects.create(
+    risk = RiskIntakeService.create_vulnerability_risk(
         title=f"Vulnerability: {finding.title}",
         description=_finding_description(finding),
-        impact=impact,
-        likelihood=likelihood,
-        treatment_strategy="mitigate",
-        status="identified",
+        severity=finding.severity,
         risk_owner=user,
         created_by=user,
         next_review_date=timezone.now().date() + timezone.timedelta(days=30),
@@ -261,14 +257,12 @@ def create_risk_from_finding(finding, user=None):
 
 def create_risk_action_from_finding(finding, user=None):
     risk = finding.risk or create_risk_from_finding(finding, user=user)
-    action = RiskAction.objects.create(
+    action = RiskIntakeService.create_vulnerability_action(
         risk=risk,
         title=f"Remediate vulnerability: {finding.title}",
-        description=finding.remediation
-        or "Remediate or document an accepted risk decision for this finding.",
-        action_type="technical",
+        remediation=finding.remediation,
+        severity=finding.severity,
         assigned_to=user,
-        priority=_severity_to_priority(finding.severity),
         due_date=timezone.now().date()
         + timezone.timedelta(days=_severity_to_due_days(finding.severity)),
         created_by=user,
@@ -321,26 +315,6 @@ def _settings_list(name):
     if isinstance(value, str):
         return [item.strip().lstrip(".") for item in value.split(",") if item.strip()]
     return [str(item).strip().lstrip(".") for item in value if str(item).strip()]
-
-
-def _severity_to_risk_rating(severity):
-    return {
-        "critical": (5, 4),
-        "high": (4, 4),
-        "medium": (3, 3),
-        "low": (2, 2),
-        "info": (1, 1),
-    }.get(severity, (2, 2))
-
-
-def _severity_to_priority(severity):
-    return {
-        "critical": "critical",
-        "high": "high",
-        "medium": "medium",
-        "low": "low",
-        "info": "low",
-    }.get(severity, "medium")
 
 
 def _severity_to_due_days(severity):

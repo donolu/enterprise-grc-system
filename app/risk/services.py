@@ -13,6 +13,57 @@ OPEN_RISK_STATUSES = ["closed", "transferred"]
 OPEN_ACTION_STATUSES = ["pending", "in_progress", "deferred"]
 
 
+class RiskIntakeService:
+    """Create risk records from structured intake data owned by another domain."""
+
+    @staticmethod
+    def create_vulnerability_risk(
+        *,
+        title,
+        description,
+        severity,
+        risk_owner=None,
+        created_by=None,
+        next_review_date=None,
+    ):
+        impact, likelihood = _severity_to_risk_rating(severity)
+        return Risk.objects.create(
+            title=title,
+            description=description,
+            impact=impact,
+            likelihood=likelihood,
+            treatment_strategy="mitigate",
+            status="identified",
+            risk_owner=risk_owner,
+            created_by=created_by,
+            next_review_date=next_review_date,
+        )
+
+    @staticmethod
+    def create_vulnerability_action(
+        *,
+        risk,
+        title,
+        remediation,
+        severity,
+        assigned_to=None,
+        created_by=None,
+        due_date=None,
+    ):
+        return RiskAction.objects.create(
+            risk=risk,
+            title=title,
+            description=(
+                remediation or "Remediate or document an accepted risk decision for this finding."
+            ),
+            action_type="technical",
+            assigned_to=assigned_to,
+            priority=_severity_to_priority(severity),
+            due_date=due_date,
+            created_by=created_by,
+        )
+
+
 class RiskCalendarProvider:
     """Provide risk-owned review and action due dates to calendar aggregation."""
 
@@ -130,3 +181,23 @@ class RiskDomainAnalyticsService:
         return list(
             Risk.objects.values("category__name").annotate(count=Count("id")).order_by("-count")
         )
+
+
+def _severity_to_risk_rating(severity):
+    return {
+        "critical": (5, 4),
+        "high": (4, 4),
+        "medium": (3, 3),
+        "low": (2, 2),
+        "info": (1, 1),
+    }.get(severity, (2, 2))
+
+
+def _severity_to_priority(severity):
+    return {
+        "critical": "critical",
+        "high": "high",
+        "medium": "medium",
+        "low": "low",
+        "info": "low",
+    }.get(severity, "medium")
