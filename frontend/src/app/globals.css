@@ -7,6 +7,20 @@ body { margin: 0; }
 .page-header-icon { display: inline-flex; color: var(--teal, #0b8f84); font-size: 25px; }
 .page-header-description { display: block; max-width: 680px; margin-top: 9px; color: var(--ink-soft, #466166); font-size: 14px; line-height: 1.5; }
 .page-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.grc-viz-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; margin-bottom: 24px; }
+.grc-viz-panel { min-width: 0; padding: 22px; background: var(--paper, #fbfcfa); border: 1px solid var(--line, #dce7e5); }
+.grc-viz-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.grc-viz-heading h3 { margin: 6px 0 0; color: var(--ink, #102b2e); font-size: 18px; line-height: 1.2; letter-spacing: 0; }
+.grc-viz-score { color: var(--teal-deep, #08756d); font-size: 28px; line-height: 1; }
+.grc-viz-caption, .framework-readiness-meta { display: flex; justify-content: space-between; gap: 12px; color: var(--ink-soft, #466166); font-size: 11px; }
+.framework-readiness-list { display: grid; gap: 17px; }
+.framework-readiness-label { display: flex; justify-content: space-between; gap: 16px; color: var(--ink, #102b2e); font-size: 12px; }
+.framework-readiness-label span { color: var(--teal-deep, #08756d); font-weight: 700; }
+.framework-readiness-item .ant-progress { margin: 7px 0 3px; }
+.grc-viz-empty { display: grid; min-height: 96px; place-items: center; color: var(--ink-soft, #466166); font-size: 12px; }
+.grc-sparkline { display: block; width: 100%; height: 92px; overflow: visible; }
+html.dark-mode .grc-viz-panel { --paper: #1e2b2d; --line: #35504e; --ink: #e8f2ef; --ink-soft: #b4c8c4; --teal-deep: #7bd2c6; }
+@media (max-width: 760px) { .grc-viz-grid { grid-template-columns: 1fr; }.grc-viz-panel { padding: 18px; } }
 html.dark-mode .page-header { --line: #35504e; --ink: #e8f2ef; --ink-soft: #b4c8c4; --teal: #61c2b5; --teal-deep: #7bd2c6; }
 @media (max-width: 760px) { .page-header { display: block; margin-bottom: 22px; }.page-header-actions { justify-content: flex-start; margin-top: 18px; }.page-header-title { font-size: 26px !important; } }
 

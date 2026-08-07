@@ -11,3 +11,4 @@ export * from './Loading';
 export * from './ExportButton';
 export * from './FilterPanel';
 export * from './PageHeader';
+export * from './GRCVisualisations';
