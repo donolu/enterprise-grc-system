@@ -30,6 +30,20 @@ def test_analytics_services_do_not_import_cross_domain_models_directly():
     assert direct_model_imports == set()
 
 
+def test_operator_analytics_uses_domain_usage_providers():
+    source = Path(__file__).with_name("operator.py").read_text()
+    tree = ast.parse(source)
+
+    direct_model_imports = {
+        node.module
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        and node.module in {"exports.models", "policies.models", "training.models"}
+    }
+
+    assert direct_model_imports == set()
+
+
 @pytest.mark.django_db
 def test_cross_module_dashboard_services_smoke():
     assert "risk_summary" in CrossModuleAnalyticsService.get_executive_dashboard_data()

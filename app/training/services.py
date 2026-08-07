@@ -6,9 +6,30 @@ from django.contrib.auth import get_user_model
 from django.db.models import Avg, Case, Count, F, FloatField, Q, Sum, Value, When
 from django.utils import timezone
 
-from .models import SecurityAwarenessCampaign, TrainingCategory, TrainingVideo, VideoView
+from .models import (
+    CampaignDelivery,
+    SecurityAwarenessCampaign,
+    TrainingCategory,
+    TrainingVideo,
+    VideoView,
+)
 
 User = get_user_model()
+
+
+class TrainingUsageProvider:
+    """Provide training usage counts to privileged cross-domain analytics."""
+
+    @staticmethod
+    def usage_counts(*, start_at):
+        return {
+            "training_deliveries": CampaignDelivery.objects.filter(sent_at__gte=start_at).count(),
+            "training_views": VideoView.objects.filter(started_at__gte=start_at).count(),
+            "training_completions": VideoView.objects.filter(
+                started_at__gte=start_at,
+                completed=True,
+            ).count(),
+        }
 
 
 class TrainingAnalyticsService:

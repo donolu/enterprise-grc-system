@@ -46,6 +46,17 @@ EXCLUDED_FIELD_NAMES = {
     "stripe_price_id",
 }
 
+
+class ExportUsageProvider:
+    """Provide export usage counts to privileged cross-domain analytics."""
+
+    @staticmethod
+    def usage_counts(*, start_at):
+        return {
+            "data_exports": TenantDataExport.objects.filter(requested_at__gte=start_at).count(),
+        }
+
+
 EXPORT_COVERAGE = [
     {
         "module": "identity",

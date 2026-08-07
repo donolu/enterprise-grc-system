@@ -40,6 +40,21 @@ class PolicyCalendarProvider:
         ]
 
 
+class PolicyUsageProvider:
+    """Provide policy usage counts to privileged cross-domain analytics."""
+
+    @staticmethod
+    def usage_counts(*, start_at):
+        return {
+            "policy_acknowledgements": PolicyAcknowledgment.objects.filter(
+                acknowledged_at__gte=start_at
+            ).count(),
+            "policy_distributions": PolicyDistribution.objects.filter(
+                distributed_at__gte=start_at
+            ).count(),
+        }
+
+
 class PolicyAnalyticsService:
     """Read-side analytics owned by the policy domain."""
 

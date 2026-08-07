@@ -12,9 +12,9 @@ from django.utils import timezone
 
 from billing.entitlements import MODULE_CATALOG
 from core.models import AuditEvent, Document, Subscription, Tenant
-from exports.models import TenantDataExport
-from policies.models import PolicyAcknowledgment, PolicyDistribution
-from training.models import CampaignDelivery, VideoView
+from exports.services import ExportUsageProvider
+from policies.services import PolicyUsageProvider
+from training.services import TrainingUsageProvider
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -198,27 +198,11 @@ class OperatorProductAnalyticsService:
                 "document_uploads": Document.objects.filter(
                     uploaded_at__gte=self.window.start_at
                 ).count(),
-                "data_exports": TenantDataExport.objects.filter(
-                    requested_at__gte=self.window.start_at
-                ).count(),
                 "audit_events": AuditEvent.objects.filter(at__gte=self.window.start_at).count(),
-                "policy_acknowledgements": PolicyAcknowledgment.objects.filter(
-                    acknowledged_at__gte=self.window.start_at
-                ).count(),
-                "policy_distributions": PolicyDistribution.objects.filter(
-                    distributed_at__gte=self.window.start_at
-                ).count(),
-                "training_deliveries": CampaignDelivery.objects.filter(
-                    sent_at__gte=self.window.start_at
-                ).count(),
-                "training_views": VideoView.objects.filter(
-                    started_at__gte=self.window.start_at
-                ).count(),
-                "training_completions": VideoView.objects.filter(
-                    started_at__gte=self.window.start_at,
-                    completed=True,
-                ).count(),
             }
+            usage_counts.update(ExportUsageProvider.usage_counts(start_at=self.window.start_at))
+            usage_counts.update(PolicyUsageProvider.usage_counts(start_at=self.window.start_at))
+            usage_counts.update(TrainingUsageProvider.usage_counts(start_at=self.window.start_at))
             return {
                 "user_count": User.objects.filter(is_active=True).count(),
                 "usage_counts": usage_counts,
