@@ -3,12 +3,14 @@ Views for document management and storage testing.
 """
 
 from django.conf import settings
+from django.db import transaction
 from rest_framework import filters, viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.http import HttpResponse, Http404
 from django.utils import timezone
+from django_tenants.utils import schema_context
 from .document_audit import (
     audit_document_change,
     document_changed_values,
@@ -47,7 +49,9 @@ class TenantEmailSettingsView(APIView):
         tags=["Tenant settings"],
     )
     def get(self, request):
-        return Response(TenantEmailSettingsSerializer(request.tenant).data)
+        with schema_context("public"):
+            tenant = Tenant.objects.get(pk=request.tenant.pk)
+        return Response(TenantEmailSettingsSerializer(tenant).data)
 
     @extend_schema(
         request=TenantEmailSettingsSerializer,
@@ -55,23 +59,25 @@ class TenantEmailSettingsView(APIView):
         tags=["Tenant settings"],
     )
     def patch(self, request):
-        tenant = request.tenant
-        serializer = TenantEmailSettingsSerializer(
-            tenant,
-            data=request.data,
-            partial=True,
-        )
-        serializer.is_valid(raise_exception=True)
-        changed_fields = list(serializer.validated_data)
-        previous = {field: getattr(tenant, field) for field in changed_fields}
-        serializer.save()
+        with transaction.atomic(), schema_context("public"):
+            tenant = Tenant.objects.select_for_update().get(pk=request.tenant.pk)
+            serializer = TenantEmailSettingsSerializer(
+                tenant,
+                data=request.data,
+                partial=True,
+            )
+            serializer.is_valid(raise_exception=True)
+            changed_fields = list(serializer.validated_data)
+            previous = {field: getattr(tenant, field) for field in changed_fields}
+            serializer.save()
+            new = {field: getattr(tenant, field) for field in changed_fields}
         log_audit_event(
             event="TENANT_EMAIL_SETTINGS_UPDATED",
             actor=request.user,
             target=tenant,
             object_display=tenant.slug,
             previous=previous,
-            new={field: getattr(tenant, field) for field in changed_fields},
+            new=new,
             request=request,
         )
         return Response(TenantEmailSettingsSerializer(tenant).data)

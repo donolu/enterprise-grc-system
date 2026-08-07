@@ -5181,6 +5181,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tenant-email-settings/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Read and update the current tenant's outbound email identity settings. */
+        get: operations["tenant_email_settings_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Read and update the current tenant's outbound email identity settings. */
+        patch: operations["tenant_email_settings_partial_update"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -8244,6 +8262,11 @@ export interface components {
             /** @description Specific users to receive this campaign (if not sending to all) */
             target_users?: number[];
         };
+        PatchedTenantEmailSettingsRequest: {
+            email_sender_name?: string;
+            email_sender_address?: string;
+            email_reply_to?: string;
+        };
         /** @description Serializer for training categories. */
         PatchedTrainingCategoryRequest: {
             name?: string;
@@ -10162,6 +10185,14 @@ export interface components {
             title?: string;
             export_format?: components["schemas"]["ExportFormatEnum"];
             selected_modules?: unknown;
+        };
+        TenantEmailSettings: {
+            email_sender_name?: string;
+            email_sender_address?: string;
+            email_reply_to?: string;
+            readonly sender_email_verified: boolean;
+            /** Format: date-time */
+            readonly sender_email_verified_at: string;
         };
         /** @description Serializer for training categories. */
         TrainingCategory: {
@@ -22661,6 +22692,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditEvent"];
+                };
+            };
+        };
+    };
+    tenant_email_settings_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantEmailSettings"];
+                };
+            };
+        };
+    };
+    tenant_email_settings_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedTenantEmailSettingsRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedTenantEmailSettingsRequest"];
+                "multipart/form-data": components["schemas"]["PatchedTenantEmailSettingsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantEmailSettings"];
                 };
             };
         };
