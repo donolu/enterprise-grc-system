@@ -8,6 +8,38 @@ from django.utils import timezone
 from .models import Policy, PolicyAcknowledgment, PolicyDistribution, PolicyVersion
 
 
+class PolicyCalendarProvider:
+    """Provide policy-owned review dates to calendar aggregation."""
+
+    @staticmethod
+    def list_events(event_factory, *, start_date=None, end_date=None, owner=None):
+        queryset = (
+            Policy.objects.filter(next_review_date__isnull=False)
+            .exclude(status="archived")
+            .select_related("owner")
+        )
+        if start_date:
+            queryset = queryset.filter(next_review_date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(next_review_date__lte=end_date)
+        if owner:
+            queryset = queryset.filter(owner=owner)
+        return [
+            event_factory(
+                source_type="policy_review",
+                source_id=str(policy.id),
+                title=f"Policy review due: {policy.title}",
+                due_date=policy.next_review_date,
+                owner=policy.owner,
+                source_url=f"/api/policies/policies/{policy.id}/",
+                status=policy.status,
+                module="policies",
+                metadata={"policy_code": policy.policy_code, "policy_type": policy.policy_type},
+            )
+            for policy in queryset
+        ]
+
+
 class PolicyAnalyticsService:
     """Read-side analytics owned by the policy domain."""
 
