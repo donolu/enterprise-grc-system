@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import AppLayout from "@/components/AppLayout";
 import AuthWrapper from "@/components/AuthWrapper";
 import { AppTheme } from "@/theme";
 import ThemeScript from "@/components/ThemeScript";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = localFont({
+  src: [
+    { path: "../../public/fonts/Inter-Regular.ttf", weight: "400", style: "normal" },
+    { path: "../../public/fonts/Inter-Medium.ttf", weight: "500", style: "normal" },
+    { path: "../../public/fonts/Inter-SemiBold.ttf", weight: "600", style: "normal" },
+    { path: "../../public/fonts/Inter-Bold.ttf", weight: "700", style: "normal" },
+  ],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   title: "GRC SaaS",
@@ -20,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={inter.variable}>
         <ThemeScript />
         <AppTheme>
           <AuthWrapper>

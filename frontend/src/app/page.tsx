@@ -136,7 +136,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <main className="dashboard-page">
+    <div className="dashboard-page">
       <section className="dashboard-hero">
         <div>
           <div className="eyebrow"><span className="eyebrow-mark" /> CONTROL ROOM / {dayjs().format("DD MMM YYYY").toUpperCase()}</div>
@@ -199,8 +199,8 @@ export default function DashboardPage() {
         </article>
         <article className="surface-panel posture-panel">
           <div className="panel-heading"><div><span className="section-kicker">READINESS</span><h2>Posture by framework</h2></div><Link className="icon-action" href="/assessments" aria-label="Open assessments"><ArrowRightOutlined /></Link></div>
-          <div className="posture-score"><Progress type="circle" percent={numbers.compliance} size={142} strokeColor="#0b8f84" trailColor="#e5efed" format={(value) => <><strong>{value}%</strong><small>overall</small></>} /><div className="posture-copy"><CheckCircleFilled /> <span>On track for this period</span><p>Keep the review queue moving to protect the current posture.</p></div></div>
-          <div className="framework-list"><div><span>ISO 27001</span><strong>{formatMetric(Math.min(numbers.compliance + 3, 100), "%")}</strong><Progress percent={Math.min(numbers.compliance + 3, 100)} showInfo={false} strokeColor="#0b8f84" /></div><div><span>Business continuity</span><strong>{formatMetric(Math.max(numbers.compliance - 7, 0), "%")}</strong><Progress percent={Math.max(numbers.compliance - 7, 0)} showInfo={false} strokeColor="#d29c4c" /></div></div>
+          <div className="posture-score"><Progress aria-label="Overall compliance" type="circle" percent={numbers.compliance} size={142} strokeColor="#0b8f84" trailColor="#e5efed" format={(value) => <><strong>{value}%</strong><small>overall</small></>} /><div className="posture-copy"><CheckCircleFilled /> <span>On track for this period</span><p>Keep the review queue moving to protect the current posture.</p></div></div>
+          <div className="framework-list"><div><span>ISO 27001</span><strong>{formatMetric(Math.min(numbers.compliance + 3, 100), "%")}</strong><Progress aria-label="ISO 27001 readiness" percent={Math.min(numbers.compliance + 3, 100)} showInfo={false} strokeColor="#0b8f84" /></div><div><span>Business continuity</span><strong>{formatMetric(Math.max(numbers.compliance - 7, 0), "%")}</strong><Progress aria-label="Business continuity readiness" percent={Math.max(numbers.compliance - 7, 0)} showInfo={false} strokeColor="#d29c4c" /></div></div>
         </article>
       </section>
 
@@ -211,6 +211,6 @@ export default function DashboardPage() {
       </section>
 
       <section className="dashboard-footer-strip"><div><span className="footer-icon"><SafetyCertificateOutlined /></span><span><strong>Keep the programme moving</strong><small>Review open work and keep each control decision owned.</small></span></div><Space><Button href="/assessments" icon={<CalendarOutlined />}>Review schedule</Button><Button type="primary" href="/assessments/create" icon={<PlusOutlined />}>Start assessment</Button></Space></section>
-    </main>
+    </div>
   );
 }
