@@ -4,6 +4,13 @@ import { Form, Input, Button, Alert } from "antd";
 import { login } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 
+function safeNext(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+    return "/";
+  }
+  return value;
+}
+
 type LoginFormValues = {
   email: string;
   password: string;
@@ -18,7 +25,8 @@ export default function LoginPage() {
     try {
       setError(null);
       await login(values.email, values.password, values.otp);
-      router.push("/");
+      const next = new URLSearchParams(window.location.search).get("next");
+      router.push(safeNext(next));
     } catch (e) {
       if (e instanceof Error) {
         setError(e.message || "Login failed");

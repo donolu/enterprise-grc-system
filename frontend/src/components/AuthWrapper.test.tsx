@@ -54,7 +54,7 @@ describe("AuthWrapper", () => {
     );
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith("/login");
+      expect(pushMock).toHaveBeenCalledWith("/login?next=%2F");
     });
     expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
   });
