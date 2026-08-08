@@ -18,6 +18,11 @@ from .document_audit import (
     snapshot_document,
 )
 from .audit import log_audit_event
+from .email_verification import (
+    SenderVerificationError,
+    confirm_sender_verification,
+    request_sender_verification,
+)
 from .models import AuditEvent, Document, DocumentAccess, Tenant
 from .serializers import (
     AuditEventSerializer,
@@ -25,6 +30,8 @@ from .serializers import (
     DocumentListSerializer,
     DocumentAccessSerializer,
     TenantEmailSettingsSerializer,
+    SenderVerificationConfirmSerializer,
+    SenderVerificationResponseSerializer,
 )
 from billing.decorators import check_document_limits
 from billing.services import PlanEnforcementService
@@ -70,6 +77,13 @@ class TenantEmailSettingsView(APIView):
             changed_fields = list(serializer.validated_data)
             previous = {field: getattr(tenant, field) for field in changed_fields}
             serializer.save()
+            if (
+                "email_sender_address" in serializer.validated_data
+                and previous["email_sender_address"]
+                != serializer.validated_data["email_sender_address"]
+            ):
+                tenant.email_sender_verified_at = None
+                tenant.save(update_fields=["email_sender_verified_at"])
             new = {field: getattr(tenant, field) for field in changed_fields}
         log_audit_event(
             event="TENANT_EMAIL_SETTINGS_UPDATED",
@@ -81,6 +95,79 @@ class TenantEmailSettingsView(APIView):
             request=request,
         )
         return Response(TenantEmailSettingsSerializer(tenant).data)
+
+
+class TenantEmailVerificationRequestView(APIView):
+    """Send a verification message to the configured tenant sender address."""
+
+    permission_classes = [permissions.IsAdminUser]
+
+    @extend_schema(
+        request=None,
+        responses={
+            202: SenderVerificationResponseSerializer,
+            400: OpenApiResponse(description="Sender email is not configured."),
+            503: OpenApiResponse(description="Verification email could not be sent."),
+        },
+        tags=["Tenant settings"],
+    )
+    def post(self, request):
+        try:
+            expires_at = request_sender_verification(request.tenant)
+        except SenderVerificationError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            return Response(
+                {"detail": "Unable to send the verification email."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        log_audit_event(
+            event="TENANT_EMAIL_VERIFICATION_REQUESTED",
+            actor=request.user,
+            object_type="core.Tenant",
+            object_id=request.tenant.pk,
+            object_display=request.tenant.slug,
+            request=request,
+        )
+        return Response(
+            {"detail": "Verification email sent.", "expires_at": expires_at},
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+class TenantEmailVerificationConfirmView(APIView):
+    """Consume a sender verification token for the current tenant."""
+
+    permission_classes = [permissions.IsAdminUser]
+
+    @extend_schema(
+        request=SenderVerificationConfirmSerializer,
+        responses={
+            200: SenderVerificationResponseSerializer,
+            400: OpenApiResponse(description="The verification token is invalid or expired."),
+        },
+        tags=["Tenant settings"],
+    )
+    def post(self, request):
+        serializer = SenderVerificationConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            verified_at = confirm_sender_verification(
+                request.tenant, serializer.validated_data["token"]
+            )
+        except SenderVerificationError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        log_audit_event(
+            event="TENANT_EMAIL_VERIFIED",
+            actor=request.user,
+            object_type="core.Tenant",
+            object_id=request.tenant.pk,
+            object_display=request.tenant.slug,
+            request=request,
+        )
+        return Response({"detail": "Sender email verified.", "verified_at": verified_at})
 
 
 @extend_schema_view(

@@ -338,6 +338,9 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "1025"))
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@example.com")
+EMAIL_VERIFICATION_BASE_URL = os.environ.get(
+    "EMAIL_VERIFICATION_BASE_URL", "http://localhost/account/email-verification"
+)
 
 SITE_DOMAIN = os.environ.get("SITE_DOMAIN", "localhost:8000")
 

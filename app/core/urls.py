@@ -4,7 +4,13 @@ URL configuration for core app including document management.
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import AuditEventViewSet, DocumentViewSet, TenantEmailSettingsView
+from .views import (
+    AuditEventViewSet,
+    DocumentViewSet,
+    TenantEmailSettingsView,
+    TenantEmailVerificationConfirmView,
+    TenantEmailVerificationRequestView,
+)
 from .health import (
     HealthCheckView,
     LivenessCheckView,
@@ -27,6 +33,16 @@ urlpatterns = [
         "api/tenant-email-settings/",
         TenantEmailSettingsView.as_view(),
         name="tenant-email-settings",
+    ),
+    path(
+        "api/tenant-email-settings/verification/",
+        TenantEmailVerificationRequestView.as_view(),
+        name="tenant-email-verification-request",
+    ),
+    path(
+        "api/tenant-email-settings/verification/confirm/",
+        TenantEmailVerificationConfirmView.as_view(),
+        name="tenant-email-verification-confirm",
     ),
     # Health check endpoints
     path("health/", HealthCheckView.as_view(), name="health_check"),

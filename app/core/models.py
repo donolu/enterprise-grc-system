@@ -20,6 +20,8 @@ class Tenant(TenantMixin):
     email_sender_address = models.EmailField(blank=True)
     email_reply_to = models.EmailField(blank=True)
     email_sender_verified_at = models.DateTimeField(null=True, blank=True)
+    email_sender_verification_token_hash = models.CharField(max_length=64, blank=True)
+    email_sender_verification_expires_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.name} ({self.schema_name})"

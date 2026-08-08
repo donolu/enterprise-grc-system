@@ -739,6 +739,28 @@ paths:
         '403':
           description: Staff administrator access required
   /api/assets/assets/{id}/:
+    get:
+      operationId: assets_assets_retrieve
+      description: CRUD API for information assets.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this asset.
+        required: true
+      tags:
+      - assets
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetDetail'
+          description: ''
     put:
       operationId: assets_assets_update
       description: CRUD API for information assets.
@@ -773,6 +795,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssetDetail'
           description: ''
+    delete:
+      operationId: assets_assets_destroy
+      description: CRUD API for information assets.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this asset.
+        required: true
+      tags:
+      - assets
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: assets_assets_partial_update
       description: CRUD API for information assets.
@@ -806,46 +846,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssetDetail'
           description: ''
-    get:
-      operationId: assets_assets_retrieve
-      description: CRUD API for information assets.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this asset.
-        required: true
-      tags:
-      - assets
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AssetDetail'
-          description: ''
-    delete:
-      operationId: assets_assets_destroy
-      description: CRUD API for information assets.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this asset.
-        required: true
-      tags:
-      - assets
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/assets/review-reminders/:
     get:
       operationId: assets_review_reminders_list
@@ -1021,6 +1021,28 @@ paths:
                 $ref: '#/components/schemas/CalendarEvent'
           description: ''
   /api/calendar/events/{id}/:
+    get:
+      operationId: calendar_events_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this calendar event.
+        required: true
+      tags:
+      - calendar
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarEvent'
+          description: ''
     put:
       operationId: calendar_events_update
       parameters:
@@ -1055,6 +1077,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/CalendarEvent'
           description: ''
+    delete:
+      operationId: calendar_events_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this calendar event.
+        required: true
+      tags:
+      - calendar
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: calendar_events_partial_update
       parameters:
@@ -1088,46 +1128,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/CalendarEvent'
           description: ''
-    get:
-      operationId: calendar_events_retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this calendar event.
-        required: true
-      tags:
-      - calendar
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CalendarEvent'
-          description: ''
-    delete:
-      operationId: calendar_events_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this calendar event.
-        required: true
-      tags:
-      - calendar
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/calendar/preferences/:
     get:
       operationId: calendar_preferences_list
@@ -1396,6 +1396,30 @@ paths:
                 $ref: '#/components/schemas/FrameworkDetail'
           description: ''
   /api/catalogs/api/frameworks/{id}/:
+    get:
+      operationId: catalogs_api_frameworks_retrieve
+      description: Retrieve detailed information about a specific compliance framework
+        including metadata and configuration.
+      summary: Get framework details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this framework.
+        required: true
+      tags:
+      - Frameworks
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrameworkDetail'
+          description: ''
     put:
       operationId: catalogs_api_frameworks_update
       description: Update an existing compliance framework. Requires all fields.
@@ -1431,6 +1455,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/FrameworkDetail'
           description: ''
+    delete:
+      operationId: catalogs_api_frameworks_destroy
+      description: Delete a compliance framework. This will also remove all associated
+        clauses and mappings.
+      summary: Delete framework
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this framework.
+        required: true
+      tags:
+      - Frameworks
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: catalogs_api_frameworks_partial_update
       description: Update specific fields of an existing compliance framework.
@@ -1465,50 +1509,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/FrameworkDetail'
           description: ''
-    get:
-      operationId: catalogs_api_frameworks_retrieve
-      description: Retrieve detailed information about a specific compliance framework
-        including metadata and configuration.
-      summary: Get framework details
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this framework.
-        required: true
-      tags:
-      - Frameworks
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FrameworkDetail'
-          description: ''
-    delete:
-      operationId: catalogs_api_frameworks_destroy
-      description: Delete a compliance framework. This will also remove all associated
-        clauses and mappings.
-      summary: Delete framework
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this framework.
-        required: true
-      tags:
-      - Frameworks
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/catalogs/api/frameworks/{id}/clauses/:
     get:
       operationId: catalogs_api_frameworks_clauses_list
@@ -1805,6 +1805,30 @@ paths:
                 $ref: '#/components/schemas/ClauseDetail'
           description: ''
   /api/catalogs/api/clauses/{id}/:
+    get:
+      operationId: catalogs_api_clauses_retrieve
+      description: |-
+        ViewSet for managing framework clauses.
+        Provides CRUD operations and clause-specific endpoints.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this clause.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClauseDetail'
+          description: ''
     put:
       operationId: catalogs_api_clauses_update
       description: |-
@@ -1841,6 +1865,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/ClauseDetail'
           description: ''
+    delete:
+      operationId: catalogs_api_clauses_destroy
+      description: |-
+        ViewSet for managing framework clauses.
+        Provides CRUD operations and clause-specific endpoints.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this clause.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: catalogs_api_clauses_partial_update
       description: |-
@@ -1876,50 +1920,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ClauseDetail'
           description: ''
-    get:
-      operationId: catalogs_api_clauses_retrieve
-      description: |-
-        ViewSet for managing framework clauses.
-        Provides CRUD operations and clause-specific endpoints.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this clause.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ClauseDetail'
-          description: ''
-    delete:
-      operationId: catalogs_api_clauses_destroy
-      description: |-
-        ViewSet for managing framework clauses.
-        Provides CRUD operations and clause-specific endpoints.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this clause.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/catalogs/api/clauses/{id}/controls/:
     get:
       operationId: catalogs_api_clauses_controls_retrieve
@@ -2190,6 +2190,30 @@ paths:
                 $ref: '#/components/schemas/ControlDetail'
           description: ''
   /api/catalogs/api/controls/{id}/:
+    get:
+      operationId: catalogs_api_controls_retrieve
+      description: |-
+        ViewSet for managing controls.
+        Provides CRUD operations and control-specific endpoints.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this control.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ControlDetail'
+          description: ''
     put:
       operationId: catalogs_api_controls_update
       description: |-
@@ -2226,6 +2250,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/ControlCreateUpdate'
           description: ''
+    delete:
+      operationId: catalogs_api_controls_destroy
+      description: |-
+        ViewSet for managing controls.
+        Provides CRUD operations and control-specific endpoints.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this control.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: catalogs_api_controls_partial_update
       description: |-
@@ -2261,50 +2305,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ControlCreateUpdate'
           description: ''
-    get:
-      operationId: catalogs_api_controls_retrieve
-      description: |-
-        ViewSet for managing controls.
-        Provides CRUD operations and control-specific endpoints.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this control.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ControlDetail'
-          description: ''
-    delete:
-      operationId: catalogs_api_controls_destroy
-      description: |-
-        ViewSet for managing controls.
-        Provides CRUD operations and control-specific endpoints.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this control.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/catalogs/api/controls/{id}/evidence/:
     get:
       operationId: catalogs_api_controls_evidence_retrieve
@@ -2481,6 +2481,28 @@ paths:
                 $ref: '#/components/schemas/ControlEvidence'
           description: ''
   /api/catalogs/api/evidence/{id}/:
+    get:
+      operationId: catalogs_api_evidence_retrieve
+      description: ViewSet for managing control evidence.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this control evidence.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ControlEvidence'
+          description: ''
     put:
       operationId: catalogs_api_evidence_update
       description: ViewSet for managing control evidence.
@@ -2515,6 +2537,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/ControlEvidence'
           description: ''
+    delete:
+      operationId: catalogs_api_evidence_destroy
+      description: ViewSet for managing control evidence.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this control evidence.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: catalogs_api_evidence_partial_update
       description: ViewSet for managing control evidence.
@@ -2548,46 +2588,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ControlEvidence'
           description: ''
-    get:
-      operationId: catalogs_api_evidence_retrieve
-      description: ViewSet for managing control evidence.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this control evidence.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ControlEvidence'
-          description: ''
-    delete:
-      operationId: catalogs_api_evidence_destroy
-      description: ViewSet for managing control evidence.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this control evidence.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/catalogs/api/evidence/{id}/assessments/:
     get:
       operationId: catalogs_api_evidence_assessments_retrieve
@@ -2878,6 +2878,28 @@ paths:
                 $ref: '#/components/schemas/FrameworkMapping'
           description: ''
   /api/catalogs/api/mappings/{id}/:
+    get:
+      operationId: catalogs_api_mappings_retrieve
+      description: ViewSet for managing framework mappings.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this framework mapping.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrameworkMapping'
+          description: ''
     put:
       operationId: catalogs_api_mappings_update
       description: ViewSet for managing framework mappings.
@@ -2912,6 +2934,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/FrameworkMapping'
           description: ''
+    delete:
+      operationId: catalogs_api_mappings_destroy
+      description: ViewSet for managing framework mappings.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this framework mapping.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: catalogs_api_mappings_partial_update
       description: ViewSet for managing framework mappings.
@@ -2945,46 +2985,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/FrameworkMapping'
           description: ''
-    get:
-      operationId: catalogs_api_mappings_retrieve
-      description: ViewSet for managing framework mappings.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this framework mapping.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FrameworkMapping'
-          description: ''
-    delete:
-      operationId: catalogs_api_mappings_destroy
-      description: ViewSet for managing framework mappings.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this framework mapping.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/catalogs/api/assessments/:
     get:
       operationId: catalogs_api_assessments_list
@@ -3242,6 +3242,30 @@ paths:
                   description: Comprehensive progress report with statistics and breakdowns
           description: ''
   /api/catalogs/api/assessments/{id}/:
+    get:
+      operationId: catalogs_api_assessments_retrieve
+      description: Retrieve detailed information about a specific control assessment
+        including evidence links and progress.
+      summary: Get assessment details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this control assessment.
+        required: true
+      tags:
+      - Assessments
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ControlAssessmentDetail'
+          description: ''
     put:
       operationId: catalogs_api_assessments_update
       description: Update an existing control assessment. Requires all fields.
@@ -3277,6 +3301,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/ControlAssessmentCreateUpdate'
           description: ''
+    delete:
+      operationId: catalogs_api_assessments_destroy
+      description: Delete a control assessment and all associated evidence links.
+      summary: Delete assessment
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this control assessment.
+        required: true
+      tags:
+      - Assessments
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: catalogs_api_assessments_partial_update
       description: Update specific fields of an existing control assessment.
@@ -3311,49 +3354,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ControlAssessmentCreateUpdate'
           description: ''
-    get:
-      operationId: catalogs_api_assessments_retrieve
-      description: Retrieve detailed information about a specific control assessment
-        including evidence links and progress.
-      summary: Get assessment details
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this control assessment.
-        required: true
-      tags:
-      - Assessments
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ControlAssessmentDetail'
-          description: ''
-    delete:
-      operationId: catalogs_api_assessments_destroy
-      description: Delete a control assessment and all associated evidence links.
-      summary: Delete assessment
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this control assessment.
-        required: true
-      tags:
-      - Assessments
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/catalogs/api/assessments/{id}/bulk_upload_evidence/:
     post:
       operationId: catalogs_api_assessments_bulk_upload_evidence_create
@@ -3631,6 +3631,28 @@ paths:
                 $ref: '#/components/schemas/AssessmentEvidence'
           description: ''
   /api/catalogs/api/assessment-evidence/{id}/:
+    get:
+      operationId: catalogs_api_assessment_evidence_retrieve
+      description: ViewSet for managing assessment evidence links.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this assessment evidence.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentEvidence'
+          description: ''
     put:
       operationId: catalogs_api_assessment_evidence_update
       description: ViewSet for managing assessment evidence links.
@@ -3665,6 +3687,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssessmentEvidence'
           description: ''
+    delete:
+      operationId: catalogs_api_assessment_evidence_destroy
+      description: ViewSet for managing assessment evidence links.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this assessment evidence.
+        required: true
+      tags:
+      - catalogs
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: catalogs_api_assessment_evidence_partial_update
       description: ViewSet for managing assessment evidence links.
@@ -3698,46 +3738,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssessmentEvidence'
           description: ''
-    get:
-      operationId: catalogs_api_assessment_evidence_retrieve
-      description: ViewSet for managing assessment evidence links.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this assessment evidence.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AssessmentEvidence'
-          description: ''
-    delete:
-      operationId: catalogs_api_assessment_evidence_destroy
-      description: ViewSet for managing assessment evidence links.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this assessment evidence.
-        required: true
-      tags:
-      - catalogs
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/compliance/artefacts/:
     get:
       operationId: compliance_artefacts_list
@@ -3851,6 +3851,27 @@ paths:
                 $ref: '#/components/schemas/GovernanceArtefact'
           description: ''
   /api/compliance/artefacts/{id}/:
+    get:
+      operationId: compliance_artefacts_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this governance artefact.
+        required: true
+      tags:
+      - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GovernanceArtefact'
+          description: ''
     put:
       operationId: compliance_artefacts_update
       parameters:
@@ -3884,6 +3905,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/GovernanceArtefact'
           description: ''
+    delete:
+      operationId: compliance_artefacts_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this governance artefact.
+        required: true
+      tags:
+      - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: compliance_artefacts_partial_update
       parameters:
@@ -3916,44 +3954,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/GovernanceArtefact'
           description: ''
-    get:
-      operationId: compliance_artefacts_retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this governance artefact.
-        required: true
-      tags:
-      - compliance
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GovernanceArtefact'
-          description: ''
-    delete:
-      operationId: compliance_artefacts_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this governance artefact.
-        required: true
-      tags:
-      - compliance
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/compliance/regulatory-requirements/:
     get:
       operationId: compliance_regulatory_requirements_list
@@ -4091,6 +4091,27 @@ paths:
                 $ref: '#/components/schemas/RegulatoryRequirement'
           description: ''
   /api/compliance/regulatory-requirements/{id}/:
+    get:
+      operationId: compliance_regulatory_requirements_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this regulatory requirement.
+        required: true
+      tags:
+      - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegulatoryRequirement'
+          description: ''
     put:
       operationId: compliance_regulatory_requirements_update
       parameters:
@@ -4124,6 +4145,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegulatoryRequirement'
           description: ''
+    delete:
+      operationId: compliance_regulatory_requirements_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this regulatory requirement.
+        required: true
+      tags:
+      - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: compliance_regulatory_requirements_partial_update
       parameters:
@@ -4156,44 +4194,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegulatoryRequirement'
           description: ''
-    get:
-      operationId: compliance_regulatory_requirements_retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this regulatory requirement.
-        required: true
-      tags:
-      - compliance
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RegulatoryRequirement'
-          description: ''
-    delete:
-      operationId: compliance_regulatory_requirements_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this regulatory requirement.
-        required: true
-      tags:
-      - compliance
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/compliance/non-conformities/:
     get:
       operationId: compliance_non_conformities_list
@@ -4319,6 +4319,27 @@ paths:
                 $ref: '#/components/schemas/NonConformity'
           description: ''
   /api/compliance/non-conformities/{id}/:
+    get:
+      operationId: compliance_non_conformities_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this non conformity.
+        required: true
+      tags:
+      - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NonConformity'
+          description: ''
     put:
       operationId: compliance_non_conformities_update
       parameters:
@@ -4352,6 +4373,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/NonConformity'
           description: ''
+    delete:
+      operationId: compliance_non_conformities_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this non conformity.
+        required: true
+      tags:
+      - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: compliance_non_conformities_partial_update
       parameters:
@@ -4384,44 +4422,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/NonConformity'
           description: ''
-    get:
-      operationId: compliance_non_conformities_retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this non conformity.
-        required: true
-      tags:
-      - compliance
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NonConformity'
-          description: ''
-    delete:
-      operationId: compliance_non_conformities_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this non conformity.
-        required: true
-      tags:
-      - compliance
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/compliance/management-reviews/:
     get:
       operationId: compliance_management_reviews_list
@@ -4525,6 +4525,27 @@ paths:
                 $ref: '#/components/schemas/ManagementReview'
           description: ''
   /api/compliance/management-reviews/{id}/:
+    get:
+      operationId: compliance_management_reviews_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this management review.
+        required: true
+      tags:
+      - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManagementReview'
+          description: ''
     put:
       operationId: compliance_management_reviews_update
       parameters:
@@ -4558,6 +4579,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/ManagementReview'
           description: ''
+    delete:
+      operationId: compliance_management_reviews_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this management review.
+        required: true
+      tags:
+      - compliance
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: compliance_management_reviews_partial_update
       parameters:
@@ -4590,44 +4628,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ManagementReview'
           description: ''
-    get:
-      operationId: compliance_management_reviews_retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this management review.
-        required: true
-      tags:
-      - compliance
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ManagementReview'
-          description: ''
-    delete:
-      operationId: compliance_management_reviews_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this management review.
-        required: true
-      tags:
-      - compliance
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/exports/assessment-reports/:
     get:
       operationId: exports_assessment_reports_list
@@ -4756,6 +4756,30 @@ paths:
         '500':
           description: Failed to start generation
   /api/exports/assessment-reports/{id}/:
+    get:
+      operationId: exports_assessment_reports_retrieve
+      description: Retrieve detailed information about a specific assessment report
+        including generation status.
+      summary: Get report details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this assessment report.
+        required: true
+      tags:
+      - Reports
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentReport'
+          description: ''
     put:
       operationId: exports_assessment_reports_update
       description: Update an existing assessment report configuration. Cannot update
@@ -4792,6 +4816,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssessmentReport'
           description: ''
+    delete:
+      operationId: exports_assessment_reports_destroy
+      description: Delete an assessment report and its generated file if it exists.
+      summary: Delete report
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this assessment report.
+        required: true
+      tags:
+      - Reports
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: exports_assessment_reports_partial_update
       description: |-
@@ -4851,49 +4894,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssessmentReport'
           description: ''
-    get:
-      operationId: exports_assessment_reports_retrieve
-      description: Retrieve detailed information about a specific assessment report
-        including generation status.
-      summary: Get report details
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this assessment report.
-        required: true
-      tags:
-      - Reports
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AssessmentReport'
-          description: ''
-    delete:
-      operationId: exports_assessment_reports_destroy
-      description: Delete an assessment report and its generated file if it exists.
-      summary: Delete report
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this assessment report.
-        required: true
-      tags:
-      - Reports
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/exports/assessment-reports/{id}/download/:
     get:
       operationId: exports_assessment_reports_download_retrieve
@@ -5446,6 +5446,30 @@ paths:
                 $ref: '#/components/schemas/RiskSummary'
           description: ''
   /api/risk/risks/{id}/:
+    get:
+      operationId: risk_risks_retrieve
+      description: Retrieve detailed information about a specific risk including notes
+        and history.
+      summary: Get risk details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk.
+        required: true
+      tags:
+      - Risk Management
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskDetail'
+          description: ''
     put:
       operationId: risk_risks_update
       description: Update an existing risk entry. Risk level will be automatically
@@ -5482,6 +5506,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskCreateUpdate'
           description: ''
+    delete:
+      operationId: risk_risks_destroy
+      description: Delete a risk entry and all associated notes.
+      summary: Delete risk
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk.
+        required: true
+      tags:
+      - Risk Management
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: risk_risks_partial_update
       description: Update specific fields of an existing risk entry.
@@ -5516,49 +5559,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskCreateUpdate'
           description: ''
-    get:
-      operationId: risk_risks_retrieve
-      description: Retrieve detailed information about a specific risk including notes
-        and history.
-      summary: Get risk details
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk.
-        required: true
-      tags:
-      - Risk Management
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RiskDetail'
-          description: ''
-    delete:
-      operationId: risk_risks_destroy
-      description: Delete a risk entry and all associated notes.
-      summary: Delete risk
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk.
-        required: true
-      tags:
-      - Risk Management
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/risk/risks/{id}/add_note/:
     post:
       operationId: risk_risks_add_note_create
@@ -5694,6 +5694,29 @@ paths:
                 $ref: '#/components/schemas/RiskCategory'
           description: ''
   /api/risk/categories/{id}/:
+    get:
+      operationId: risk_categories_retrieve
+      description: Retrieve detailed information about a risk category.
+      summary: Get category details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk category.
+        required: true
+      tags:
+      - Risk Management
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskCategory'
+          description: ''
     put:
       operationId: risk_categories_update
       description: Update an existing risk category.
@@ -5729,6 +5752,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskCategory'
           description: ''
+    delete:
+      operationId: risk_categories_destroy
+      description: Delete a risk category. Risks in this category will become uncategorized.
+      summary: Delete risk category
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk category.
+        required: true
+      tags:
+      - Risk Management
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: risk_categories_partial_update
       description: |-
@@ -5766,48 +5808,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskCategory'
           description: ''
-    get:
-      operationId: risk_categories_retrieve
-      description: Retrieve detailed information about a risk category.
-      summary: Get category details
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk category.
-        required: true
-      tags:
-      - Risk Management
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RiskCategory'
-          description: ''
-    delete:
-      operationId: risk_categories_destroy
-      description: Delete a risk category. Risks in this category will become uncategorized.
-      summary: Delete risk category
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk category.
-        required: true
-      tags:
-      - Risk Management
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/risk/matrices/:
     get:
       operationId: risk_matrices_list
@@ -5856,6 +5856,29 @@ paths:
                 $ref: '#/components/schemas/RiskMatrix'
           description: ''
   /api/risk/matrices/{id}/:
+    get:
+      operationId: risk_matrices_retrieve
+      description: Retrieve detailed information about a risk matrix including configuration.
+      summary: Get matrix details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk matrix.
+        required: true
+      tags:
+      - Risk Management
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskMatrix'
+          description: ''
     put:
       operationId: risk_matrices_update
       description: Update an existing risk matrix configuration.
@@ -5891,6 +5914,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskMatrix'
           description: ''
+    delete:
+      operationId: risk_matrices_destroy
+      description: Delete a risk matrix. Cannot delete if it's the default matrix
+        or in use by risks.
+      summary: Delete risk matrix
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk matrix.
+        required: true
+      tags:
+      - Risk Management
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: risk_matrices_partial_update
       description: |-
@@ -5928,49 +5971,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskMatrix'
           description: ''
-    get:
-      operationId: risk_matrices_retrieve
-      description: Retrieve detailed information about a risk matrix including configuration.
-      summary: Get matrix details
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk matrix.
-        required: true
-      tags:
-      - Risk Management
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RiskMatrix'
-          description: ''
-    delete:
-      operationId: risk_matrices_destroy
-      description: Delete a risk matrix. Cannot delete if it's the default matrix
-        or in use by risks.
-      summary: Delete risk matrix
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk matrix.
-        required: true
-      tags:
-      - Risk Management
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/risk/actions/:
     get:
       operationId: risk_actions_list
@@ -6238,6 +6238,30 @@ paths:
                 $ref: '#/components/schemas/RiskActionSummary'
           description: ''
   /api/risk/actions/{id}/:
+    get:
+      operationId: risk_actions_retrieve
+      description: Retrieve detailed information about a specific risk action including
+        notes and evidence.
+      summary: Get risk action details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk action.
+        required: true
+      tags:
+      - Risk Actions
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskActionDetail'
+          description: ''
     put:
       operationId: risk_actions_update
       description: Update an existing risk action. Progress and status will be validated.
@@ -6273,6 +6297,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskActionCreateUpdate'
           description: ''
+    delete:
+      operationId: risk_actions_destroy
+      description: Delete a risk action and all associated notes and evidence.
+      summary: Delete risk action
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this risk action.
+        required: true
+      tags:
+      - Risk Actions
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: risk_actions_partial_update
       description: Update specific fields of an existing risk action.
@@ -6307,49 +6350,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskActionCreateUpdate'
           description: ''
-    get:
-      operationId: risk_actions_retrieve
-      description: Retrieve detailed information about a specific risk action including
-        notes and evidence.
-      summary: Get risk action details
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk action.
-        required: true
-      tags:
-      - Risk Actions
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RiskActionDetail'
-          description: ''
-    delete:
-      operationId: risk_actions_destroy
-      description: Delete a risk action and all associated notes and evidence.
-      summary: Delete risk action
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this risk action.
-        required: true
-      tags:
-      - Risk Actions
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/risk/actions/{id}/add_note/:
     post:
       operationId: risk_actions_add_note_create
@@ -6534,6 +6534,30 @@ paths:
                 $ref: '#/components/schemas/RiskActionReminderConfiguration'
           description: ''
   /api/risk/reminder-config/{id}/:
+    get:
+      operationId: risk_reminder_config_retrieve
+      description: Retrieve detailed risk action reminder configuration.
+      summary: Get reminder configuration
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Risk Action Reminder
+          Configuration.
+        required: true
+      tags:
+      - Risk Action Reminders
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskActionReminderConfiguration'
+          description: ''
     put:
       operationId: risk_reminder_config_update
       description: Update risk action reminder configuration settings.
@@ -6569,6 +6593,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskActionReminderConfiguration'
           description: ''
+    delete:
+      operationId: risk_reminder_config_destroy
+      description: |-
+        **Risk Action Reminder Configuration Management**
+
+        Manage automated reminder settings for risk actions including:
+        - Email notification preferences
+        - Reminder timing and frequency
+        - Weekly digest settings
+        - Auto-silence options
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Risk Action Reminder
+          Configuration.
+        required: true
+      tags:
+      - risk
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: risk_reminder_config_partial_update
       description: |-
@@ -6610,56 +6660,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/RiskActionReminderConfiguration'
           description: ''
-    get:
-      operationId: risk_reminder_config_retrieve
-      description: Retrieve detailed risk action reminder configuration.
-      summary: Get reminder configuration
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this Risk Action Reminder
-          Configuration.
-        required: true
-      tags:
-      - Risk Action Reminders
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RiskActionReminderConfiguration'
-          description: ''
-    delete:
-      operationId: risk_reminder_config_destroy
-      description: |-
-        **Risk Action Reminder Configuration Management**
-
-        Manage automated reminder settings for risk actions including:
-        - Email notification preferences
-        - Reminder timing and frequency
-        - Weekly digest settings
-        - Auto-silence options
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this Risk Action Reminder
-          Configuration.
-        required: true
-      tags:
-      - risk
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/risk/analytics/action_overview/:
     get:
       operationId: risk_analytics_action_overview_retrieve
@@ -6989,6 +6989,29 @@ paths:
                 $ref: '#/components/schemas/PolicyCategory'
           description: ''
   /api/policies/categories/{id}/:
+    get:
+      operationId: policies_categories_retrieve
+      description: ViewSet for managing policy categories.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Policy Category.
+        required: true
+      tags:
+      - policies
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyCategory'
+          description: ''
     put:
       operationId: policies_categories_update
       description: ViewSet for managing policy categories.
@@ -7024,6 +7047,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/PolicyCategory'
           description: ''
+    delete:
+      operationId: policies_categories_destroy
+      description: ViewSet for managing policy categories.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Policy Category.
+        required: true
+      tags:
+      - policies
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: policies_categories_partial_update
       description: ViewSet for managing policy categories.
@@ -7058,48 +7100,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/PolicyCategory'
           description: ''
-    get:
-      operationId: policies_categories_retrieve
-      description: ViewSet for managing policy categories.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this Policy Category.
-        required: true
-      tags:
-      - policies
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PolicyCategory'
-          description: ''
-    delete:
-      operationId: policies_categories_destroy
-      description: ViewSet for managing policy categories.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this Policy Category.
-        required: true
-      tags:
-      - policies
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/policies/categories/{id}/policies/:
     get:
       operationId: policies_categories_policies_retrieve
@@ -7306,6 +7306,29 @@ paths:
                 $ref: '#/components/schemas/PolicyDetail'
           description: ''
   /api/policies/policies/{id}/:
+    get:
+      operationId: policies_policies_retrieve
+      description: ViewSet for managing policies with versioning support.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Policy.
+        required: true
+      tags:
+      - policies
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyDetail'
+          description: ''
     put:
       operationId: policies_policies_update
       description: ViewSet for managing policies with versioning support.
@@ -7341,6 +7364,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/PolicyCreateUpdate'
           description: ''
+    delete:
+      operationId: policies_policies_destroy
+      description: ViewSet for managing policies with versioning support.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Policy.
+        required: true
+      tags:
+      - policies
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: policies_policies_partial_update
       description: ViewSet for managing policies with versioning support.
@@ -7375,48 +7417,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/PolicyCreateUpdate'
           description: ''
-    get:
-      operationId: policies_policies_retrieve
-      description: ViewSet for managing policies with versioning support.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this Policy.
-        required: true
-      tags:
-      - policies
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PolicyDetail'
-          description: ''
-    delete:
-      operationId: policies_policies_destroy
-      description: ViewSet for managing policies with versioning support.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this Policy.
-        required: true
-      tags:
-      - policies
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/policies/policies/{id}/acknowledge/:
     post:
       operationId: policies_policies_acknowledge_create
@@ -7647,6 +7647,29 @@ paths:
                 $ref: '#/components/schemas/PolicyVersionDetail'
           description: ''
   /api/policies/versions/{id}/:
+    get:
+      operationId: policies_versions_retrieve
+      description: ViewSet for managing policy versions.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Policy Version.
+        required: true
+      tags:
+      - policies
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyVersionDetail'
+          description: ''
     put:
       operationId: policies_versions_update
       description: ViewSet for managing policy versions.
@@ -7682,6 +7705,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/PolicyVersionDetail'
           description: ''
+    delete:
+      operationId: policies_versions_destroy
+      description: ViewSet for managing policy versions.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Policy Version.
+        required: true
+      tags:
+      - policies
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: policies_versions_partial_update
       description: ViewSet for managing policy versions.
@@ -7716,48 +7758,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/PolicyVersionDetail'
           description: ''
-    get:
-      operationId: policies_versions_retrieve
-      description: ViewSet for managing policy versions.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this Policy Version.
-        required: true
-      tags:
-      - policies
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PolicyVersionDetail'
-          description: ''
-    delete:
-      operationId: policies_versions_destroy
-      description: ViewSet for managing policy versions.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this Policy Version.
-        required: true
-      tags:
-      - policies
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/policies/versions/{id}/activate/:
     post:
       operationId: policies_versions_activate_create
@@ -8207,6 +8207,29 @@ paths:
                 $ref: '#/components/schemas/TrainingCategory'
           description: ''
   /api/training/categories/{id}/:
+    get:
+      operationId: training_categories_retrieve
+      description: ViewSet for managing training categories.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this training category.
+        required: true
+      tags:
+      - training
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingCategory'
+          description: ''
     put:
       operationId: training_categories_update
       description: ViewSet for managing training categories.
@@ -8242,6 +8265,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/TrainingCategory'
           description: ''
+    delete:
+      operationId: training_categories_destroy
+      description: ViewSet for managing training categories.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this training category.
+        required: true
+      tags:
+      - training
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: training_categories_partial_update
       description: ViewSet for managing training categories.
@@ -8276,48 +8318,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/TrainingCategory'
           description: ''
-    get:
-      operationId: training_categories_retrieve
-      description: ViewSet for managing training categories.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this training category.
-        required: true
-      tags:
-      - training
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TrainingCategory'
-          description: ''
-    delete:
-      operationId: training_categories_destroy
-      description: ViewSet for managing training categories.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this training category.
-        required: true
-      tags:
-      - training
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/training/videos/:
     get:
       operationId: training_videos_list
@@ -8480,6 +8480,29 @@ paths:
                 $ref: '#/components/schemas/TrainingVideoDetail'
           description: ''
   /api/training/videos/{id}/:
+    get:
+      operationId: training_videos_retrieve
+      description: ViewSet for managing training videos.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this training video.
+        required: true
+      tags:
+      - training
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingVideoDetail'
+          description: ''
     put:
       operationId: training_videos_update
       description: ViewSet for managing training videos.
@@ -8515,6 +8538,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/TrainingVideoDetail'
           description: ''
+    delete:
+      operationId: training_videos_destroy
+      description: ViewSet for managing training videos.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this training video.
+        required: true
+      tags:
+      - training
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: training_videos_partial_update
       description: ViewSet for managing training videos.
@@ -8549,48 +8591,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/TrainingVideoDetail'
           description: ''
-    get:
-      operationId: training_videos_retrieve
-      description: ViewSet for managing training videos.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this training video.
-        required: true
-      tags:
-      - training
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TrainingVideoDetail'
-          description: ''
-    delete:
-      operationId: training_videos_destroy
-      description: ViewSet for managing training videos.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this training video.
-        required: true
-      tags:
-      - training
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/training/videos/{id}/track_view/:
     post:
       operationId: training_videos_track_view_create
@@ -8809,6 +8809,29 @@ paths:
                 $ref: '#/components/schemas/SecurityAwarenessCampaignDetail'
           description: ''
   /api/training/campaigns/{id}/:
+    get:
+      operationId: training_campaigns_retrieve
+      description: ViewSet for managing security awareness campaigns.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this security awareness campaign.
+        required: true
+      tags:
+      - training
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecurityAwarenessCampaignDetail'
+          description: ''
     put:
       operationId: training_campaigns_update
       description: ViewSet for managing security awareness campaigns.
@@ -8844,6 +8867,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/SecurityAwarenessCampaignDetail'
           description: ''
+    delete:
+      operationId: training_campaigns_destroy
+      description: ViewSet for managing security awareness campaigns.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this security awareness campaign.
+        required: true
+      tags:
+      - training
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: training_campaigns_partial_update
       description: ViewSet for managing security awareness campaigns.
@@ -8878,48 +8920,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/SecurityAwarenessCampaignDetail'
           description: ''
-    get:
-      operationId: training_campaigns_retrieve
-      description: ViewSet for managing security awareness campaigns.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this security awareness campaign.
-        required: true
-      tags:
-      - training
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SecurityAwarenessCampaignDetail'
-          description: ''
-    delete:
-      operationId: training_campaigns_destroy
-      description: ViewSet for managing security awareness campaigns.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this security awareness campaign.
-        required: true
-      tags:
-      - training
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/training/campaigns/{id}/send_now/:
     post:
       operationId: training_campaigns_send_now_create
@@ -9283,6 +9283,27 @@ paths:
                 $ref: '#/components/schemas/KnowledgeCategory'
           description: ''
   /api/knowledge/categories/{id}/:
+    get:
+      operationId: knowledge_categories_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this knowledge category.
+        required: true
+      tags:
+      - knowledge
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeCategory'
+          description: ''
     put:
       operationId: knowledge_categories_update
       parameters:
@@ -9316,6 +9337,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/KnowledgeCategory'
           description: ''
+    delete:
+      operationId: knowledge_categories_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this knowledge category.
+        required: true
+      tags:
+      - knowledge
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: knowledge_categories_partial_update
       parameters:
@@ -9348,44 +9386,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/KnowledgeCategory'
           description: ''
-    get:
-      operationId: knowledge_categories_retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this knowledge category.
-        required: true
-      tags:
-      - knowledge
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/KnowledgeCategory'
-          description: ''
-    delete:
-      operationId: knowledge_categories_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this knowledge category.
-        required: true
-      tags:
-      - knowledge
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/knowledge/articles/:
     get:
       operationId: knowledge_articles_list
@@ -9527,6 +9527,26 @@ paths:
                 $ref: '#/components/schemas/KnowledgeArticleDetail'
           description: ''
   /api/knowledge/articles/{slug}/:
+    get:
+      operationId: knowledge_articles_retrieve
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - knowledge
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeArticleDetail'
+          description: ''
     put:
       operationId: knowledge_articles_update
       parameters:
@@ -9559,6 +9579,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/KnowledgeArticleDetail'
           description: ''
+    delete:
+      operationId: knowledge_articles_destroy
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - knowledge
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: knowledge_articles_partial_update
       parameters:
@@ -9590,42 +9626,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/KnowledgeArticleDetail'
           description: ''
-    get:
-      operationId: knowledge_articles_retrieve
-      parameters:
-      - in: path
-        name: slug
-        schema:
-          type: string
-        required: true
-      tags:
-      - knowledge
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/KnowledgeArticleDetail'
-          description: ''
-    delete:
-      operationId: knowledge_articles_destroy
-      parameters:
-      - in: path
-        name: slug
-        schema:
-          type: string
-        required: true
-      tags:
-      - knowledge
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/knowledge/articles/{slug}/revisions/:
     get:
       operationId: knowledge_articles_revisions_retrieve
@@ -10415,6 +10415,30 @@ paths:
                 $ref: '#/components/schemas/VendorSummary'
           description: ''
   /api/vendors/vendors/{id}/:
+    get:
+      operationId: vendors_vendors_retrieve
+      description: Retrieve detailed information about a specific vendor including
+        contacts and services.
+      summary: Get vendor details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor.
+        required: true
+      tags:
+      - Vendors
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorDetail'
+          description: ''
     put:
       operationId: vendors_vendors_update
       description: Update an existing vendor profile with new information.
@@ -10450,6 +10474,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorCreateUpdate'
           description: ''
+    delete:
+      operationId: vendors_vendors_destroy
+      description: Delete a vendor profile and all associated data.
+      summary: Delete vendor
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor.
+        required: true
+      tags:
+      - Vendors
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: vendors_vendors_partial_update
       description: |-
@@ -10514,49 +10557,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorCreateUpdate'
           description: ''
-    get:
-      operationId: vendors_vendors_retrieve
-      description: Retrieve detailed information about a specific vendor including
-        contacts and services.
-      summary: Get vendor details
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor.
-        required: true
-      tags:
-      - Vendors
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VendorDetail'
-          description: ''
-    delete:
-      operationId: vendors_vendors_destroy
-      description: Delete a vendor profile and all associated data.
-      summary: Delete vendor
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor.
-        required: true
-      tags:
-      - Vendors
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vendors/vendors/{id}/add_note/:
     post:
       operationId: vendors_vendors_add_note_create
@@ -10704,6 +10704,32 @@ paths:
                 $ref: '#/components/schemas/VendorCategory'
           description: ''
   /api/vendors/categories/{id}/:
+    get:
+      operationId: vendors_categories_retrieve
+      description: |-
+        **Vendor Category Management**
+
+        Manage vendor categories for classification and organization.
+        Categories help organize vendors by business type, risk level, and compliance requirements.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor category.
+        required: true
+      tags:
+      - Vendor Categories
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorCategory'
+          description: ''
     put:
       operationId: vendors_categories_update
       description: |-
@@ -10742,6 +10768,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorCategory'
           description: ''
+    delete:
+      operationId: vendors_categories_destroy
+      description: |-
+        **Vendor Category Management**
+
+        Manage vendor categories for classification and organization.
+        Categories help organize vendors by business type, risk level, and compliance requirements.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor category.
+        required: true
+      tags:
+      - Vendor Categories
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: vendors_categories_partial_update
       description: |-
@@ -10779,54 +10827,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorCategory'
           description: ''
-    get:
-      operationId: vendors_categories_retrieve
-      description: |-
-        **Vendor Category Management**
-
-        Manage vendor categories for classification and organization.
-        Categories help organize vendors by business type, risk level, and compliance requirements.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor category.
-        required: true
-      tags:
-      - Vendor Categories
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VendorCategory'
-          description: ''
-    delete:
-      operationId: vendors_categories_destroy
-      description: |-
-        **Vendor Category Management**
-
-        Manage vendor categories for classification and organization.
-        Categories help organize vendors by business type, risk level, and compliance requirements.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor category.
-        required: true
-      tags:
-      - Vendor Categories
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vendors/contacts/:
     get:
       operationId: vendors_contacts_list
@@ -10970,6 +10970,31 @@ paths:
                 $ref: '#/components/schemas/VendorContact'
           description: ''
   /api/vendors/contacts/{id}/:
+    get:
+      operationId: vendors_contacts_retrieve
+      description: |-
+        **Vendor Contact Management**
+
+        Manage contact persons for vendors with different roles and responsibilities.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor contact.
+        required: true
+      tags:
+      - Vendor Contacts
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorContact'
+          description: ''
     put:
       operationId: vendors_contacts_update
       description: |-
@@ -11007,6 +11032,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorContact'
           description: ''
+    delete:
+      operationId: vendors_contacts_destroy
+      description: |-
+        **Vendor Contact Management**
+
+        Manage contact persons for vendors with different roles and responsibilities.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor contact.
+        required: true
+      tags:
+      - Vendor Contacts
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: vendors_contacts_partial_update
       description: |-
@@ -11043,52 +11089,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorContact'
           description: ''
-    get:
-      operationId: vendors_contacts_retrieve
-      description: |-
-        **Vendor Contact Management**
-
-        Manage contact persons for vendors with different roles and responsibilities.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor contact.
-        required: true
-      tags:
-      - Vendor Contacts
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VendorContact'
-          description: ''
-    delete:
-      operationId: vendors_contacts_destroy
-      description: |-
-        **Vendor Contact Management**
-
-        Manage contact persons for vendors with different roles and responsibilities.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor contact.
-        required: true
-      tags:
-      - Vendor Contacts
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vendors/services/:
     get:
       operationId: vendors_services_list
@@ -11296,6 +11296,31 @@ paths:
                 $ref: '#/components/schemas/VendorService'
           description: ''
   /api/vendors/services/{id}/:
+    get:
+      operationId: vendors_services_retrieve
+      description: |-
+        **Vendor Service Management**
+
+        Manage services provided by vendors including categorization and risk assessment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor service.
+        required: true
+      tags:
+      - Vendor Services
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorService'
+          description: ''
     put:
       operationId: vendors_services_update
       description: |-
@@ -11333,6 +11358,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorService'
           description: ''
+    delete:
+      operationId: vendors_services_destroy
+      description: |-
+        **Vendor Service Management**
+
+        Manage services provided by vendors including categorization and risk assessment.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor service.
+        required: true
+      tags:
+      - Vendor Services
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: vendors_services_partial_update
       description: |-
@@ -11369,52 +11415,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorService'
           description: ''
-    get:
-      operationId: vendors_services_retrieve
-      description: |-
-        **Vendor Service Management**
-
-        Manage services provided by vendors including categorization and risk assessment.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor service.
-        required: true
-      tags:
-      - Vendor Services
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VendorService'
-          description: ''
-    delete:
-      operationId: vendors_services_destroy
-      description: |-
-        **Vendor Service Management**
-
-        Manage services provided by vendors including categorization and risk assessment.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor service.
-        required: true
-      tags:
-      - Vendor Services
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vendors/notes/:
     get:
       operationId: vendors_notes_list
@@ -11480,6 +11480,31 @@ paths:
                 $ref: '#/components/schemas/VendorNote'
           description: ''
   /api/vendors/notes/{id}/:
+    get:
+      operationId: vendors_notes_retrieve
+      description: |-
+        **Vendor Note Management**
+
+        Manage notes and comments about vendors for tracking interactions and decisions.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor note.
+        required: true
+      tags:
+      - Vendor Notes
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorNote'
+          description: ''
     put:
       operationId: vendors_notes_update
       description: |-
@@ -11517,6 +11542,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorNote'
           description: ''
+    delete:
+      operationId: vendors_notes_destroy
+      description: |-
+        **Vendor Note Management**
+
+        Manage notes and comments about vendors for tracking interactions and decisions.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this vendor note.
+        required: true
+      tags:
+      - Vendor Notes
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: vendors_notes_partial_update
       description: |-
@@ -11553,52 +11599,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorNote'
           description: ''
-    get:
-      operationId: vendors_notes_retrieve
-      description: |-
-        **Vendor Note Management**
-
-        Manage notes and comments about vendors for tracking interactions and decisions.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor note.
-        required: true
-      tags:
-      - Vendor Notes
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VendorNote'
-          description: ''
-    delete:
-      operationId: vendors_notes_destroy
-      description: |-
-        **Vendor Note Management**
-
-        Manage notes and comments about vendors for tracking interactions and decisions.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this vendor note.
-        required: true
-      tags:
-      - Vendor Notes
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vendors/tasks/:
     get:
       operationId: vendors_tasks_list
@@ -12099,6 +12099,32 @@ paths:
                 $ref: '#/components/schemas/VendorTaskDetail'
           description: ''
   /api/vendors/tasks/{id}/:
+    get:
+      operationId: vendors_tasks_retrieve
+      description: |-
+        **Vendor Task Management**
+
+        Comprehensive task management for vendor-related activities including contract renewals,
+        security reviews, compliance assessments, and automated task generation.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Vendor Task.
+        required: true
+      tags:
+      - Vendor Tasks
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorTaskDetail'
+          description: ''
     put:
       operationId: vendors_tasks_update
       description: |-
@@ -12137,6 +12163,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorTaskCreateUpdate'
           description: ''
+    delete:
+      operationId: vendors_tasks_destroy
+      description: |-
+        **Vendor Task Management**
+
+        Comprehensive task management for vendor-related activities including contract renewals,
+        security reviews, compliance assessments, and automated task generation.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Vendor Task.
+        required: true
+      tags:
+      - Vendor Tasks
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: vendors_tasks_partial_update
       description: |-
@@ -12174,54 +12222,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorTaskCreateUpdate'
           description: ''
-    get:
-      operationId: vendors_tasks_retrieve
-      description: |-
-        **Vendor Task Management**
-
-        Comprehensive task management for vendor-related activities including contract renewals,
-        security reviews, compliance assessments, and automated task generation.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this Vendor Task.
-        required: true
-      tags:
-      - Vendor Tasks
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VendorTaskDetail'
-          description: ''
-    delete:
-      operationId: vendors_tasks_destroy
-      description: |-
-        **Vendor Task Management**
-
-        Comprehensive task management for vendor-related activities including contract renewals,
-        security reviews, compliance assessments, and automated task generation.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this Vendor Task.
-        required: true
-      tags:
-      - Vendor Tasks
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vendors/tasks/{id}/update_status/:
     post:
       operationId: vendors_tasks_update_status_create
@@ -12343,6 +12343,28 @@ paths:
                 $ref: '#/components/schemas/ScanTarget'
           description: ''
   /api/vuln/targets/{id}/:
+    get:
+      operationId: vuln_targets_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this scan target.
+        required: true
+      tags:
+      - vuln
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanTarget'
+          description: ''
     put:
       operationId: vuln_targets_update
       parameters:
@@ -12377,6 +12399,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScanTarget'
           description: ''
+    delete:
+      operationId: vuln_targets_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this scan target.
+        required: true
+      tags:
+      - vuln
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: vuln_targets_partial_update
       parameters:
@@ -12410,46 +12450,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScanTarget'
           description: ''
-    get:
-      operationId: vuln_targets_retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this scan target.
-        required: true
-      tags:
-      - vuln
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ScanTarget'
-          description: ''
-    delete:
-      operationId: vuln_targets_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this scan target.
-        required: true
-      tags:
-      - vuln
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vuln/targets/{id}/start-scan/:
     post:
       operationId: vuln_targets_start_scan_create
@@ -12586,6 +12586,28 @@ paths:
                 $ref: '#/components/schemas/ScanSchedule'
           description: ''
   /api/vuln/schedules/{id}/:
+    get:
+      operationId: vuln_schedules_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this scan schedule.
+        required: true
+      tags:
+      - vuln
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanSchedule'
+          description: ''
     put:
       operationId: vuln_schedules_update
       parameters:
@@ -12620,6 +12642,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScanSchedule'
           description: ''
+    delete:
+      operationId: vuln_schedules_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this scan schedule.
+        required: true
+      tags:
+      - vuln
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: vuln_schedules_partial_update
       parameters:
@@ -12653,46 +12693,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScanSchedule'
           description: ''
-    get:
-      operationId: vuln_schedules_retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this scan schedule.
-        required: true
-      tags:
-      - vuln
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ScanSchedule'
-          description: ''
-    delete:
-      operationId: vuln_schedules_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this scan schedule.
-        required: true
-      tags:
-      - vuln
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/vuln/jobs/:
     get:
       operationId: vuln_jobs_list
@@ -12888,6 +12888,28 @@ paths:
                 $ref: '#/components/schemas/VulnerabilityFinding'
           description: ''
   /api/vuln/findings/{id}/:
+    get:
+      operationId: vuln_findings_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this vulnerability finding.
+        required: true
+      tags:
+      - vuln
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VulnerabilityFinding'
+          description: ''
     patch:
       operationId: vuln_findings_partial_update
       parameters:
@@ -12911,28 +12933,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/PatchedVulnerabilityFindingRequest'
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VulnerabilityFinding'
-          description: ''
-    get:
-      operationId: vuln_findings_retrieve
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          format: uuid
-        description: A UUID string identifying this vulnerability finding.
-        required: true
-      tags:
-      - vuln
       security:
       - cookieAuth: []
       - SessionAuth: []
@@ -13252,6 +13252,28 @@ paths:
                 $ref: '#/components/schemas/LimitOverrideRequest'
           description: ''
   /api/limit-overrides/{id}/:
+    get:
+      operationId: limit_overrides_retrieve
+      description: ViewSet for managing limit override requests with approval workflow.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this limit override request.
+        required: true
+      tags:
+      - limit-overrides
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LimitOverrideRequest'
+          description: ''
     put:
       operationId: limit_overrides_update
       description: ViewSet for managing limit override requests with approval workflow.
@@ -13286,6 +13308,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/LimitOverrideRequest'
           description: ''
+    delete:
+      operationId: limit_overrides_destroy
+      description: ViewSet for managing limit override requests with approval workflow.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this limit override request.
+        required: true
+      tags:
+      - limit-overrides
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: limit_overrides_partial_update
       description: ViewSet for managing limit override requests with approval workflow.
@@ -13319,46 +13359,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/LimitOverrideRequest'
           description: ''
-    get:
-      operationId: limit_overrides_retrieve
-      description: ViewSet for managing limit override requests with approval workflow.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this limit override request.
-        required: true
-      tags:
-      - limit-overrides
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LimitOverrideRequest'
-          description: ''
-    delete:
-      operationId: limit_overrides_destroy
-      description: ViewSet for managing limit override requests with approval workflow.
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this limit override request.
-        required: true
-      tags:
-      - limit-overrides
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/limit-overrides/{id}/apply_override/:
     post:
       operationId: limit_overrides_apply_override_create
@@ -13591,6 +13591,30 @@ paths:
                 $ref: '#/components/schemas/Document'
           description: ''
   /api/documents/{id}/:
+    get:
+      operationId: documents_retrieve
+      description: Retrieve detailed information about a specific document including
+        metadata and access information.
+      summary: Get document details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document.
+        required: true
+      tags:
+      - Documents
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
     put:
       operationId: documents_update
       description: Update document metadata. File cannot be changed after upload.
@@ -13623,6 +13647,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/Document'
           description: ''
+    delete:
+      operationId: documents_destroy
+      description: Delete a document and its file from storage. Only the uploader
+        can delete documents.
+      summary: Delete document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this document.
+        required: true
+      tags:
+      - Documents
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '204':
+          description: No response body
     patch:
       operationId: documents_partial_update
       description: |-
@@ -13679,50 +13723,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Document'
           description: ''
-    get:
-      operationId: documents_retrieve
-      description: Retrieve detailed information about a specific document including
-        metadata and access information.
-      summary: Get document details
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this document.
-        required: true
-      tags:
-      - Documents
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Document'
-          description: ''
-    delete:
-      operationId: documents_destroy
-      description: Delete a document and its file from storage. Only the uploader
-        can delete documents.
-      summary: Delete document
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this document.
-        required: true
-      tags:
-      - Documents
-      security:
-      - cookieAuth: []
-      - SessionAuth: []
-      responses:
-        '204':
-          description: No response body
   /api/documents/{id}/access_logs/:
     get:
       operationId: documents_access_logs_retrieve
@@ -13869,6 +13869,56 @@ paths:
               schema:
                 $ref: '#/components/schemas/TenantEmailSettings'
           description: ''
+  /api/tenant-email-settings/verification/:
+    post:
+      operationId: tenant_email_settings_verification_create
+      description: Send a verification message to the configured tenant sender address.
+      tags:
+      - Tenant settings
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderVerificationResponse'
+          description: ''
+        '400':
+          description: Sender email is not configured.
+        '503':
+          description: Verification email could not be sent.
+  /api/tenant-email-settings/verification/confirm/:
+    post:
+      operationId: tenant_email_settings_verification_confirm_create
+      description: Consume a sender verification token for the current tenant.
+      tags:
+      - Tenant settings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SenderVerificationConfirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SenderVerificationConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SenderVerificationConfirmRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderVerificationResponse'
+          description: ''
+        '400':
+          description: The verification token is invalid or expired.
 components:
   schemas:
     AnalyticsExportStatusEnum:
@@ -23767,6 +23817,27 @@ components:
         * `biweekly` - Bi-weekly
         * `monthly` - Monthly
         * `quarterly` - Quarterly
+    SenderVerificationConfirmRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+      required:
+      - token
+    SenderVerificationResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        verified_at:
+          type: string
+          format: date-time
+      required:
+      - detail
     SetupTOTPRequest:
       type: object
       properties:

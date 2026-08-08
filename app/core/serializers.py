@@ -145,3 +145,13 @@ class TenantEmailSettingsSerializer(serializers.ModelSerializer):
 
     def get_sender_email_verified(self, obj) -> bool:
         return bool(obj.email_sender_verified_at)
+
+
+class SenderVerificationResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    expires_at = serializers.DateTimeField(required=False)
+    verified_at = serializers.DateTimeField(required=False)
+
+
+class SenderVerificationConfirmSerializer(serializers.Serializer):
+    token = serializers.CharField(trim_whitespace=True)
