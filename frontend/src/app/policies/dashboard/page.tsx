@@ -14,8 +14,6 @@ import {
   Tag,
   Table,
   Badge,
-  Empty,
-  Spin,
   message,
   Space
 } from 'antd'
@@ -31,8 +29,9 @@ import {
   WarningOutlined
 } from '@ant-design/icons'
 import { api } from '@/lib/api'
+import { EmptyState, Loading, PageHeader } from '@/components/ui'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 const { Search } = Input
 const { Option } = Select
 
@@ -257,35 +256,18 @@ export default function PolicyDashboardPage() {
   ]
 
   if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: 16 }}>Loading dashboard data...</div>
-      </div>
-    )
+    return <Loading message="Loading dashboard data..." />
   }
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <Title level={2}>
-            <DashboardOutlined style={{ marginRight: 8 }} />
-            Policy Acknowledgment Dashboard
-          </Title>
-          <Text type="secondary">
-            Monitor policy acknowledgment rates and compliance status across your organization
-          </Text>
-        </div>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={fetchDashboardData}
-          loading={loading}
-        >
-          Refresh
-        </Button>
-      </div>
+      <PageHeader
+        eyebrow="POLICY GOVERNANCE"
+        title="Policy acknowledgment dashboard"
+        description="Monitor policy acknowledgment rates and compliance status across your organisation."
+        icon={<DashboardOutlined />}
+        actions={<Button icon={<ReloadOutlined />} onClick={fetchDashboardData}>Refresh</Button>}
+      />
 
       {/* Overview Stats */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
@@ -407,12 +389,12 @@ export default function PolicyDashboardPage() {
         }
       >
         {filteredData.length === 0 ? (
-          <Empty
-            description={
-              dashboardData.length === 0
-                ? "No policies found"
-                : "No policies match your current filters"
-            }
+          <EmptyState
+            size="small"
+            headingLevel={3}
+            type={dashboardData.length === 0 ? 'policies' : 'filter'}
+            title={dashboardData.length === 0 ? 'No policies found' : 'No matching policies'}
+            description={dashboardData.length === 0 ? 'Published policies will appear here once they are available.' : 'Try changing your search or filters.'}
           />
         ) : (
           <Table
