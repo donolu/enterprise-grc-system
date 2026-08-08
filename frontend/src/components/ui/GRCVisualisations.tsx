@@ -1,6 +1,7 @@
 "use client";
 
-import { Progress, Typography } from "antd";
+import { useMemo } from "react";
+import { Progress, Tooltip, Typography } from "antd";
 
 const { Text } = Typography;
 
@@ -54,4 +55,43 @@ export function TrendSparkline({ values, label }: { values: number[]; label: str
 
 export function TrendPanel({ values, label, heading }: { values: number[]; label: string; heading: string }) {
   return <section className="grc-viz-panel" aria-labelledby={`${heading.toLowerCase().replaceAll(" ", "-")}-title`}><div className="grc-viz-heading"><div><span className="section-kicker">MOVEMENT</span><h3 id={`${heading.toLowerCase().replaceAll(" ", "-")}-title`}>{heading}</h3></div></div><TrendSparkline values={values} label={label} /></section>;
+}
+
+type RiskPosition = { impact: number; likelihood: number };
+
+export function RiskHeatMap({ risks }: { risks: RiskPosition[] }) {
+  const cells = useMemo(() => {
+    const counts = new Map<string, number>();
+    risks.forEach((risk) => {
+      const key = `${risk.impact}-${risk.likelihood}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return Array.from({ length: 25 }, (_, index) => {
+      const impact = Math.floor(index / 5) + 1;
+      const likelihood = (index % 5) + 1;
+      return { impact, likelihood, count: counts.get(`${impact}-${likelihood}`) ?? 0 };
+    });
+  }, [risks]);
+
+  return (
+    <div className="heatmap-wrap">
+      <div className="heatmap-y-label">IMPACT</div>
+      <div className="heatmap-content">
+        <div className="heatmap-grid" role="grid" aria-label="Risk heat map showing impact against likelihood">
+          {cells.map((cell) => {
+            const label = `${cell.count} risk${cell.count === 1 ? "" : "s"}, impact ${cell.impact}, likelihood ${cell.likelihood}`;
+            return <Tooltip key={`${cell.impact}-${cell.likelihood}`} title={label}><div className={`heat-cell heat-${Math.min(cell.impact * cell.likelihood, 25)}`} role="gridcell" tabIndex={0} aria-label={label}>{cell.count > 0 ? cell.count : ""}</div></Tooltip>;
+          })}
+        </div>
+        <div className="heatmap-x-axis"><span>Low</span><span>LIKELIHOOD</span><span>High</span></div>
+      </div>
+    </div>
+  );
+}
+
+export function TrendLine({ data, colour = "#0b8f84" }: { data: number[]; colour?: string }) {
+  if (!data.length) return <div className="trend-empty">No trend data</div>;
+  const max = Math.max(...data, 1);
+  const points = data.map((value, index) => `${(index / Math.max(data.length - 1, 1)) * 100},${36 - (value / max) * 30}`).join(" ");
+  return <svg className="trend-line" viewBox="0 0 100 40" preserveAspectRatio="none" aria-label="Trend line" role="img"><polyline points={points} fill="none" stroke={colour} strokeWidth="2.4" vectorEffect="non-scaling-stroke" /></svg>;
 }

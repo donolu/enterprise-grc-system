@@ -32,6 +32,7 @@ import {
 import dayjs, { type Dayjs } from "dayjs";
 import { analyticsService, type DashboardMetric, type ExecutiveDashboard } from "@/lib/services/analyticsService";
 import { riskService, type Risk } from "@/lib/services/riskService";
+import { RiskHeatMap, TrendLine } from "@/components/ui/GRCVisualisations";
 
 const { Title, Text } = Typography;
 
@@ -72,50 +73,6 @@ function formatMetric(value: number, suffix = "") {
 
 function riskTone(level: string) {
   return level === "critical" ? "critical" : level === "high" ? "high" : level === "medium" ? "medium" : "low";
-}
-
-function RiskHeatMap({ risks }: { risks: Risk[] }) {
-  const cells = useMemo(() => {
-    const counts = new Map<string, number>();
-    risks.forEach((risk) => {
-      const key = `${risk.impact}-${risk.likelihood}`;
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    });
-    return Array.from({ length: 25 }, (_, index) => {
-      const impact = Math.floor(index / 5) + 1;
-      const likelihood = (index % 5) + 1;
-      return { impact, likelihood, count: counts.get(`${impact}-${likelihood}`) ?? 0 };
-    });
-  }, [risks]);
-
-  return (
-    <div className="heatmap-wrap">
-      <div className="heatmap-y-label">IMPACT</div>
-      <div className="heatmap-content">
-        <div className="heatmap-grid" role="img" aria-label="Risk heat map showing impact against likelihood">
-          {cells.map((cell) => (
-            <Tooltip key={`${cell.impact}-${cell.likelihood}`} title={`${cell.count} risk${cell.count === 1 ? "" : "s"} · impact ${cell.impact}, likelihood ${cell.likelihood}`}>
-              <div className={`heat-cell heat-${Math.min(cell.impact * cell.likelihood, 25)}`}>
-                {cell.count > 0 ? cell.count : ""}
-              </div>
-            </Tooltip>
-          ))}
-        </div>
-        <div className="heatmap-x-axis"><span>Low</span><span>LIKELIHOOD</span><span>High</span></div>
-      </div>
-    </div>
-  );
-}
-
-function TrendLine({ data, colour = "#0b8f84" }: { data: number[]; colour?: string }) {
-  if (!data.length) return <div className="trend-empty">No trend data</div>;
-  const max = Math.max(...data, 1);
-  const points = data.map((value, index) => `${(index / Math.max(data.length - 1, 1)) * 100},${36 - (value / max) * 30}`).join(" ");
-  return (
-    <svg className="trend-line" viewBox="0 0 100 40" preserveAspectRatio="none" aria-label="Trend line" role="img">
-      <polyline points={points} fill="none" stroke={colour} strokeWidth="2.4" vectorEffect="non-scaling-stroke" />
-    </svg>
-  );
 }
 
 export default function DashboardPage() {

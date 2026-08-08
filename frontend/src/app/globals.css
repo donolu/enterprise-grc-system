@@ -75,6 +75,7 @@ html.dark-mode .page-header { --line: #35504e; --ink: #e8f2ef; --ink-soft: #b4c8
 .heatmap-content { flex: 1; }
 .heatmap-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; max-width: 330px; aspect-ratio: 1; }
 .heat-cell { display: flex; align-items: center; justify-content: center; color: rgba(16,43,46,.78); font-weight: 700; font-size: 13px; min-width: 0; transition: transform .15s ease; }
+.heat-cell:focus-visible { outline: 3px solid var(--teal-deep, #08756d); outline-offset: 2px; position: relative; z-index: 2; }
 .heat-cell:hover { transform: scale(1.08); z-index: 1; box-shadow: 0 4px 12px rgba(16,43,46,.15); }
 .heat-1, .heat-2, .heat-3 { background: #d7eee8; }.heat-4, .heat-5, .heat-6 { background: #c4e3dc; }.heat-7, .heat-8, .heat-9 { background: #f3e7c5; }.heat-10, .heat-12, .heat-15 { background: #e8bd83; }.heat-16, .heat-20, .heat-25 { background: #ce7363; color: #fff; }
 .heatmap-x-axis { display: flex; justify-content: space-between; max-width: 330px; margin-top: 9px; color: var(--ink-soft); font-size: 9px; letter-spacing: .1em; }.heatmap-x-axis span:nth-child(2) { color: var(--ink-soft); }
