@@ -1,4 +1,4 @@
-body { margin: 0; }
+body { margin: 0; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 
 .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 4px 0 28px; padding-bottom: 22px; border-bottom: 1px solid var(--line, #dce7e5); }
 .page-header-copy { min-width: 0; }
