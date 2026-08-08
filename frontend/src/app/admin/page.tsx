@@ -24,6 +24,7 @@ import {
   SettingOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
+import Link from 'next/link'
 import type { UploadProps } from 'antd'
 import {
   importTemplateLibrary,
@@ -131,6 +132,9 @@ export default function AdminPage() {
         <Text type="secondary">
           Manage catalogue data, template packs and controlled imports.
         </Text>
+        <div style={{ marginTop: 12 }}>
+          <Link href="/admin/email-settings">Configure tenant email identity</Link>
+        </div>
       </div>
 
       <Row gutter={[16, 16]}>

@@ -30,7 +30,8 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
         })
         .catch(() => {
           if (cancelled) return;
-          router.push('/login');
+          const next = `${pathname}${window.location.search}`;
+          router.push(`/login?next=${encodeURIComponent(next)}`);
         });
       return () => {
         cancelled = true;
