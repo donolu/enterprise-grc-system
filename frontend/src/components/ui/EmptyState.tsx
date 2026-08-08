@@ -16,6 +16,7 @@ import {
   DatabaseOutlined
 } from "@ant-design/icons";
 import { useTheme } from "@/theme";
+import { designTokens } from "@/themeTokens";
 
 interface EmptyStateProps {
   type?: 'default' | 'search' | 'filter' | 'error' | 'maintenance' | 'assessments' | 'risks' | 'vendors' | 'policies' | 'training' | 'vulnerabilities' | 'evidence';
@@ -134,13 +135,13 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   const titleStyle = {
     fontSize: size === 'small' ? 16 : size === 'large' ? 20 : 18,
     fontWeight: 600,
-    color: isDark ? '#F8FAFC' : '#0F172A',
+    color: isDark ? designTokens.color.dark.text : designTokens.color.light.text,
     marginBottom: 8,
   };
 
   const descriptionStyle = {
     fontSize: size === 'small' ? 13 : 14,
-    color: isDark ? '#94A3B8' : '#64748B',
+    color: isDark ? designTokens.color.dark.textSecondary : designTokens.color.light.textSecondary,
     marginBottom: action || secondaryAction ? 24 : 0,
     maxWidth: 400,
     margin: '0 auto',
@@ -149,7 +150,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
   const iconStyle = {
     fontSize: size === 'small' ? 48 : size === 'large' ? 72 : 64,
-    color: isDark ? '#475569' : '#CBD5E1',
+    color: isDark ? designTokens.color.dark.textTertiary : designTokens.color.light.textTertiary,
     marginBottom: 16,
   };
 
