@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Card, Row, Col, Typography, Button, Empty, Spin, message, Badge, Tag } from 'antd'
+import { Card, Row, Col, Typography, Button, message, Badge, Tag } from 'antd'
 import { FileTextOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { api, getErrorMessage } from '@/lib/api'
 import { useTheme } from '@/theme'
+import { EmptyState, Loading, PageHeader } from '@/components/ui'
 
-const { Title, Text, Paragraph } = Typography
+const { Text, Paragraph } = Typography
 
 interface PolicyForAcknowledgment {
   distribution_id: string
@@ -158,38 +159,24 @@ export default function PoliciesPage() {
   }
 
   if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: 16 }}>Loading your policies...</div>
-      </div>
-    )
+    return <Loading message="Loading your policies..." />
   }
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <Title level={2}>
-          <FileTextOutlined style={{ marginRight: 8 }} />
-          Policy Acknowledgments
-        </Title>
-        <Text type="secondary">
-          Review and acknowledge the policies assigned to you. These policies require your acknowledgment to ensure compliance.
-        </Text>
-      </div>
+      <PageHeader
+        eyebrow="POLICY GOVERNANCE"
+        title="Policy acknowledgments"
+        description="Review and acknowledge the policies assigned to you so your organisation stays aligned with its standards."
+        icon={<FileTextOutlined />}
+      />
 
       {policies.length === 0 ? (
-        <Card>
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <span>
-                <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} />
-                All caught up! You have no policies requiring acknowledgment.
-              </span>
-            }
-          />
-        </Card>
+        <EmptyState
+          title="All caught up"
+          description="You have no policies requiring acknowledgment. New assignments will appear here."
+          icon={<CheckCircleOutlined />}
+        />
       ) : (
         <>
           <div style={{ marginBottom: 16 }}>
