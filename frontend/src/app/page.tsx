@@ -3,10 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  Alert,
   Button,
   DatePicker,
-  Empty,
   Progress,
   Select,
   Skeleton,
@@ -32,6 +30,7 @@ import {
 import dayjs, { type Dayjs } from "dayjs";
 import { analyticsService, type DashboardMetric, type ExecutiveDashboard } from "@/lib/services/analyticsService";
 import { riskService, type Risk } from "@/lib/services/riskService";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { RiskHeatMap, TrendLine } from "@/components/ui/GRCVisualisations";
 
 const { Title, Text } = Typography;
@@ -158,7 +157,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {error && <Alert className="dashboard-alert" type="warning" showIcon message="Live data is unavailable" description="The dashboard is showing an empty state until the API reconnects." action={<Button size="small" onClick={() => void fetchDashboard()}>Retry</Button>} />}
+      {error && <div className="dashboard-alert"><EmptyState type="error" size="small" headingLevel={2} title="Live data is unavailable" description="The dashboard is showing an empty state until the API reconnects." action={{ text: "Retry", onClick: () => void fetchDashboard() }} /></div>}
 
       <section className="metric-rail" aria-label="Posture summary">
         <div className="metric-block metric-primary">
@@ -205,9 +204,9 @@ export default function DashboardPage() {
       </section>
 
       <section className="dashboard-grid dashboard-grid-lower">
-        <article className="surface-panel queue-panel"><div className="panel-heading"><div><span className="section-kicker">ATTENTION QUEUE</span><h2>Work requiring an owner</h2></div><Button type="text" icon={<PlusOutlined />} href="/risk">Add risk</Button></div>{loading ? <Skeleton active paragraph={{ rows: 4 }} /> : highRisks.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No high-priority work is waiting" /> : <div className="queue-list">{highRisks.slice(0, 4).map((risk) => <Link href={`/risk/${risk.id}`} className="queue-item" key={risk.id}><span className={`queue-marker marker-${riskTone(risk.risk_level)}`} /><span className="queue-main"><strong>{risk.title}</strong><small>{risk.risk_id} · {risk.risk_owner ? `${risk.risk_owner.first_name} ${risk.risk_owner.last_name}` : "Unassigned"}</small></span><Tag className={`risk-tag tag-${riskTone(risk.risk_level)}`}>{risk.risk_level}</Tag><ArrowRightOutlined className="queue-arrow" /></Link>)}</div>}</article>
+        <article className="surface-panel queue-panel"><div className="panel-heading"><div><span className="section-kicker">ATTENTION QUEUE</span><h2>Work requiring an owner</h2></div><Button type="text" icon={<PlusOutlined />} href="/risk">Add risk</Button></div>{loading ? <Skeleton active paragraph={{ rows: 4 }} /> : highRisks.length === 0 ? <EmptyState type="risks" size="small" headingLevel={3} title="No high-priority work is waiting" description="New risks that need immediate attention will appear here." /> : <div className="queue-list">{highRisks.slice(0, 4).map((risk) => <Link href={`/risk/${risk.id}`} className="queue-item" key={risk.id}><span className={`queue-marker marker-${riskTone(risk.risk_level)}`} /><span className="queue-main"><strong>{risk.title}</strong><small>{risk.risk_id} · {risk.risk_owner ? `${risk.risk_owner.first_name} ${risk.risk_owner.last_name}` : "Unassigned"}</small></span><Tag className={`risk-tag tag-${riskTone(risk.risk_level)}`}>{risk.risk_level}</Tag><ArrowRightOutlined className="queue-arrow" /></Link>)}</div>}</article>
         <article className="surface-panel trend-panel"><div className="panel-heading"><div><span className="section-kicker">RISK MOMENTUM</span><h2>Exposure trend</h2></div><span className="trend-period">{period === "custom" ? "Custom" : `Last ${period} days`}</span></div><div className="trend-value"><strong>{trend.length ? trend[trend.length - 1] : 0}</strong><span className="trend-change"><ArrowDownOutlined /> 8.2%</span></div><TrendLine data={trend} /><div className="trend-axis"><span>Earlier</span><span>Now</span></div></article>
-          <article className="surface-panel activity-panel"><div className="panel-heading"><div><span className="section-kicker">AUDIT ACTIVITY</span><h2>Recent movement</h2></div><Link className="icon-action" href="/analytics" aria-label="Open analytics"><ArrowRightOutlined /></Link></div>{activities.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No recent activity" /> : <div className="activity-list">{activities.slice(0, 4).map((activity) => <div className="activity-item" key={activity.id}><span className={`activity-icon activity-${activity.type}`}><FileProtectOutlined /></span><span><strong>{activity.title}</strong><small>{activity.description}</small></span><time>{dayjs(activity.timestamp).format("DD MMM")}</time></div>)}</div>}</article>
+          <article className="surface-panel activity-panel"><div className="panel-heading"><div><span className="section-kicker">AUDIT ACTIVITY</span><h2>Recent movement</h2></div><Link className="icon-action" href="/analytics" aria-label="Open analytics"><ArrowRightOutlined /></Link></div>{activities.length === 0 ? <EmptyState size="small" headingLevel={3} title="No recent activity" description="Completed reviews, policy changes and other movement will appear here." /> : <div className="activity-list">{activities.slice(0, 4).map((activity) => <div className="activity-item" key={activity.id}><span className={`activity-icon activity-${activity.type}`}><FileProtectOutlined /></span><span><strong>{activity.title}</strong><small>{activity.description}</small></span><time>{dayjs(activity.timestamp).format("DD MMM")}</time></div>)}</div>}</article>
       </section>
 
       <section className="dashboard-footer-strip"><div><span className="footer-icon"><SafetyCertificateOutlined /></span><span><strong>Keep the programme moving</strong><small>Review open work and keep each control decision owned.</small></span></div><Space><Button href="/assessments" icon={<CalendarOutlined />}>Review schedule</Button><Button type="primary" href="/assessments/create" icon={<PlusOutlined />}>Start assessment</Button></Space></section>
