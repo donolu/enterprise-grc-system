@@ -80,7 +80,7 @@ export function RiskHeatMap({ risks }: { risks: RiskPosition[] }) {
         <div className="heatmap-grid" role="group" aria-label="Risk heat map showing impact against likelihood">
           {cells.map((cell) => {
             const label = `${cell.count} risk${cell.count === 1 ? "" : "s"}, impact ${cell.impact}, likelihood ${cell.likelihood}`;
-            return <Tooltip key={`${cell.impact}-${cell.likelihood}`} title={label}><div className={`heat-cell heat-${Math.min(cell.impact * cell.likelihood, 25)}`} tabIndex={0} aria-label={label}>{cell.count > 0 ? cell.count : ""}</div></Tooltip>;
+            return <Tooltip key={`${cell.impact}-${cell.likelihood}`} title={label}><div className={`heat-cell heat-${Math.min(cell.impact * cell.likelihood, 25)}`} role="img" aria-label={label}>{cell.count > 0 ? cell.count : ""}</div></Tooltip>;
           })}
         </div>
         <div className="heatmap-x-axis"><span>Low</span><span>LIKELIHOOD</span><span>High</span></div>

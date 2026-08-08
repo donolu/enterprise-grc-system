@@ -78,7 +78,7 @@ html.dark-mode .page-header { --line: #35504e; --ink: #e8f2ef; --ink-soft: #b4c8
 .heat-cell:focus-visible { outline: 3px solid var(--teal-deep, #08756d); outline-offset: 2px; position: relative; z-index: 2; }
 .ant-menu-dark .ant-menu-item a { color: #CBD5E1; }
 .ant-menu-dark .ant-menu-item-selected a, .ant-menu-dark .ant-menu-item:hover a { color: #FFFFFF; }
-.ant-empty-description { color: #466166; }
+body .ant-empty-description { color: #466166 !important; }
 .heat-cell:hover { transform: scale(1.08); z-index: 1; box-shadow: 0 4px 12px rgba(16,43,46,.15); }
 .heat-1, .heat-2, .heat-3 { background: #d7eee8; }.heat-4, .heat-5, .heat-6 { background: #c4e3dc; }.heat-7, .heat-8, .heat-9 { background: #f3e7c5; }.heat-10, .heat-12, .heat-15 { background: #e8bd83; }.heat-16, .heat-20, .heat-25 { background: #ce7363; color: #fff; }
 .heatmap-x-axis { display: flex; justify-content: space-between; max-width: 330px; margin-top: 9px; color: var(--ink-soft); font-size: 9px; letter-spacing: .1em; }.heatmap-x-axis span:nth-child(2) { color: var(--ink-soft); }
