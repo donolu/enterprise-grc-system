@@ -25,6 +25,7 @@ import {
   UploadOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
+import { PageHeader } from '@/components/ui/PageHeader'
 import type { UploadProps } from 'antd'
 import {
   importTemplateLibrary,
@@ -32,7 +33,7 @@ import {
   TemplateImportSample,
 } from '@/lib/services/catalogService'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 const moduleOptions = [
   { value: 'policy', label: 'Policy' },
@@ -124,18 +125,13 @@ export default function AdminPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <Title level={2}>
-          <SettingOutlined style={{ marginRight: 8 }} />
-          System Administration
-        </Title>
-        <Text type="secondary">
-          Manage catalogue data, template packs and controlled imports.
-        </Text>
-        <div style={{ marginTop: 12 }}>
-          <Link href="/admin/email-settings">Configure tenant email identity</Link>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Administration"
+        title="System administration"
+        description="Manage catalogue data, template packs and controlled imports."
+        icon={<SettingOutlined />}
+        actions={<Link href="/admin/email-settings">Configure tenant email identity</Link>}
+      />
 
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={10}>
