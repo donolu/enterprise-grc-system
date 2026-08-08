@@ -5199,6 +5199,40 @@ export interface paths {
         patch: operations["tenant_email_settings_partial_update"];
         trace?: never;
     };
+    "/api/tenant-email-settings/verification/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Send a verification message to the configured tenant sender address. */
+        post: operations["tenant_email_settings_verification_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tenant-email-settings/verification/confirm/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Consume a sender verification token for the current tenant. */
+        post: operations["tenant_email_settings_verification_confirm_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -9991,6 +10025,16 @@ export interface components {
          * @enum {string}
          */
         SendFrequencyEnum: "weekly" | "biweekly" | "monthly" | "quarterly";
+        SenderVerificationConfirmRequest: {
+            token: string;
+        };
+        SenderVerificationResponse: {
+            detail: string;
+            /** Format: date-time */
+            expires_at?: string;
+            /** Format: date-time */
+            verified_at?: string;
+        };
         SetupTOTPRequest: {
             password: string;
         };
@@ -22737,6 +22781,71 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TenantEmailSettings"];
                 };
+            };
+        };
+    };
+    tenant_email_settings_verification_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SenderVerificationResponse"];
+                };
+            };
+            /** @description Sender email is not configured. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Verification email could not be sent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    tenant_email_settings_verification_confirm_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SenderVerificationConfirmRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SenderVerificationConfirmRequest"];
+                "multipart/form-data": components["schemas"]["SenderVerificationConfirmRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SenderVerificationResponse"];
+                };
+            };
+            /** @description The verification token is invalid or expired. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
