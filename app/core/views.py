@@ -114,8 +114,11 @@ class TenantEmailVerificationRequestView(APIView):
     def post(self, request):
         try:
             expires_at = request_sender_verification(request.tenant)
-        except SenderVerificationError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except SenderVerificationError:
+            return Response(
+                {"detail": "Configure a sender email address first."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         except Exception:
             return Response(
                 {"detail": "Unable to send the verification email."},
@@ -156,8 +159,11 @@ class TenantEmailVerificationConfirmView(APIView):
             verified_at = confirm_sender_verification(
                 request.tenant, serializer.validated_data["token"]
             )
-        except SenderVerificationError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except SenderVerificationError:
+            return Response(
+                {"detail": "The verification token is invalid or expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         log_audit_event(
             event="TENANT_EMAIL_VERIFIED",
