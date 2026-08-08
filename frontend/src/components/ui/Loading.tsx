@@ -4,6 +4,7 @@ import React from 'react'
 import { Spin, Space, Typography } from 'antd'
 import { LoadingOutlined } from '@ant-design/icons'
 import { useTheme } from '@/theme'
+import { designTokens } from '@/themeTokens'
 
 const { Text } = Typography
 
@@ -29,7 +30,7 @@ export const Loading: React.FC<LoadingProps> = ({
 
   const antIcon = <LoadingOutlined style={{
     fontSize: size === 'small' ? 16 : size === 'large' ? 32 : 24,
-    color: '#2F6FED'
+    color: designTokens.color.primary
   }} spin />
 
   if (children) {

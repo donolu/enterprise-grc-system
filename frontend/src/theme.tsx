@@ -1,8 +1,8 @@
 "use client";
 import { ConfigProvider, theme } from "antd";
 import { createContext, useContext, useState, useEffect } from "react";
+import { designTokens, type ThemeMode } from "./themeTokens";
 
-type ThemeMode = 'light' | 'dark';
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -17,37 +17,6 @@ export const useTheme = () => {
     throw new Error('useTheme must be used within AppTheme');
   }
   return context;
-};
-
-// Professional color palette
-const colors = {
-  primary: "#0B8F84",
-  success: "#0EB57D",
-  warning: "#FFB020",
-  error: "#E5484D",
-  info: "#256D8A",
-  light: {
-    bg: "#FFFFFF",
-    bgLayout: "#F7F8FA",
-    bgContainer: "#FFFFFF",
-    border: "#E7EBF0",
-    text: "#0F172A",
-    textSecondary: "#64748B",
-    textTertiary: "#94A3B8",
-    sider: "#0F1219",
-    header: "#FFFFFF",
-  },
-  dark: {
-    bg: "#0F1419",
-    bgLayout: "#151B23",
-    bgContainer: "#1E2532",
-    border: "#2A3441",
-    text: "#F8FAFC",
-    textSecondary: "#CBD5E1",
-    textTertiary: "#94A3B8",
-    sider: "#0F1419",
-    header: "#1E2532",
-  }
 };
 
 export const AppTheme = ({ children }: { children: React.ReactNode }) => {
@@ -87,7 +56,7 @@ export const AppTheme = ({ children }: { children: React.ReactNode }) => {
   };
 
   const isDark = mode === 'dark';
-  const colorScheme = isDark ? colors.dark : colors.light;
+  const colorScheme = isDark ? designTokens.color.dark : designTokens.color.light;
 
   return (
     <ThemeContext.Provider value={{ mode, toggleMode }}>
@@ -96,23 +65,23 @@ export const AppTheme = ({ children }: { children: React.ReactNode }) => {
           algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
           token: {
             fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif',
-            colorPrimary: colors.primary,
-            colorSuccess: colors.success,
-            colorWarning: colors.warning,
-            colorError: colors.error,
-            colorInfo: colors.info,
-            borderRadius: 8,
-            borderRadiusLG: 8,
-            borderRadiusSM: 6,
+            colorPrimary: designTokens.color.primary,
+            colorSuccess: designTokens.color.success,
+            colorWarning: designTokens.color.warning,
+            colorError: designTokens.color.error,
+            colorInfo: designTokens.color.info,
+            borderRadius: designTokens.radius.default,
+            borderRadiusLG: designTokens.radius.default,
+            borderRadiusSM: designTokens.radius.small,
             colorBorder: colorScheme.border,
             colorBgLayout: colorScheme.bgLayout,
             colorBgContainer: colorScheme.bgContainer,
             colorText: colorScheme.text,
             colorTextSecondary: colorScheme.textSecondary,
             colorTextTertiary: colorScheme.textTertiary,
-            controlHeight: 40,
-            controlHeightLG: 48,
-            controlHeightSM: 32,
+            controlHeight: designTokens.size.control,
+            controlHeightLG: designTokens.size.controlLarge,
+            controlHeightSM: designTokens.size.controlSmall,
             fontSize: 14,
             fontSizeLG: 16,
             fontSizeSM: 12,
@@ -134,19 +103,19 @@ export const AppTheme = ({ children }: { children: React.ReactNode }) => {
               triggerColor: colorScheme.text,
             },
             Card: {
-              borderRadiusLG: 8,
+              borderRadiusLG: designTokens.radius.default,
               boxShadow: isDark
                 ? "0 6px 24px rgba(0,0,0,0.15)"
                 : "0 6px 24px rgba(15,18,25,0.06)",
               headerBg: "transparent",
             },
             Button: {
-              borderRadius: 6,
-              controlHeight: 40,
+              borderRadius: designTokens.radius.small,
+              controlHeight: designTokens.size.control,
               fontWeight: 600,
             },
             Tag: {
-              borderRadiusSM: 20,
+              borderRadiusSM: designTokens.radius.pill,
             },
             Table: {
               borderColor: colorScheme.border,
@@ -154,13 +123,13 @@ export const AppTheme = ({ children }: { children: React.ReactNode }) => {
               rowHoverBg: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)",
             },
             Input: {
-              borderRadius: 8,
+              borderRadius: designTokens.radius.default,
             },
             Select: {
               borderRadius: 8,
             },
             Modal: {
-              borderRadiusLG: 8,
+              borderRadiusLG: designTokens.radius.default,
             },
             Tooltip: {
               colorBgSpotlight: colorScheme.sider,
