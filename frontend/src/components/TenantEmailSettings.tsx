@@ -12,7 +12,6 @@ import {
   Row,
   Space,
   Tag,
-  Typography,
   message,
 } from "antd";
 import {
@@ -22,13 +21,12 @@ import {
   SendOutlined,
 } from "@ant-design/icons";
 import { getErrorMessage } from "@/lib/api";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   getTenantEmailSettings,
   requestTenantEmailVerification,
   updateTenantEmailSettings,
 } from "@/lib/services/tenantEmailService";
-
-const { Title, Text } = Typography;
 
 export default function TenantEmailSettings() {
   const [form] = Form.useForm();
@@ -100,15 +98,12 @@ export default function TenantEmailSettings() {
 
   return (
     <Space direction="vertical" size={24} style={{ width: "100%" }}>
-      <div>
-        <Text type="secondary">Tenant administration / outbound communications</Text>
-        <Title level={2} style={{ margin: "6px 0 0" }}>
-          Email identity
-        </Title>
-        <Text type="secondary">
-          Control how Provena identifies your organisation in tenant notifications.
-        </Text>
-      </div>
+      <PageHeader
+        eyebrow="Tenant administration / outbound communications"
+        title="Email identity"
+        description="Control how Provena identifies your organisation in tenant notifications."
+        icon={<MailOutlined />}
+      />
 
       <Row gutter={[20, 20]}>
         <Col xs={24} lg={15}>
