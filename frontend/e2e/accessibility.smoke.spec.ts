@@ -17,7 +17,7 @@ test("dashboard has no detected accessibility violations", async ({ page }) => {
   await page.getByRole("button", { name: "Login" }).click();
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/?tenant=demo");
-  await expect(page.getByRole("heading", { name: /control room/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /your governance posture/i })).toBeVisible();
 
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);

@@ -136,7 +136,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <main className="dashboard-page">
+    <div className="dashboard-page">
       <section className="dashboard-hero">
         <div>
           <div className="eyebrow"><span className="eyebrow-mark" /> CONTROL ROOM / {dayjs().format("DD MMM YYYY").toUpperCase()}</div>
@@ -211,6 +211,6 @@ export default function DashboardPage() {
       </section>
 
       <section className="dashboard-footer-strip"><div><span className="footer-icon"><SafetyCertificateOutlined /></span><span><strong>Keep the programme moving</strong><small>Review open work and keep each control decision owned.</small></span></div><Space><Button href="/assessments" icon={<CalendarOutlined />}>Review schedule</Button><Button type="primary" href="/assessments/create" icon={<PlusOutlined />}>Start assessment</Button></Space></section>
-    </main>
+    </div>
   );
 }

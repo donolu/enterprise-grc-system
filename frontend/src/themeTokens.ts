@@ -1,6 +1,6 @@
 export const designTokens = {
   color: {
-    primary: "#0B8F84",
+    primary: "#08756D",
     success: "#0EB57D",
     warning: "#FFB020",
     error: "#E5484D",

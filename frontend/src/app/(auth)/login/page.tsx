@@ -38,7 +38,7 @@ export default function LoginPage() {
 
   return (
     <Form layout="vertical" onFinish={onFinish} style={{ maxWidth: 360, margin: "10vh auto" }}>
-      <h2>Sign in</h2>
+      <h1>Sign in</h1>
       {error && <Alert type="error" message={error} style={{ marginBottom: 12 }} />}
       <Form.Item name="email" label="Email" rules={[{ required: true }, { type: "email" }]}>
         <Input />

@@ -111,6 +111,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         breakpoint="lg"
         collapsedWidth="0"
         style={{
+          background: mode === 'dark' ? '#0F1419' : '#0F1219',
           boxShadow: mode === 'dark'
             ? '2px 0 8px rgba(0,0,0,0.3)'
             : '2px 0 8px rgba(0,0,0,0.06)'
