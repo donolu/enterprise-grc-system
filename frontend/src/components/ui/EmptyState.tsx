@@ -37,6 +37,7 @@ interface EmptyStateProps {
   children?: React.ReactNode;
   image?: string | React.ReactNode;
   size?: 'small' | 'default' | 'large';
+  headingLevel?: 2 | 3 | 4 | 5;
 }
 
 // Predefined empty state configurations
@@ -115,7 +116,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   secondaryAction,
   children,
   image,
-  size = 'default'
+  size = 'default',
+  headingLevel
 }) => {
   const { mode } = useTheme();
   const isDark = mode === 'dark';
@@ -125,6 +127,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   const finalTitle = title || config.title;
   const finalDescription = description || config.description;
   const finalIcon = icon || config.icon;
+  const titleLevel = headingLevel || (size === 'small' ? 5 : 4);
 
   const containerStyle = {
     padding: size === 'small' ? 24 : size === 'large' ? 48 : 32,
@@ -180,7 +183,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         </div>
       )}
 
-      <Typography.Title level={size === 'small' ? 5 : 4} style={titleStyle}>
+      <Typography.Title level={titleLevel} style={titleStyle}>
         {finalTitle}
       </Typography.Title>
 
