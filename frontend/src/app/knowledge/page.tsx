@@ -5,7 +5,6 @@ import {
   Button,
   Card,
   Col,
-  Empty,
   Input,
   List,
   Modal,
@@ -24,8 +23,9 @@ import {
   getKnowledgeArticles,
   getKnowledgeCategories,
 } from "@/lib/services/knowledgeService";
+import { EmptyState, PageHeader } from "@/components/ui";
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 
 const moduleOptions = [
   { value: "dashboard", label: "Dashboard" },
@@ -106,13 +106,12 @@ export default function KnowledgePage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <Title level={2}>
-          <BookOutlined style={{ marginRight: 8 }} />
-          Knowledge Base
-        </Title>
-        <Text type="secondary">Search guidance, process notes and module help.</Text>
-      </div>
+      <PageHeader
+        eyebrow="KNOWLEDGE OPERATIONS"
+        title="Knowledge base"
+        description="Search guidance, process notes and module help."
+        icon={<BookOutlined />}
+      />
 
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={[16, 16]} align="middle">
@@ -158,7 +157,7 @@ export default function KnowledgePage() {
         <List
           loading={loading}
           dataSource={articles}
-          locale={{ emptyText: <Empty description="No knowledge articles found" /> }}
+          locale={{ emptyText: <EmptyState size="small" headingLevel={3} type={search || moduleKey || category ? "search" : "default"} title={search || moduleKey || category ? "No matching articles" : "No knowledge articles found"} description={search || moduleKey || category ? "Try changing your search or filters." : "Published guidance will appear here when it is available."} /> }}
           pagination={{
             current: page,
             pageSize: 20,
