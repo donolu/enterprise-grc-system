@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Card, Row, Col, Typography, Button, Select, Input, Tag, Empty, Spin, message } from 'antd'
+import { Card, Row, Col, Typography, Button, Select, Input, Tag, message } from 'antd'
 import { PlayCircleOutlined, SearchOutlined, ClockCircleOutlined, UserOutlined } from '@ant-design/icons'
 import { api } from '@/lib/api'
+import { EmptyState, Loading, PageHeader } from '@/components/ui'
 
-const { Title, Text, Paragraph } = Typography
+const { Text, Paragraph } = Typography
 const { Search } = Input
 const { Option } = Select
 
@@ -210,26 +211,17 @@ export default function TrainingPage() {
   }
 
   if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: 16 }}>Loading training content...</div>
-      </div>
-    )
+    return <Loading message="Loading training content..." />
   }
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <Title level={2}>
-          <PlayCircleOutlined style={{ marginRight: 8 }} />
-          Security Training Videos
-        </Title>
-        <Text type="secondary">
-          Enhance your security awareness with our comprehensive training library
-        </Text>
-      </div>
+      <PageHeader
+        eyebrow="SECURITY AWARENESS"
+        title="Training library"
+        description="Build practical security awareness with focused training for your organisation."
+        icon={<PlayCircleOutlined />}
+      />
 
       {/* Category Overview */}
       {categories.length > 0 && (
@@ -321,15 +313,13 @@ export default function TrainingPage() {
       </div>
 
       {filteredVideos.length === 0 ? (
-        <Card>
-          <Empty
-            description={
-              videos.length === 0
-                ? "No training videos available yet"
-                : "No videos match your current filters"
-            }
-          />
-        </Card>
+        <EmptyState
+          size="small"
+          headingLevel={2}
+          type={videos.length === 0 ? 'training' : 'filter'}
+          title={videos.length === 0 ? 'No training videos available yet' : 'No matching videos'}
+          description={videos.length === 0 ? 'Training content will appear here when it is published.' : 'Try changing your search or filters.'}
+        />
       ) : (
         <Row gutter={[16, 16]}>
           {filteredVideos.map((video) => (
