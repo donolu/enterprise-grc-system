@@ -15,7 +15,6 @@ import {
   Statistic,
   Table,
   Tag,
-  Typography,
   Upload,
   message,
 } from 'antd'
@@ -29,8 +28,7 @@ import {
   importAssetRegister,
   updateAsset,
 } from '@/lib/services/assetService'
-
-const { Title, Text } = Typography
+import { EmptyState, PageHeader } from '@/components/ui'
 
 const assetTypeOptions = [
   { value: 'server', label: 'Server' },
@@ -164,15 +162,12 @@ export default function AssetsPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <Title level={2}>
-          <DatabaseOutlined style={{ marginRight: 8 }} />
-          Asset Register
-        </Title>
-        <Text type="secondary">
-          Track information assets, ownership, classification, risk links and review dates.
-        </Text>
-      </div>
+      <PageHeader
+        eyebrow="INFORMATION ASSETS"
+        title="Asset register"
+        description="Track information assets, ownership, classification, risk links and review dates."
+        icon={<DatabaseOutlined />}
+      />
 
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} md={8}>
@@ -239,6 +234,9 @@ export default function AssetsPage() {
           rowKey="id"
           loading={loading}
           dataSource={assets}
+          locale={{
+            emptyText: <EmptyState size="small" headingLevel={3} type={search ? 'search' : 'default'} title={search ? 'No matching assets' : 'No assets registered'} description={search ? 'Try a different search term.' : 'Add an asset or import your register to get started.'} />,
+          }}
           pagination={{ total, pageSize: 20, current: page }}
           onChange={pagination => loadAssets(pagination.current || 1)}
           onRow={record => ({ onDoubleClick: () => openEditModal(record) })}
