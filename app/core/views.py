@@ -32,6 +32,7 @@ from .serializers import (
     TenantEmailSettingsSerializer,
     SenderVerificationConfirmSerializer,
     SenderVerificationResponseSerializer,
+    TenantTaxProfileSerializer,
 )
 from billing.decorators import check_document_limits
 from billing.services import PlanEnforcementService
@@ -95,6 +96,75 @@ class TenantEmailSettingsView(APIView):
             request=request,
         )
         return Response(TenantEmailSettingsSerializer(tenant).data)
+
+
+class TenantTaxProfileView(APIView):
+    """Read and update the current tenant's billing and tax profile."""
+
+    permission_classes = [permissions.IsAdminUser]
+
+    @extend_schema(
+        responses=TenantTaxProfileSerializer,
+        tags=["Tenant settings"],
+    )
+    def get(self, request):
+        with schema_context("public"):
+            tenant = Tenant.objects.get(pk=request.tenant.pk)
+        return Response(TenantTaxProfileSerializer(tenant).data)
+
+    @extend_schema(
+        request=TenantTaxProfileSerializer,
+        responses=TenantTaxProfileSerializer,
+        tags=["Tenant settings"],
+    )
+    def patch(self, request):
+        server_owned_fields = {"tax_identifier_status", "tax_identifier_validated_at"}
+        supplied_server_owned_fields = server_owned_fields.intersection(request.data)
+        if supplied_server_owned_fields:
+            return Response(
+                {
+                    "detail": "Tax identifier validation fields are managed by the server.",
+                    "fields": sorted(supplied_server_owned_fields),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        with transaction.atomic(), schema_context("public"):
+            tenant = Tenant.objects.select_for_update().get(pk=request.tenant.pk)
+            serializer = TenantTaxProfileSerializer(
+                tenant,
+                data=request.data,
+                partial=True,
+            )
+            serializer.is_valid(raise_exception=True)
+            changed_fields = list(serializer.validated_data)
+            previous = {
+                field: _audit_tax_profile_value(field, getattr(tenant, field))
+                for field in changed_fields
+                if field not in server_owned_fields
+            }
+            serializer.save()
+            new = {
+                field: _audit_tax_profile_value(field, getattr(tenant, field))
+                for field in changed_fields
+                if field not in server_owned_fields
+            }
+
+        log_audit_event(
+            event="TENANT_TAX_PROFILE_UPDATED",
+            actor=request.user,
+            target=tenant,
+            object_display=tenant.slug,
+            previous=previous,
+            new=new,
+            request=request,
+        )
+        return Response(TenantTaxProfileSerializer(tenant).data)
+
+
+def _audit_tax_profile_value(field, value):
+    if field == "tax_identifier":
+        return {"configured": bool(value)}
+    return value
 
 
 class TenantEmailVerificationRequestView(APIView):

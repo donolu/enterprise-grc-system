@@ -10,6 +10,7 @@ from .views import (
     TenantEmailSettingsView,
     TenantEmailVerificationConfirmView,
     TenantEmailVerificationRequestView,
+    TenantTaxProfileView,
 )
 from .health import (
     HealthCheckView,
@@ -43,6 +44,11 @@ urlpatterns = [
         "api/tenant-email-settings/verification/confirm/",
         TenantEmailVerificationConfirmView.as_view(),
         name="tenant-email-verification-confirm",
+    ),
+    path(
+        "api/tenant-tax-profile/",
+        TenantTaxProfileView.as_view(),
+        name="tenant-tax-profile",
     ),
     # Health check endpoints
     path("health/", HealthCheckView.as_view(), name="health_check"),

@@ -147,6 +147,42 @@ class TenantEmailSettingsSerializer(serializers.ModelSerializer):
         return bool(obj.email_sender_verified_at)
 
 
+class TenantTaxProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tenant
+        fields = [
+            "billing_country",
+            "business_type",
+            "tax_identifier",
+            "tax_identifier_type",
+            "tax_identifier_status",
+            "tax_identifier_validated_at",
+        ]
+        read_only_fields = ["tax_identifier_status", "tax_identifier_validated_at"]
+
+    def validate_billing_country(self, value):
+        value = value.strip().upper()
+        if len(value) != 2 or not value.isalpha():
+            raise serializers.ValidationError("Use a two-letter ISO country code.")
+        return value
+
+    def validate(self, attrs):
+        if attrs.get("tax_identifier") and not attrs.get(
+            "tax_identifier_type", self.instance.tax_identifier_type
+        ):
+            raise serializers.ValidationError(
+                {"tax_identifier_type": "Select a type for the tax identifier."}
+            )
+        return attrs
+
+    def update(self, instance, validated_data):
+        identity_fields = {"billing_country", "tax_identifier", "tax_identifier_type"}
+        if identity_fields.intersection(validated_data):
+            validated_data["tax_identifier_status"] = "unknown"
+            validated_data["tax_identifier_validated_at"] = None
+        return super().update(instance, validated_data)
+
+
 class SenderVerificationResponseSerializer(serializers.Serializer):
     detail = serializers.CharField()
     expires_at = serializers.DateTimeField(required=False)
