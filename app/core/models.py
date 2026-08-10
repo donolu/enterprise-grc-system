@@ -253,6 +253,9 @@ class BillingEvent(models.Model):
     EVENT_TYPES = [
         ("invoice.payment_succeeded", "Invoice Payment Succeeded"),
         ("invoice.payment_failed", "Invoice Payment Failed"),
+        ("invoice.finalized", "Invoice Finalized"),
+        ("invoice.updated", "Invoice Updated"),
+        ("invoice.voided", "Invoice Voided"),
         ("customer.subscription.created", "Subscription Created"),
         ("customer.subscription.updated", "Subscription Updated"),
         ("customer.subscription.deleted", "Subscription Deleted"),
@@ -281,6 +284,52 @@ class BillingEvent(models.Model):
 
     def __str__(self):
         return f"{self.event_type} - {self.stripe_event_id}"
+
+
+class InvoiceEvidence(models.Model):
+    """Redacted Stripe invoice evidence retained for billing reconciliation."""
+
+    STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("open", "Open"),
+        ("paid", "Paid"),
+        ("uncollectible", "Uncollectible"),
+        ("void", "Void"),
+        ("unknown", "Unknown"),
+    ]
+
+    stripe_invoice_id = models.CharField(max_length=255, unique=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="invoice_evidence")
+    subscription = models.ForeignKey(
+        Subscription,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="invoice_evidence",
+    )
+    stripe_customer_id = models.CharField(max_length=255, blank=True)
+    invoice_number = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="unknown")
+    currency = models.CharField(max_length=3, blank=True)
+    subtotal = models.BigIntegerField(default=0)
+    tax_amount = models.BigIntegerField(default=0)
+    total = models.BigIntegerField(default=0)
+    amount_due = models.BigIntegerField(default=0)
+    amount_paid = models.BigIntegerField(default=0)
+    hosted_invoice_url = models.URLField(blank=True)
+    invoice_pdf = models.URLField(blank=True)
+    tax_status = models.CharField(max_length=30, blank=True)
+    period_start = models.DateTimeField(null=True, blank=True)
+    period_end = models.DateTimeField(null=True, blank=True)
+    source_event_id = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.invoice_number or self.stripe_invoice_id
 
 
 class LimitOverrideRequest(models.Model):
