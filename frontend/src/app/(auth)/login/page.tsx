@@ -55,7 +55,7 @@ export default function LoginPage() {
       <Form.Item name="otp" label="Authenticator code (if prompted)">
         <Input size="large" inputMode="numeric" autoComplete="one-time-code" />
       </Form.Item>
-      <Button type="primary" htmlType="submit" block size="large" icon={<ArrowRightOutlined />} iconPosition="end">Continue securely</Button>
+      <Button type="primary" htmlType="submit" block size="large" icon={<ArrowRightOutlined />} iconPlacement="end">Continue securely</Button>
       <p className="auth-form-note">Access is protected with two-factor authentication where enabled.</p>
     </Form>
   );
