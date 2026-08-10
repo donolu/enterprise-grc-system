@@ -114,7 +114,7 @@ export default function VendorDetailPage() {
       <PageHeader
         eyebrow="THIRD-PARTY ASSURANCE"
         title={vendor.name}
-        description={`Vendor ${vendor.vendor_id} · Review profile, risk and assurance details.`}
+        description={`${vendor.legal_name && vendor.legal_name !== vendor.name ? `${vendor.legal_name} · ` : ''}Vendor ${vendor.vendor_id} · Review profile, risk and assurance details.`}
         icon={<TeamOutlined />}
       />
 
