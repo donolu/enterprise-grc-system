@@ -161,6 +161,7 @@ cython_debug/
 
 # Node.js and Next.js
 frontend/node_modules/
+openapi-codegen/node_modules/
 frontend/.next/
 frontend/out/
 frontend/.vercel/
