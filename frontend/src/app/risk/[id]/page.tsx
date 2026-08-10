@@ -4,7 +4,7 @@ import React, { useCallback, useState, useEffect } from 'react'
 import { Card, Typography, Space, Button, Row, Col, Descriptions, Tag, Progress, Divider, message, Modal, Form, Input, Select } from 'antd'
 import { SafetyOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { useRouter, useParams } from 'next/navigation'
-import { Breadcrumb, StatusTag, PriorityTag, Loading } from '@/components/ui'
+import { Breadcrumb, EmptyState, PageHeader, StatusTag, PriorityTag, Loading } from '@/components/ui'
 import { riskService, type Risk } from '@/lib/services/riskService'
 
 const { Title, Text, Paragraph } = Typography
@@ -82,16 +82,7 @@ export default function RiskDetailPage() {
   }
 
   if (!risk) {
-    return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <Title level={3}>Risk Not Found</Title>
-        <Text type="secondary">The risk you&apos;re looking for doesn&apos;t exist or has been deleted.</Text>
-        <br />
-        <Button type="primary" onClick={() => router.push('/risk')} style={{ marginTop: 16 }}>
-          Back to Risk Management
-        </Button>
-      </div>
-    )
+    return <EmptyState type="risks" title="Risk not found" description="The selected risk does not exist or has been deleted." action={{ text: "Back to risk management", onClick: () => router.push('/risk') }} />
   }
 
   return (
@@ -111,16 +102,17 @@ export default function RiskDetailPage() {
         </Space>
       </div>
 
+      <PageHeader
+        eyebrow="RISK & RESILIENCE"
+        title={risk.title}
+        description={`Risk ${risk.risk_id} · Review ownership, treatment, controls and exposure.`}
+        icon={<SafetyOutlined />}
+      />
+
       <Row gutter={[24, 24]}>
         {/* Main Risk Information */}
         <Col xs={24} lg={16}>
           <Card
-            title={
-              <Space>
-                <SafetyOutlined />
-                <Text strong>{risk.title}</Text>
-              </Space>
-            }
             extra={
               <Space>
                 <Button icon={<EditOutlined />} onClick={handleEditRisk}>
