@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react'
 import { Card, Typography, Space, Button, Table, Tag, Progress, Row, Col, Modal, Descriptions, Divider, Form, Input, Select, message } from 'antd'
-import { SafetyOutlined, ArrowLeftOutlined, CheckCircleOutlined, EyeOutlined, EditOutlined } from '@ant-design/icons'
+import { SafetyOutlined, ArrowLeftOutlined, EyeOutlined, EditOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
-import { Breadcrumb, StatusTag, PriorityTag } from '@/components/ui'
+import { Breadcrumb, PageHeader, StatusTag, PriorityTag } from '@/components/ui'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 interface MitigationAction {
   task: string
@@ -199,13 +199,12 @@ export default function RiskMitigationPage() {
         </Space>
       </div>
 
-      <Title level={2}>
-        <CheckCircleOutlined style={{ marginRight: 8 }} />
-        Risk Mitigation Plans
-      </Title>
-      <Text type="secondary">
-        Track and manage risk treatment actions and mitigation strategies
-      </Text>
+      <PageHeader
+        eyebrow="RISK & RESILIENCE"
+        title="Risk mitigation plans"
+        description="Track and manage risk treatment actions and mitigation strategies."
+        icon={<SafetyOutlined />}
+      />
 
       {/* Summary Cards */}
       <Row gutter={[16, 16]} style={{ marginTop: 24, marginBottom: 24 }}>
