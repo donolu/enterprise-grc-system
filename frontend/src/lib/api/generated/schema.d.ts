@@ -5233,6 +5233,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tenant-tax-profile/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Read and update the current tenant's billing and tax profile. */
+        get: operations["tenant_tax_profile_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Read and update the current tenant's billing and tax profile. */
+        patch: operations["tenant_tax_profile_partial_update"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5611,6 +5629,14 @@ export interface components {
         BulkVendorCreateRequest: {
             vendors: components["schemas"]["VendorCreateUpdateRequest"][];
         };
+        /**
+         * @description * `individual` - Individual
+         *     * `business` - Business
+         *     * `charity` - Charity
+         *     * `public_body` - Public body
+         * @enum {string}
+         */
+        BusinessTypeEnum: "individual" | "business" | "charity" | "public_body";
         CalendarAuditLog: {
             readonly id: number;
             readonly action: components["schemas"]["CalendarAuditLogActionEnum"];
@@ -8301,6 +8327,13 @@ export interface components {
             email_sender_address?: string;
             email_reply_to?: string;
         };
+        PatchedTenantTaxProfileRequest: {
+            /** @description ISO 3166-1 alpha-2 country code used for billing and tax calculation. */
+            billing_country?: string;
+            business_type?: components["schemas"]["BusinessTypeEnum"] | components["schemas"]["BlankEnum"];
+            tax_identifier?: string;
+            tax_identifier_type?: components["schemas"]["TaxIdentifierTypeEnum"] | components["schemas"]["BlankEnum"];
+        };
         /** @description Serializer for training categories. */
         PatchedTrainingCategoryRequest: {
             name?: string;
@@ -10104,6 +10137,21 @@ export interface components {
          * @enum {string}
          */
         TaskTypeEnum: "contract_renewal" | "contract_renegotiation" | "security_review" | "compliance_assessment" | "performance_review" | "risk_assessment" | "audit" | "certification_renewal" | "policy_review" | "onboarding" | "offboarding" | "data_processing_agreement" | "insurance_verification" | "financial_review" | "custom";
+        /**
+         * @description * `unknown` - Unknown
+         *     * `pending` - Pending
+         *     * `valid` - Valid
+         *     * `invalid` - Invalid
+         * @enum {string}
+         */
+        TaxIdentifierStatusEnum: "unknown" | "pending" | "valid" | "invalid";
+        /**
+         * @description * `vat` - VAT
+         *     * `gst` - GST
+         *     * `other` - Other
+         * @enum {string}
+         */
+        TaxIdentifierTypeEnum: "vat" | "gst" | "other";
         /** @description Serializer for imported template and sample documents. */
         TemplateDocument: {
             readonly id: number;
@@ -10237,6 +10285,16 @@ export interface components {
             readonly sender_email_verified: boolean;
             /** Format: date-time */
             readonly sender_email_verified_at: string;
+        };
+        TenantTaxProfile: {
+            /** @description ISO 3166-1 alpha-2 country code used for billing and tax calculation. */
+            billing_country?: string;
+            business_type?: components["schemas"]["BusinessTypeEnum"] | components["schemas"]["BlankEnum"];
+            tax_identifier?: string;
+            tax_identifier_type?: components["schemas"]["TaxIdentifierTypeEnum"] | components["schemas"]["BlankEnum"];
+            readonly tax_identifier_status: components["schemas"]["TaxIdentifierStatusEnum"];
+            /** Format: date-time */
+            readonly tax_identifier_validated_at: string | null;
         };
         /** @description Serializer for training categories. */
         TrainingCategory: {
@@ -22846,6 +22904,50 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    tenant_tax_profile_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantTaxProfile"];
+                };
+            };
+        };
+    };
+    tenant_tax_profile_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedTenantTaxProfileRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedTenantTaxProfileRequest"];
+                "multipart/form-data": components["schemas"]["PatchedTenantTaxProfileRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantTaxProfile"];
+                };
             };
         };
     };

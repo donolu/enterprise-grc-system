@@ -5,12 +5,44 @@ from django_tenants.models import TenantMixin, DomainMixin
 
 
 class Tenant(TenantMixin):
+    BUSINESS_TYPE_CHOICES = [
+        ("individual", "Individual"),
+        ("business", "Business"),
+        ("charity", "Charity"),
+        ("public_body", "Public body"),
+    ]
+    TAX_IDENTIFIER_TYPE_CHOICES = [
+        ("vat", "VAT"),
+        ("gst", "GST"),
+        ("other", "Other"),
+    ]
+    TAX_IDENTIFIER_STATUS_CHOICES = [
+        ("unknown", "Unknown"),
+        ("pending", "Pending"),
+        ("valid", "Valid"),
+        ("invalid", "Invalid"),
+    ]
+
     name = models.CharField(max_length=200)
     slug = models.SlugField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     # Billing information
     stripe_customer_id = models.CharField(max_length=255, blank=True, null=True)
+    billing_country = models.CharField(
+        max_length=2,
+        blank=True,
+        help_text="ISO 3166-1 alpha-2 country code used for billing and tax calculation.",
+    )
+    business_type = models.CharField(max_length=20, choices=BUSINESS_TYPE_CHOICES, blank=True)
+    tax_identifier = models.CharField(max_length=100, blank=True)
+    tax_identifier_type = models.CharField(
+        max_length=20, choices=TAX_IDENTIFIER_TYPE_CHOICES, blank=True
+    )
+    tax_identifier_status = models.CharField(
+        max_length=20, choices=TAX_IDENTIFIER_STATUS_CHOICES, default="unknown"
+    )
+    tax_identifier_validated_at = models.DateTimeField(null=True, blank=True)
     current_plan = models.CharField(
         max_length=20,
         default="free",
