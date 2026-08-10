@@ -12,3 +12,5 @@ shell:
 	docker compose exec web python manage.py shell_plus || docker compose exec web python manage.py shell
 test:
 	docker compose exec web pytest -q
+setup-hooks:
+	python -m pre_commit install --install-hooks
