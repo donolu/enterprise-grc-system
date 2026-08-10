@@ -292,7 +292,7 @@ export default function CreateAssessmentPage() {
 
       <PageHeader
         eyebrow="ASSURANCE PROGRAMME"
-        title="Create assessment"
+        title="Create New Assessment"
         description="Set up a risk, vendor, or security assessment and define its scope."
         icon={<SafetyOutlined />}
       />
