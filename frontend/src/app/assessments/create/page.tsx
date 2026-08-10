@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, Typography, Space, Button, Row, Col, Form, Input, Select, DatePicker, Radio, Divider, Steps, message } from 'antd'
 import { SafetyOutlined, ArrowLeftOutlined, CheckOutlined } from '@ant-design/icons'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Breadcrumb } from '@/components/ui'
+import { Breadcrumb, PageHeader } from '@/components/ui'
 import { riskService, type Risk } from '@/lib/services/riskService'
 import { vendorService, type Vendor } from '@/lib/services/vendorService'
 
@@ -290,6 +290,13 @@ export default function CreateAssessmentPage() {
         ]}
       />
 
+      <PageHeader
+        eyebrow="ASSURANCE PROGRAMME"
+        title="Create assessment"
+        description="Set up a risk, vendor, or security assessment and define its scope."
+        icon={<SafetyOutlined />}
+      />
+
       <div style={{ marginBottom: 24 }}>
         <Space>
           <Button icon={<ArrowLeftOutlined />} onClick={() => router.back()}>
@@ -299,11 +306,6 @@ export default function CreateAssessmentPage() {
       </div>
 
       <Card style={{ maxWidth: 900, margin: '0 auto' }}>
-        <Title level={2} style={{ textAlign: 'center', marginBottom: 32 }}>
-          <SafetyOutlined style={{ marginRight: 8 }} />
-          Create New Assessment
-        </Title>
-
         <Steps
           current={currentStep}
           items={steps.map((item) => ({ title: item.title }))}
