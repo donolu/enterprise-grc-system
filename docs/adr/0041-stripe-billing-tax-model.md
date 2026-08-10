@@ -100,6 +100,9 @@ Until these gates are complete, the product must describe Stripe Tax as a
 calculation and evidence service, not as a substitute for tax registration,
 filing or remittance advice.
 
+The operational ownership, evidence-retention and release checklist are
+defined in [Stripe Tax Remittance Operations](../operations/stripe-tax-remittance.md).
+
 VAT identifier validation must be treated as an external verification result with a timestamp and provider status; it must not be treated as proof of registration indefinitely. Reverse-charge treatment must be decided from the validated customer and transaction context, not from a client-supplied flag alone.
 
 ## Consequences
