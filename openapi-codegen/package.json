@@ -1,0 +1,13 @@
+{
+  "name": "enterprise-grc-openapi-codegen",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pinned toolchain for generating the frontend OpenAPI declaration file",
+  "scripts": {
+    "generate": "openapi-typescript ../app/schema.yml -o ../frontend/src/lib/api/generated/schema.d.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.6.3"
+  }
+}

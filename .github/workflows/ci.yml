@@ -362,6 +362,10 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Install OpenAPI generator dependencies
+      run: npm ci
+      working-directory: ./openapi-codegen
+
     - name: Verify generated OpenAPI types
       run: npm run verify:api-types
 
