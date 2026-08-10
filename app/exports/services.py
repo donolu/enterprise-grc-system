@@ -70,6 +70,14 @@ EXPORT_COVERAGE = [
         ],
     },
     {
+        "module": "billing_tax",
+        "label": "Invoice and tax evidence for finance reconciliation",
+        "formats": ["xlsx", "csv_zip"],
+        "sheets": [
+            {"model": "core.InvoiceEvidence", "worksheet": "Invoice tax evidence"},
+        ],
+    },
+    {
         "module": "frameworks",
         "label": "Frameworks, controls, assessments, evidence and templates",
         "formats": ["xlsx", "csv_zip"],
