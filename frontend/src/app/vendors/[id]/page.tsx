@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useCallback, useState, useEffect } from 'react'
-import { Card, Typography, Space, Button, Row, Col, Descriptions, Tag, Progress, Divider, message, Modal, Form, Input, Avatar } from 'antd'
+import { Card, Typography, Space, Button, Row, Col, Descriptions, Tag, Progress, Divider, message, Modal, Form, Input } from 'antd'
 import { TeamOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined, GlobalOutlined } from '@ant-design/icons'
 import { useRouter, useParams } from 'next/navigation'
-import { Breadcrumb, StatusTag, PriorityTag, Loading } from '@/components/ui'
+import { Breadcrumb, EmptyState, PageHeader, StatusTag, PriorityTag, Loading } from '@/components/ui'
 import { vendorService, type Vendor } from '@/lib/services/vendorService'
 
 const { Title, Text, Paragraph } = Typography
@@ -82,16 +82,7 @@ export default function VendorDetailPage() {
   }
 
   if (!vendor) {
-    return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <Title level={3}>Vendor Not Found</Title>
-        <Text type="secondary">The vendor you&apos;re looking for doesn&apos;t exist or has been deleted.</Text>
-        <br />
-        <Button type="primary" onClick={() => router.push('/vendors')} style={{ marginTop: 16 }}>
-          Back to Vendor Management
-        </Button>
-      </div>
-    )
+    return <EmptyState type="vendors" title="Vendor not found" description="The selected vendor does not exist or has been deleted." action={{ text: "Back to vendor management", onClick: () => router.push('/vendors') }} />
   }
 
   const typeLabels: { [key: string]: string } = {
@@ -120,25 +111,17 @@ export default function VendorDetailPage() {
         </Space>
       </div>
 
+      <PageHeader
+        eyebrow="THIRD-PARTY ASSURANCE"
+        title={vendor.name}
+        description={`Vendor ${vendor.vendor_id} · Review profile, risk and assurance details.`}
+        icon={<TeamOutlined />}
+      />
+
       <Row gutter={[24, 24]}>
         {/* Main Vendor Information */}
         <Col xs={24} lg={16}>
           <Card
-            title={
-              <Space>
-                <Avatar size="large" style={{ backgroundColor: '#2F6FED' }}>
-                  {vendor.name.substring(0, 2).toUpperCase()}
-                </Avatar>
-                <div>
-                  <Text strong style={{ fontSize: '18px' }}>{vendor.name}</Text>
-                  <br />
-                  <Text type="secondary">{vendor.vendor_id}</Text>
-                  {vendor.legal_name && vendor.legal_name !== vendor.name && (
-                    <><br /><Text type="secondary" style={{ fontSize: '12px' }}>Legal: {vendor.legal_name}</Text></>
-                  )}
-                </div>
-              </Space>
-            }
             extra={
               <Space>
                 <Button icon={<EditOutlined />} onClick={handleEditVendor}>

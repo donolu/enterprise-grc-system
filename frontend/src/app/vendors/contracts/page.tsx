@@ -4,9 +4,9 @@ import React from 'react'
 import { Card, Typography, Space, Button, Table, Tag } from 'antd'
 import { TeamOutlined, ArrowLeftOutlined, ClockCircleOutlined, WarningOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
-import { Breadcrumb } from '@/components/ui'
+import { Breadcrumb, PageHeader } from '@/components/ui'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 export default function VendorContractsPage() {
   const router = useRouter()
@@ -110,13 +110,12 @@ export default function VendorContractsPage() {
         </Space>
       </div>
 
-      <Title level={2}>
-        <ClockCircleOutlined style={{ marginRight: 8 }} />
-        Contract Management
-      </Title>
-      <Text type="secondary">
-        Track vendor contracts, renewals, and expirations
-      </Text>
+      <PageHeader
+        eyebrow="THIRD-PARTY ASSURANCE"
+        title="Contract management"
+        description="Track vendor contracts, renewals, and expirations."
+        icon={<ClockCircleOutlined />}
+      />
 
       <Card style={{ marginTop: 24 }}>
         <Table
