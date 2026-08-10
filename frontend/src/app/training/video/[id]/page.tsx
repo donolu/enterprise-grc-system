@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, Typography, Button, Tag, Row, Col, Progress, message, Spin } from 'antd'
+import { Card, Typography, Button, Tag, Row, Col, Progress, message } from 'antd'
 import {
   ArrowLeftOutlined,
   PlayCircleOutlined,
@@ -12,8 +12,9 @@ import {
   InfoCircleOutlined
 } from '@ant-design/icons'
 import { api } from '@/lib/api'
+import { EmptyState, Loading, PageHeader } from '@/components/ui'
 
-const { Title, Text, Paragraph } = Typography
+const { Text, Paragraph } = Typography
 
 interface TrainingVideo {
   id: string
@@ -162,20 +163,11 @@ export default function VideoPlayerPage() {
   }
 
   if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: 16 }}>Loading video...</div>
-      </div>
-    )
+    return <Loading message="Loading video..." />
   }
 
   if (!video) {
-    return (
-      <div style={{ textAlign: 'center', padding: '50px' }}>
-        <Text>Video not found</Text>
-      </div>
-    )
+    return <EmptyState type="training" title="Video not found" description="This training video is unavailable or may have been removed." />
   }
 
   return (
@@ -192,12 +184,18 @@ export default function VideoPlayerPage() {
         </Button>
       </div>
 
+      <PageHeader
+        eyebrow="SECURITY AWARENESS"
+        title={video.title}
+        description={video.description || 'Training video'}
+        icon={<PlayCircleOutlined />}
+      />
+
       <Row gutter={[24, 24]}>
         {/* Video Player */}
         <Col xs={24} lg={16}>
           <Card>
             <div style={{ marginBottom: 16 }}>
-              <Title level={3}>{video.title}</Title>
               <div style={{ marginBottom: 16 }}>
                 <Tag
                   color={video.category_details.color}
