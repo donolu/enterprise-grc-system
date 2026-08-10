@@ -34,9 +34,7 @@ class Tenant(TenantMixin):
         blank=True,
         help_text="ISO 3166-1 alpha-2 country code used for billing and tax calculation.",
     )
-    business_type = models.CharField(
-        max_length=20, choices=BUSINESS_TYPE_CHOICES, blank=True
-    )
+    business_type = models.CharField(max_length=20, choices=BUSINESS_TYPE_CHOICES, blank=True)
     tax_identifier = models.CharField(max_length=100, blank=True)
     tax_identifier_type = models.CharField(
         max_length=20, choices=TAX_IDENTIFIER_TYPE_CHOICES, blank=True
