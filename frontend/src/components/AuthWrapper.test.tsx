@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AuthWrapper from "./AuthWrapper";
 
@@ -17,6 +18,10 @@ vi.mock("@/lib/auth", () => ({
   getAccessToken: () => accessToken,
   refresh: () => refreshMock(),
   setAccessToken: (token: string | null) => setAccessTokenMock(token),
+}));
+
+vi.mock("./AppLayout", () => ({
+  default: ({ children }: { children: ReactNode }) => <div data-testid="app-layout">{children}</div>,
 }));
 
 describe("AuthWrapper", () => {
