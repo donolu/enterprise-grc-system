@@ -49,6 +49,57 @@ The implementation will proceed in separate, testable slices:
 3. Reconcile invoice and tax metadata from signed, idempotent webhooks.
 4. Provide finance/admin exports containing invoice and tax evidence references, without sensitive payment payloads.
 
+## Checkout safeguards and known trade-offs
+
+The Stripe-hosted Checkout flow will collect a billing address and, where
+applicable, a tax identifier. This deliberately sends those values to Stripe;
+the application does not receive or persist the tax identifier entered in
+Checkout. The tenant must document Stripe as a billing and tax-data processor
+in its privacy and data-processing notices.
+
+The following behaviours are intentional and must be visible in the product
+and support documentation:
+
+- A required billing address can add friction to checkout.
+- `customer_update[address] = auto` allows the latest Checkout address to
+  replace the saved Stripe Customer address.
+- Stripe does not display tax-ID collection when the Customer already has a
+  tax ID; the billing profile and Stripe Customer must therefore remain
+  reconcilable.
+- `automatic_tax` calculates tax only for jurisdictions and products that are
+  configured in Stripe Tax. Enabling the Checkout flag is not evidence that
+  the business is registered or compliant.
+- Stripe Tax calculation and reporting do not, by themselves, transfer the
+  business's responsibility for VAT returns or remittance.
+
+## Firm follow-up sequence
+
+These are release gates for the remaining #177 work, in order:
+
+1. **Stripe Tax readiness** — configure UK registration, product tax codes,
+   tax behaviour and seller details in the Stripe account; add a production
+   readiness check that blocks tax-enabled release when registration is
+   missing.
+2. **Tax-profile synchronisation** — reconcile the tenant profile with the
+   Stripe Customer, record provider status and validation timestamps, and
+   handle replacement or removal of an existing tax ID without logging its
+   value.
+3. **Invoice reconciliation** — consume signed, idempotent invoice and
+   subscription webhooks; persist invoice ID, status, currency, taxable amount,
+   tax amount, tax treatment and hosted-invoice URL, with refund and credit
+   note handling.
+4. **Finance and admin evidence** — provide exports of invoice and tax-evidence
+   references, reconciliation failures and refund adjustments. Exports must
+   exclude payment methods, complete webhook payloads and raw secrets.
+5. **Remittance operations** — document UK VAT return ownership, filing
+   frequency, evidence retention and refund amendments. Reassess Stripe filing
+   partners or a merchant-of-record provider before material international
+   expansion.
+
+Until these gates are complete, the product must describe Stripe Tax as a
+calculation and evidence service, not as a substitute for tax registration,
+filing or remittance advice.
+
 VAT identifier validation must be treated as an external verification result with a timestamp and provider status; it must not be treated as proof of registration indefinitely. Reverse-charge treatment must be decided from the validated customer and transaction context, not from a client-supplied flag alone.
 
 ## Consequences
@@ -58,4 +109,3 @@ VAT identifier validation must be treated as an external verification result wit
 - The business remains responsible for VAT registration, returns and remittance while Stripe supplies calculation and evidence capabilities.
 - Tax configuration, VAT registration status and invoice evidence become part of the audited billing domain.
 - The product must not promise global tax compliance until registrations, evidence retention and reporting obligations for each market are explicitly assessed.
-

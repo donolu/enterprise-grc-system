@@ -6,6 +6,16 @@ from core.models import Tenant, Plan, Subscription, Document
 User = get_user_model()
 
 
+def stripe_checkout_tax_parameters() -> dict[str, object]:
+    """Return the Stripe Checkout settings required for automatic tax collection."""
+    return {
+        "automatic_tax": {"enabled": True},
+        "billing_address_collection": "required",
+        "tax_id_collection": {"enabled": True},
+        "customer_update": {"address": "auto", "name": "auto"},
+    }
+
+
 class PlanEnforcementService:
     """
     Service class for checking plan limits and features.

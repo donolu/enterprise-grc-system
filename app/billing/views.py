@@ -26,6 +26,7 @@ from .audit import (
     billing_changed_values,
     snapshot_subscription,
 )
+from .services import stripe_checkout_tax_parameters
 
 logger = logging.getLogger(__name__)
 
@@ -212,6 +213,7 @@ class BillingViewSet(viewsets.ViewSet):
                     success_url=f"{settings.SITE_DOMAIN}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
                     cancel_url=f"{settings.SITE_DOMAIN}/billing/cancel",
                     metadata={"tenant_id": tenant.id, "plan_id": plan.id},
+                    **stripe_checkout_tax_parameters(),
                 )
 
             return Response({"checkout_url": session.url, "session_id": session.id})
