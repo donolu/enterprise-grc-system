@@ -13,11 +13,11 @@ from django.views import View
 from django_tenants.utils import schema_context
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 
-from core.models import Tenant, Plan, Subscription, BillingEvent
+from core.models import InvoiceEvidence, Tenant, Plan, Subscription, BillingEvent
 from .serializers import PlanSerializer, SubscriptionSerializer
 from .entitlements import MODULE_BY_KEY
 from .tenant_access import get_public_tenant
@@ -414,10 +414,19 @@ class StripeWebhookView(View):
             logger.error("Invalid signature in webhook")
             return HttpResponse(status=400)
 
-        # Log the event
-        billing_event = BillingEvent.objects.create(
-            stripe_event_id=event["id"], event_type=event["type"], data=event["data"]
-        )
+        # Persist the event before handling it so delivery is auditable and can
+        # be recognised when Stripe retries the same event.
+        try:
+            billing_event, created = BillingEvent.objects.get_or_create(
+                stripe_event_id=event["id"],
+                defaults={"event_type": event["type"], "data": event["data"]},
+            )
+        except Exception:
+            logger.exception("Unable to persist Stripe event %s", event["id"])
+            return HttpResponse(status=500)
+
+        if not created and billing_event.processed:
+            return HttpResponse(status=200)
 
         try:
             if event["type"] == "checkout.session.completed":
@@ -434,9 +443,14 @@ class StripeWebhookView(View):
 
             elif event["type"] == "invoice.payment_succeeded":
                 self._handle_payment_succeeded(event["data"]["object"], event["id"])
+                self._handle_invoice_event(event["data"]["object"], event["id"])
 
             elif event["type"] == "invoice.payment_failed":
                 self._handle_payment_failed(event["data"]["object"], event["id"])
+                self._handle_invoice_event(event["data"]["object"], event["id"])
+
+            elif event["type"].startswith("invoice."):
+                self._handle_invoice_event(event["data"]["object"], event["id"])
 
             billing_event.processed = True
             billing_event.processed_at = datetime.now()
@@ -449,6 +463,52 @@ class StripeWebhookView(View):
             return HttpResponse(status=500)
 
         return HttpResponse(status=200)
+
+    def _handle_invoice_event(self, invoice, event_id):
+        """Upsert redacted invoice and tax evidence from a Stripe event."""
+        subscription_id = invoice.get("subscription")
+        subscription = None
+        if subscription_id:
+            subscription = (
+                Subscription.objects.filter(stripe_subscription_id=subscription_id)
+                .select_related("tenant")
+                .first()
+            )
+
+        customer_id = invoice.get("customer") or ""
+        tenant = (
+            subscription.tenant
+            if subscription
+            else Tenant.objects.filter(stripe_customer_id=customer_id).first()
+        )
+        if tenant is None:
+            logger.error("No tenant found for Stripe invoice %s", invoice.get("id"))
+            return
+
+        automatic_tax = invoice.get("automatic_tax") or {}
+        tax_amount = sum(int(item.get("amount") or 0) for item in invoice.get("total_taxes", []))
+        InvoiceEvidence.objects.update_or_create(
+            stripe_invoice_id=invoice["id"],
+            defaults={
+                "tenant": tenant,
+                "subscription": subscription,
+                "stripe_customer_id": customer_id,
+                "invoice_number": invoice.get("number") or "",
+                "status": invoice.get("status") or "unknown",
+                "currency": invoice.get("currency") or "",
+                "subtotal": int(invoice.get("subtotal") or 0),
+                "tax_amount": tax_amount,
+                "total": int(invoice.get("total") or 0),
+                "amount_due": int(invoice.get("amount_due") or 0),
+                "amount_paid": int(invoice.get("amount_paid") or 0),
+                "hosted_invoice_url": invoice.get("hosted_invoice_url") or "",
+                "invoice_pdf": invoice.get("invoice_pdf") or "",
+                "tax_status": automatic_tax.get("status") or "",
+                "period_start": _stripe_datetime(invoice.get("period_start")),
+                "period_end": _stripe_datetime(invoice.get("period_end")),
+                "source_event_id": event_id,
+            },
+        )
 
     def _handle_checkout_completed(self, session, event_id):
         """Handle successful checkout completion."""
@@ -639,3 +699,9 @@ class StripeWebhookView(View):
         except Plan.DoesNotExist:
             logger.error(f"No plan found for Stripe price {price_id}")
             return Plan.objects.get(slug="free")  # Fallback to free plan
+
+
+def _stripe_datetime(value):
+    if not value:
+        return None
+    return datetime.fromtimestamp(value, tz=UTC)
