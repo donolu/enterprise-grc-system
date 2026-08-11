@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Layout, Menu, Avatar, Typography, Dropdown, Space, Switch, Badge } from "antd";
+import { Layout, Menu, Avatar, Typography, Dropdown, Space, Switch, message } from "antd";
 import {
   HomeOutlined,
   CheckSquareOutlined,
@@ -15,20 +15,23 @@ import {
   BulbFilled,
   UserOutlined,
   LogoutOutlined,
-  BellOutlined,
   DatabaseOutlined,
   QuestionCircleOutlined
 } from "@ant-design/icons";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTheme } from "@/theme";
 import { SearchBar } from "@/components/ui";
 import { getCurrentSubscription } from "@/lib/services/billingService";
+import { checkSession, logout } from "@/lib/auth";
 
 const { Header, Sider, Content } = Layout;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { mode, toggleMode } = useTheme();
+  const router = useRouter();
   const [enabledModules, setEnabledModules] = useState<string[] | null>(null);
+  const [user, setUser] = useState<{ first_name?: string; last_name?: string; email?: string } | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -43,6 +46,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    checkSession()
+      .then((session) => {
+        if (mounted) setUser(session);
+      })
+      .catch(() => {
+        if (mounted) setUser(null);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      router.replace("/login");
+      router.refresh();
+    } catch {
+      message.error("We could not end this session. Please try again.");
+    }
+  };
 
   const menuItems = useMemo(() => {
     const allItems = [
@@ -66,7 +93,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     {
       key: 'profile',
       icon: <UserOutlined />,
-      label: 'Profile Settings',
+      label: <Link href="/account/profile">Profile settings</Link>,
     },
     {
       key: 'theme',
@@ -94,15 +121,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       icon: <LogoutOutlined />,
       label: 'Sign Out',
       danger: true,
+      onClick: () => void handleSignOut(),
     },
   ];
 
-  const tenantMenuItems = [
-    { key: "tenant", label: "Switch Tenant", disabled: true },
-    { key: 'div2', type: 'divider' as const },
-    { key: "acme", label: "Acme Corp" },
-    { key: "demo", label: "Demo Company", disabled: true },
-  ];
+  const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "Account";
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -166,28 +196,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           <div style={{ marginLeft: "auto" }}>
             <Space size={20}>
-              <Badge count={3}>
-                <BellOutlined style={{
-                  fontSize: 18,
-                  color: mode === 'dark' ? '#CBD5E1' : '#64748B',
-                  cursor: 'pointer'
-                }} />
-              </Badge>
-
-              <Dropdown
-                menu={{ items: tenantMenuItems }}
-                placement="bottomRight"
-                trigger={['click']}
-              >
-                <a style={{
-                  color: mode === 'dark' ? '#F8FAFC' : '#0F172A',
-                  fontWeight: 500,
-                  textDecoration: 'none'
-                }}>
-                  Acme Corp ▾
-                </a>
-              </Dropdown>
-
               <Dropdown
                 menu={{ items: userMenuItems }}
                 placement="bottomRight"
@@ -201,7 +209,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   }}
                   size={36}
                 >
-                  AC
+                  {initials || <UserOutlined />}
                 </Avatar>
               </Dropdown>
             </Space>

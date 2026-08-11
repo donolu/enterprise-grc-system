@@ -187,7 +187,7 @@ export default function RiskPage() {
 
   // Handle Create Assessment
   const handleCreateAssessment = () => {
-    router.push('/assessments/create')
+    router.push('/assessments')
   }
 
   // Handle Risk ID click (navigate to risk details)

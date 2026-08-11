@@ -156,6 +156,25 @@ export async function mockAuthenticatedGrcApi(page: Page) {
       return;
     }
 
+    if (path === "/api/auth/profile/" && request.method() === "GET") {
+      await fulfilJson(route, {
+        email: "user@example.com",
+        first_name: "Test",
+        last_name: "User",
+      });
+      return;
+    }
+
+    if (path === "/api/auth/profile/" && request.method() === "PATCH") {
+      await fulfilJson(route, await request.postDataJSON());
+      return;
+    }
+
+    if (path === "/api/auth/logout/" && request.method() === "POST") {
+      await fulfilJson(route, { message: "Logout successful" });
+      return;
+    }
+
     if (path === "/api/billing/current_subscription/" && request.method() === "GET") {
       await fulfilJson(route, {
         enabled_module_keys: [
