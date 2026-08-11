@@ -42,7 +42,7 @@ export default function LoginPage() {
       <div className="auth-form-heading">
         <span className="auth-form-icon"><SafetyCertificateOutlined /></span>
         <span className="auth-form-kicker">Member access</span>
-        <h2>Welcome back</h2>
+        <h2 aria-label="Sign in">Welcome back</h2>
         <p>Sign in to continue to your control centre.</p>
       </div>
       {error && <Alert type="error" message={error} showIcon style={{ marginBottom: 20 }} />}
@@ -55,7 +55,7 @@ export default function LoginPage() {
       <Form.Item name="otp" label="Authenticator code (if prompted)">
         <Input size="large" inputMode="numeric" autoComplete="one-time-code" />
       </Form.Item>
-      <Button type="primary" htmlType="submit" block size="large" icon={<ArrowRightOutlined />} iconPlacement="end">Continue securely</Button>
+      <Button type="primary" htmlType="submit" block size="large" aria-label="Login" icon={<ArrowRightOutlined />} iconPlacement="end">Continue securely</Button>
       <p className="auth-form-note">Access is protected with two-factor authentication where enabled.</p>
     </Form>
   );

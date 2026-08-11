@@ -16,13 +16,13 @@ body { margin: 0; font-family: var(--font-inter), system-ui, -apple-system, Blin
 .auth-form-icon { display: grid; width: 42px; height: 42px; margin-bottom: 25px; place-items: center; border: 1px solid #b9dcd4; color: #08756d; background: #e5f3ef; font-size: 19px; }
 .auth-form-kicker { margin: 0 0 11px; color: #08756d; }
 .auth-form h2 { margin: 0; color: #102b2e; font-size: 36px; font-weight: 650; letter-spacing: -.045em; line-height: 1.05; }
-.auth-form-heading p { margin: 12px 0 0; color: #60777a; font-size: 14px; }
+.auth-form-heading p { margin: 12px 0 0; color: #526b68; font-size: 14px; }
 .auth-form .ant-form-item-label > label { color: #304d50; font-size: 12px; font-weight: 650; }
 .auth-form .ant-input-affix-wrapper, .auth-form .ant-input { border-color: #cbdad7; border-radius: 2px; background: #fff; }
 .auth-form .ant-input-affix-wrapper-focused, .auth-form .ant-input:focus { border-color: #0b8f84; box-shadow: 0 0 0 3px rgba(11,143,132,.12); }
 .auth-form .ant-btn { height: 48px; margin-top: 8px; border: 0; border-radius: 2px; background: #0b8f84; box-shadow: none; font-weight: 650; }
 .auth-form .ant-btn:hover { background: #08756d !important; }
-.auth-form-note { margin: 20px 0 0; color: #79908e; font-size: 11px; line-height: 1.5; text-align: center; }
+.auth-form-note { margin: 20px 0 0; color: #4f6865; font-size: 11px; line-height: 1.5; text-align: center; }
 html.dark-mode .auth-shell, html.dark-mode .auth-panel { background: #172426; }
 html.dark-mode .auth-form h2 { color: #e8f2ef; }
 html.dark-mode .auth-form-heading p, html.dark-mode .auth-form-note { color: #a8bfbb; }
