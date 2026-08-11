@@ -45,7 +45,7 @@ export default function LoginPage() {
         <h2 aria-label="Sign in">Welcome back</h2>
         <p>Sign in to continue to your control centre.</p>
       </div>
-      {error && <Alert type="error" message={error} showIcon style={{ marginBottom: 20 }} />}
+      {error && <Alert type="error" title={error} showIcon style={{ marginBottom: 20 }} />}
       <Form.Item name="email" label="Work email" rules={[{ required: true }, { type: "email" }]}>
         <Input size="large" prefix={<MailOutlined />} autoComplete="email" />
       </Form.Item>

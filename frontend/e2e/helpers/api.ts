@@ -141,12 +141,18 @@ export async function mockAuthenticatedGrcApi(page: Page) {
     const path = url.pathname;
 
     if (path === "/api/auth/login/" && request.method() === "POST") {
-      await fulfilJson(route, { access: "test-access-token" });
+      await fulfilJson(route, { message: "Login successful", requires_2fa: false });
       return;
     }
 
-    if (path === "/api/auth/refresh/" && request.method() === "POST") {
-      await fulfilJson(route, { access: "test-access-token" });
+    if (path === "/api/auth/me/" && request.method() === "GET") {
+      await fulfilJson(route, {
+        id: 1,
+        username: "user@example.com",
+        email: "user@example.com",
+        first_name: "Test",
+        last_name: "User",
+      });
       return;
     }
 

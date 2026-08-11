@@ -147,7 +147,7 @@ export default function AdminPage() {
               <Alert
                 type="info"
                 showIcon
-                message="Upload an Axim ZIP pack or a single template file."
+                title="Upload an Axim ZIP pack or a single template file."
                 description="Run a preview first to confirm classification counts before importing into the tenant library."
               />
 

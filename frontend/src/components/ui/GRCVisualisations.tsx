@@ -23,7 +23,7 @@ export function ControlCoverage({ total, automated }: { total: number; automated
         </div>
         <strong className="grc-viz-score">{percentage}%</strong>
       </div>
-      <Progress percent={percentage} showInfo={false} strokeColor="#0b8f84" trailColor="#e5efed" />
+      <Progress percent={percentage} showInfo={false} strokeColor="#0b8f84" railColor="#e5efed" />
       <div className="grc-viz-caption"><span>{automated} automated controls</span><span>{total} total controls</span></div>
     </section>
   );
@@ -39,7 +39,7 @@ export function FrameworkReadiness({ frameworks }: { frameworks: FrameworkReadin
         </div>
         <Text type="secondary">{frameworks.length} frameworks</Text>
       </div>
-      {frameworks.length === 0 ? <div className="grc-viz-empty">No framework assessments yet.</div> : <div className="framework-readiness-list">{frameworks.map((framework) => <div className="framework-readiness-item" key={framework.name}><div className="framework-readiness-label"><strong>{framework.name}</strong><span>{Math.round(framework.completionRate)}%</span></div><Progress percent={Math.round(framework.completionRate)} showInfo={false} strokeColor={framework.completionRate >= 80 ? "#0b8f84" : "#d29c4c"} trailColor="#e9efed" /><div className="framework-readiness-meta"><span>Score {framework.averageScore == null ? "—" : `${Math.round(framework.averageScore)}%`}</span><span>{framework.overdue ?? 0} overdue</span></div></div>)}</div>}
+      {frameworks.length === 0 ? <div className="grc-viz-empty">No framework assessments yet.</div> : <div className="framework-readiness-list">{frameworks.map((framework) => <div className="framework-readiness-item" key={framework.name}><div className="framework-readiness-label"><strong>{framework.name}</strong><span>{Math.round(framework.completionRate)}%</span></div><Progress percent={Math.round(framework.completionRate)} showInfo={false} strokeColor={framework.completionRate >= 80 ? "#0b8f84" : "#d29c4c"} railColor="#e9efed" /><div className="framework-readiness-meta"><span>Score {framework.averageScore == null ? "—" : `${Math.round(framework.averageScore)}%`}</span><span>{framework.overdue ?? 0} overdue</span></div></div>)}</div>}
     </section>
   );
 }

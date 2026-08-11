@@ -1,5 +1,4 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
-import { getAccessToken, setAccessToken, refresh } from "./auth";
 import { getApiBaseUrl } from "./config";
 import { getTenantFromHost } from "./tenant";
 
@@ -32,9 +31,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = getAccessToken();
   const tenant = getTenantFromHost();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
   if (tenant) {
     config.headers["X-Tenancy-Mode"] = "header";
     config.headers["X-Tenant-Id"] = tenant;
@@ -42,40 +39,16 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-let refreshing = false;
-let queue: Array<() => void> = [];
-
 api.interceptors.response.use(
   (res: AxiosResponse) => res,
   async (err: AxiosError) => {
     const original = err.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
 
-    // Handle 401 Unauthorized - attempt token refresh
+    // Sessions are HttpOnly; an expired session must be re-established at login.
     if (err?.response?.status === 401 && original && !original._retry) {
       original._retry = true;
-      if (!refreshing) {
-        refreshing = true;
-        try {
-          const newToken = await refresh(); // calls /auth/refresh, httpOnly cookie provides refresh
-          setAccessToken(newToken);
-          queue.forEach((fn) => fn());
-          queue = [];
-        } catch (refreshError) {
-          // Refresh failed - redirect to login or handle appropriately
-          console.error('Token refresh failed:', refreshError);
-          // Clear any stored tokens
-          setAccessToken('');
-          // In a real app, you might redirect to login here
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login';
-          }
-        } finally {
-          refreshing = false;
-        }
-      }
-      return new Promise((resolve) => {
-        queue.push(() => resolve(api(original)));
-      });
+      if (typeof window !== 'undefined') window.location.href = '/login';
+      return Promise.reject(err);
     }
 
     // Enhanced error handling for different status codes
