@@ -54,7 +54,8 @@ describe("auth helpers", () => {
     );
   });
 
-  it("clears the in-memory token on logout", async () => {
+  it("ends the tenant-scoped session on logout", async () => {
+    window.history.replaceState({}, "", "http://localhost:3000/login?tenant=demo");
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -64,6 +65,10 @@ describe("auth helpers", () => {
       "/api/auth/logout/",
       expect.objectContaining({
         credentials: "include",
+        headers: {
+          "X-Tenancy-Mode": "header",
+          "X-Tenant-Id": "demo",
+        },
         method: "POST",
       }),
     );

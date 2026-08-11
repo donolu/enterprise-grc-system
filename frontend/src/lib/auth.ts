@@ -44,7 +44,17 @@ export async function checkSession() {
 }
 
 export async function logout() {
-  await fetch(`${getApiBaseUrl()}/auth/logout/`, {
-    method: "POST", credentials: "include"
+  const tenant = getTenantFromHost();
+  const headers: Record<string, string> = {};
+  if (tenant) {
+    headers["X-Tenancy-Mode"] = "header";
+    headers["X-Tenant-Id"] = tenant;
+  }
+
+  const response = await fetch(`${getApiBaseUrl()}/auth/logout/`, {
+    method: "POST",
+    credentials: "include",
+    headers,
   });
+  if (!response.ok) throw new Error("Logout failed");
 }
