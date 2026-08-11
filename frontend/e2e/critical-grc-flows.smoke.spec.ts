@@ -9,15 +9,6 @@ async function signIn(page: Page) {
   await expect(page).toHaveURL(/\/$/);
 }
 
-async function chooseSelectOption(page: Page, fieldId: string, option: string) {
-  await page.locator(`#${fieldId}`).click({ force: true });
-  const dropdown = page.locator(".ant-select-dropdown:not(.ant-select-dropdown-hidden)").last();
-  await expect(dropdown).toBeVisible();
-  await dropdown
-    .locator(".ant-select-item-option", { hasText: option })
-    .evaluate((element) => (element as HTMLElement).click());
-}
-
 test("users can acknowledge assigned policies", async ({ page }) => {
   await mockAuthenticatedGrcApi(page);
   await signIn(page);
@@ -62,42 +53,18 @@ test("users can open a vendor profile from the vendor directory", async ({ page 
   await expect(page.getByText("Ada Lovelace")).toBeVisible();
 });
 
-test("users can complete the assessment creation wizard", async ({ page }) => {
+test("assessment and treatment setup never simulate saved work", async ({ page }) => {
   await mockAuthenticatedGrcApi(page);
   await signIn(page);
 
   await page.goto("/assessments/create?tenant=demo");
 
-  await expect(page.getByRole("heading", { name: "Create New Assessment" })).toBeVisible();
-  await expect(page.getByText("Risk Assessment")).toBeVisible();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Assessment setup" })).toBeVisible();
+  await page.getByRole("link", { name: "Import a framework" }).click();
+  await expect(page).toHaveURL(/\/admin$/);
 
-  await page.getByPlaceholder("Enter assessment title").fill("Quarterly risk assessment");
-  await page.getByPlaceholder("Enter assessor name").fill("Ada Lovelace");
-  await page
-    .getByPlaceholder("Describe the assessment scope and objectives")
-    .fill("Review supplier access and control evidence for the quarter.");
-
-  const dateInputs = page.locator(".ant-picker input");
-  await dateInputs.nth(0).fill("2026-07-20");
-  await dateInputs.nth(0).press("Enter");
-  await dateInputs.nth(1).fill("2026-08-20");
-  await dateInputs.nth(1).press("Enter");
-  await page.keyboard.press("Escape");
-
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-
-  await page
-    .getByPlaceholder("Define what will be assessed, boundaries, and exclusions")
-    .fill("Supplier privileged access, approval evidence, and review records.");
-  await chooseSelectOption(page, "methodology", "ISO 27001");
-  await page
-    .getByPlaceholder("Define what constitutes successful completion of this assessment")
-    .fill("All sampled access rights have valid owners and evidence.");
-  await chooseSelectOption(page, "priority", "High");
-
-  await page.getByRole("button", { name: "Create Assessment" }).click();
-
-  await expect(page).toHaveURL(/\/assessments$/);
-  await expect(page.getByRole("heading", { name: "Compliance Assessments" })).toBeVisible();
+  await page.goto("/risk/mitigation?tenant=demo");
+  await expect(page.getByRole("heading", { name: "Risk treatment" })).toBeVisible();
+  await page.getByRole("link", { name: "Open risk register" }).click();
+  await expect(page).toHaveURL(/\/risk$/);
 });
