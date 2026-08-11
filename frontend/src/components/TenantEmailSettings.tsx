@@ -88,7 +88,7 @@ export default function TenantEmailSettings() {
       <Alert
         type="error"
         showIcon
-        message="Email identity settings are unavailable"
+        title="Email identity settings are unavailable"
         description="Your account may not have tenant administrator access."
       />
     );
@@ -161,7 +161,7 @@ export default function TenantEmailSettings() {
               <Alert
                 type={verified ? "success" : "info"}
                 showIcon
-                message={verified ? "Ready for tenant notifications" : "Confirm the sender address"}
+                title={verified ? "Ready for tenant notifications" : "Confirm the sender address"}
                 description={
                   verified
                     ? "The configured address has confirmed ownership."

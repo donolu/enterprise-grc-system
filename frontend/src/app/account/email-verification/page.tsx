@@ -32,7 +32,7 @@ function Confirmation() {
   }
 
   if (state === "error") {
-    return <Alert type="error" showIcon message="Verification failed" description={error} />;
+    return <Alert type="error" showIcon title="Verification failed" description={error} />;
   }
 
   return (

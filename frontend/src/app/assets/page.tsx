@@ -223,7 +223,7 @@ export default function AssetsPage() {
             style={{ marginTop: 16 }}
             type={importSummary.dry_run ? 'info' : 'success'}
             showIcon
-            message={importSummary.dry_run ? 'Import preview ready' : 'Import complete'}
+            title={importSummary.dry_run ? 'Import preview ready' : 'Import complete'}
             description={`Importable: ${importSummary.importable_count ?? 0}. Imported: ${importSummary.imported_count ?? 0}. Updated: ${importSummary.updated_count ?? 0}. Skipped rows: ${importSummary.skipped_count}.`}
           />
         ) : null}

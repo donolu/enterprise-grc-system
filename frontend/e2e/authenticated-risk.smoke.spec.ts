@@ -27,7 +27,6 @@ test("authenticated users can open the risk register with tenant-scoped API requ
   await expect(page.getByRole("cell", { name: "Ada Lovelace" })).toBeVisible();
 
   expect(riskRequestHeaders).toMatchObject({
-    authorization: "Bearer test-access-token",
     "x-tenancy-mode": "header",
     "x-tenant-id": "demo",
   });

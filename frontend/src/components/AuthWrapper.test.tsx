@@ -4,10 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import AuthWrapper from "./AuthWrapper";
 
 const pushMock = vi.fn();
-const refreshMock = vi.fn();
-const setAccessTokenMock = vi.fn();
+const checkSessionMock = vi.fn();
 let pathname = "/";
-let accessToken: string | null = null;
 
 vi.mock("next/navigation", () => ({
   usePathname: () => pathname,
@@ -15,9 +13,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/lib/auth", () => ({
-  getAccessToken: () => accessToken,
-  refresh: () => refreshMock(),
-  setAccessToken: (token: string | null) => setAccessTokenMock(token),
+  checkSession: () => checkSessionMock(),
 }));
 
 vi.mock("./AppLayout", () => ({
@@ -26,15 +22,13 @@ vi.mock("./AppLayout", () => ({
 
 describe("AuthWrapper", () => {
   beforeEach(() => {
-    accessToken = null;
     pathname = "/";
     pushMock.mockClear();
-    refreshMock.mockReset();
-    setAccessTokenMock.mockClear();
+    checkSessionMock.mockReset();
   });
 
-  it("refreshes the access token before rendering protected pages", async () => {
-    refreshMock.mockResolvedValue("refreshed-access");
+  it("checks the current session before rendering protected pages", async () => {
+    checkSessionMock.mockResolvedValue({ id: 1 });
 
     render(
       <AuthWrapper>
@@ -43,14 +37,14 @@ describe("AuthWrapper", () => {
     );
 
     await waitFor(() => {
-      expect(setAccessTokenMock).toHaveBeenCalledWith("refreshed-access");
+      expect(checkSessionMock).toHaveBeenCalled();
     });
     expect(await screen.findByText("Protected content")).toBeInTheDocument();
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it("redirects unauthenticated users away from protected pages when refresh fails", async () => {
-    refreshMock.mockRejectedValue(new Error("Refresh failed"));
+  it("redirects unauthenticated users away from protected pages when the session check fails", async () => {
+    checkSessionMock.mockRejectedValue(new Error("Session check failed"));
 
     render(
       <AuthWrapper>
@@ -77,8 +71,7 @@ describe("AuthWrapper", () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it("redirects authenticated users away from public auth pages", async () => {
-    accessToken = "access-token";
+  it("does not require a session check on public auth pages", async () => {
     pathname = "/login";
 
     render(
@@ -87,8 +80,6 @@ describe("AuthWrapper", () => {
       </AuthWrapper>,
     );
 
-    await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith("/");
-    });
+    expect(checkSessionMock).not.toHaveBeenCalled();
   });
 });

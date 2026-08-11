@@ -1,11 +1,6 @@
 import { getApiBaseUrl } from "./config";
 import { getTenantFromHost } from "./tenant";
 
-let accessToken: string | null = null;
-
-export function setAccessToken(t: string | null) { accessToken = t; }
-export function getAccessToken() { return accessToken; }
-
 export async function login(email: string, password: string, otp?: string) {
   const tenant = getTenantFromHost();
   const headers: Record<string, string> = {
@@ -28,24 +23,28 @@ export async function login(email: string, password: string, otp?: string) {
     }),
   });
   if (!r.ok) throw new Error("Login failed");
-  const data = await r.json();
-  setAccessToken(data.access); // short-lived JWT
-  return data;
+  return r.json();
 }
 
-export async function refresh(): Promise<string> {
-  const r = await fetch(`${getApiBaseUrl()}/auth/refresh/`, {
-    method: "POST",
+export async function checkSession() {
+  const tenant = getTenantFromHost();
+  const headers: Record<string, string> = {};
+  if (tenant) {
+    headers["X-Tenancy-Mode"] = "header";
+    headers["X-Tenant-Id"] = tenant;
+  }
+
+  const r = await fetch(`${getApiBaseUrl()}/auth/me/`, {
+    method: "GET",
     credentials: "include",
+    headers,
   });
-  if (!r.ok) throw new Error("Refresh failed");
-  const data = await r.json();
-  return data.access;
+  if (!r.ok) throw new Error("Session check failed");
+  return r.json();
 }
 
 export async function logout() {
   await fetch(`${getApiBaseUrl()}/auth/logout/`, {
     method: "POST", credentials: "include"
   });
-  setAccessToken(null);
 }
