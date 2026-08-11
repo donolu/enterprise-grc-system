@@ -418,12 +418,12 @@ export default function VendorsPage() {
           <Card hoverable>
             <Space direction="vertical" size={8}>
               <CheckCircleOutlined style={{ fontSize: '24px', color: '#0EB57D' }} />
-              <Text strong>Security Assessment</Text>
+              <Text strong>Assessment catalogue</Text>
               <Text type="secondary" style={{ fontSize: '12px' }}>
-                Conduct vendor security evaluations
+                Import the controls needed before starting supplier reviews
               </Text>
               <Button type="link" style={{ padding: 0 }} onClick={() => router.push('/assessments')}>
-                Start Assessment →
+                Open setup →
               </Button>
             </Space>
           </Card>
@@ -446,12 +446,12 @@ export default function VendorsPage() {
           <Card hoverable>
             <Space direction="vertical" size={8}>
               <WarningOutlined style={{ fontSize: '24px', color: '#E5484D' }} />
-              <Text strong>Risk Assessment</Text>
+              <Text strong>Vendor review readiness</Text>
               <Text type="secondary" style={{ fontSize: '12px' }}>
-                Evaluate vendor risk profiles
+                Prepare the controls used to assess vendor risk
               </Text>
               <Button type="link" style={{ padding: 0 }} onClick={() => router.push('/assessments')}>
-                Assess Risk →
+                Open setup →
               </Button>
             </Space>
           </Card>
