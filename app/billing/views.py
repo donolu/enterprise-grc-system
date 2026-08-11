@@ -19,7 +19,7 @@ from drf_spectacular.types import OpenApiTypes
 
 from core.models import InvoiceEvidence, Tenant, Plan, Subscription, BillingEvent
 from .serializers import PlanSerializer, SubscriptionSerializer
-from .entitlements import MODULE_BY_KEY
+from .entitlements import MODULE_BY_KEY, get_default_modules_for_plan
 from .tenant_access import get_public_tenant
 from .audit import (
     audit_subscription_change,
@@ -97,6 +97,25 @@ class BillingViewSet(viewsets.ViewSet):
     serializer_class = SubscriptionSerializer
     permission_classes = [IsAuthenticated]
 
+    @staticmethod
+    def _get_or_create_free_plan():
+        """Provide the baseline entitlement needed by a newly provisioned tenant."""
+        return Plan.objects.get_or_create(
+            slug="free",
+            defaults={
+                "name": "Free",
+                "description": "Perfect for getting started with basic GRC needs",
+                "price_monthly": 0,
+                "max_users": 3,
+                "max_documents": 50,
+                "max_frameworks": 1,
+                "has_api_access": False,
+                "has_advanced_reporting": False,
+                "has_priority_support": False,
+                "included_modules": get_default_modules_for_plan("free"),
+            },
+        )
+
     @extend_schema(
         summary="Get current subscription",
         description="Retrieve the current tenant's subscription details including plan, status, and billing information.",
@@ -115,7 +134,7 @@ class BillingViewSet(viewsets.ViewSet):
                 subscription = getattr(tenant, "subscription", None)
 
                 if not subscription:
-                    free_plan = Plan.objects.get(slug="free")
+                    free_plan, _ = self._get_or_create_free_plan()
                     subscription = Subscription.objects.create(
                         tenant=tenant,
                         plan=free_plan,

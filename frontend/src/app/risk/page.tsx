@@ -447,12 +447,12 @@ export default function RiskPage() {
           <Card hoverable>
             <Space direction="vertical" size={8}>
               <InfoCircleOutlined style={{ fontSize: '24px', color: '#2F6FED' }} />
-              <Text strong>Risk Reports</Text>
+              <Text strong>Risk Analytics</Text>
               <Text type="secondary" style={{ fontSize: '12px' }}>
-                Generate executive and detailed reports
+                Review executive and detailed risk trends
               </Text>
-              <Button type="link" style={{ padding: 0 }} onClick={() => router.push('/reports')}>
-                Generate Report →
+              <Button type="link" style={{ padding: 0 }} onClick={() => router.push('/analytics')}>
+                Open Analytics →
               </Button>
             </Space>
           </Card>
