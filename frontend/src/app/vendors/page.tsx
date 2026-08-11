@@ -450,7 +450,7 @@ export default function VendorsPage() {
               <Text type="secondary" style={{ fontSize: '12px' }}>
                 Evaluate vendor risk profiles
               </Text>
-              <Button type="link" style={{ padding: 0 }} onClick={() => router.push('/vendors/risk-assessment')}>
+              <Button type="link" style={{ padding: 0 }} onClick={() => router.push('/assessments/create?type=vendor')}>
                 Assess Risk →
               </Button>
             </Space>
