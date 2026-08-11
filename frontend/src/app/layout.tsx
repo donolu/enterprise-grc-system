@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import AppLayout from "@/components/AppLayout";
 import AuthWrapper from "@/components/AuthWrapper";
 import { AppTheme } from "@/theme";
 import ThemeScript from "@/components/ThemeScript";
@@ -28,12 +27,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.variable}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.variable} suppressHydrationWarning>
         <ThemeScript />
         <AppTheme>
           <AuthWrapper>
-            <AppLayout>{children}</AppLayout>
+            {children}
           </AuthWrapper>
         </AppTheme>
       </body>

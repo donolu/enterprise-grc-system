@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Form, Input, Button, Alert } from "antd";
+import { ArrowRightOutlined, LockOutlined, MailOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
 import { login } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 
@@ -37,19 +38,25 @@ export default function LoginPage() {
   };
 
   return (
-    <Form layout="vertical" onFinish={onFinish} style={{ maxWidth: 360, margin: "10vh auto" }}>
-      <h1>Sign in</h1>
-      {error && <Alert type="error" message={error} style={{ marginBottom: 12 }} />}
-      <Form.Item name="email" label="Email" rules={[{ required: true }, { type: "email" }]}>
-        <Input />
+    <Form layout="vertical" onFinish={onFinish} className="auth-form">
+      <div className="auth-form-heading">
+        <span className="auth-form-icon"><SafetyCertificateOutlined /></span>
+        <span className="auth-form-kicker">Member access</span>
+        <h2 aria-label="Sign in">Welcome back</h2>
+        <p>Sign in to continue to your control centre.</p>
+      </div>
+      {error && <Alert type="error" message={error} showIcon style={{ marginBottom: 20 }} />}
+      <Form.Item name="email" label="Work email" rules={[{ required: true }, { type: "email" }]}>
+        <Input size="large" prefix={<MailOutlined />} autoComplete="email" />
       </Form.Item>
       <Form.Item name="password" label="Password" rules={[{ required: true }]}>
-        <Input.Password />
+        <Input.Password size="large" prefix={<LockOutlined />} autoComplete="current-password" />
       </Form.Item>
-      <Form.Item name="otp" label="One-Time Code (if prompted)">
-        <Input />
+      <Form.Item name="otp" label="Authenticator code (if prompted)">
+        <Input size="large" inputMode="numeric" autoComplete="one-time-code" />
       </Form.Item>
-      <Button type="primary" htmlType="submit" block>Login</Button>
+      <Button type="primary" htmlType="submit" block size="large" aria-label="Login" icon={<ArrowRightOutlined />} iconPlacement="end">Continue securely</Button>
+      <p className="auth-form-note">Access is protected with two-factor authentication where enabled.</p>
     </Form>
   );
 }

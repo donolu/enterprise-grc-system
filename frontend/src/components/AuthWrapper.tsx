@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getAccessToken, refresh, setAccessToken } from '@/lib/auth';
 import { Spin } from 'antd';
+import AppLayout from './AppLayout';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -66,5 +67,5 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
     );
   }
 
-  return <>{children}</>;
+  return isPublicPage ? <>{children}</> : <AppLayout>{children}</AppLayout>;
 }
