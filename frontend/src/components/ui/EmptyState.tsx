@@ -2,7 +2,6 @@
 import { Button, Typography, Space } from "antd";
 import {
   FileTextOutlined,
-  PlusOutlined,
   InboxOutlined,
   SearchOutlined,
   FilterOutlined,
@@ -240,11 +239,7 @@ export const AssessmentsEmptyState: React.FC<Omit<EmptyStateProps, 'type'>> = (p
   <EmptyState
     {...props}
     type="assessments"
-    action={props.action || {
-      text: "Create Assessment",
-      icon: <PlusOutlined />,
-      onClick: () => console.log("Create assessment clicked")
-    }}
+    action={props.action}
   />
 );
 
@@ -252,11 +247,7 @@ export const RisksEmptyState: React.FC<Omit<EmptyStateProps, 'type'>> = (props) 
   <EmptyState
     {...props}
     type="risks"
-    action={props.action || {
-      text: "Add Risk",
-      icon: <PlusOutlined />,
-      onClick: () => console.log("Add risk clicked")
-    }}
+    action={props.action}
   />
 );
 
@@ -264,11 +255,7 @@ export const VendorsEmptyState: React.FC<Omit<EmptyStateProps, 'type'>> = (props
   <EmptyState
     {...props}
     type="vendors"
-    action={props.action || {
-      text: "Add Vendor",
-      icon: <PlusOutlined />,
-      onClick: () => console.log("Add vendor clicked")
-    }}
+    action={props.action}
   />
 );
 
@@ -276,11 +263,7 @@ export const PoliciesEmptyState: React.FC<Omit<EmptyStateProps, 'type'>> = (prop
   <EmptyState
     {...props}
     type="policies"
-    action={props.action || {
-      text: "Create Policy",
-      icon: <PlusOutlined />,
-      onClick: () => console.log("Create policy clicked")
-    }}
+    action={props.action}
   />
 );
 
@@ -288,11 +271,7 @@ export const TrainingEmptyState: React.FC<Omit<EmptyStateProps, 'type'>> = (prop
   <EmptyState
     {...props}
     type="training"
-    action={props.action || {
-      text: "Upload Content",
-      icon: <PlusOutlined />,
-      onClick: () => console.log("Upload training clicked")
-    }}
+    action={props.action}
   />
 );
 
@@ -300,11 +279,7 @@ export const VulnerabilitiesEmptyState: React.FC<Omit<EmptyStateProps, 'type'>> 
   <EmptyState
     {...props}
     type="vulnerabilities"
-    action={props.action || {
-      text: "Run Scan",
-      icon: <RadarChartOutlined />,
-      onClick: () => console.log("Run scan clicked")
-    }}
+    action={props.action}
   />
 );
 
@@ -312,11 +287,7 @@ export const SearchEmptyState: React.FC<Omit<EmptyStateProps, 'type'>> = (props)
   <EmptyState
     {...props}
     type="search"
-    secondaryAction={props.secondaryAction || {
-      text: "Clear Search",
-      icon: <SearchOutlined />,
-      onClick: () => console.log("Clear search clicked")
-    }}
+    secondaryAction={props.secondaryAction}
   />
 );
 
@@ -324,10 +295,6 @@ export const FilterEmptyState: React.FC<Omit<EmptyStateProps, 'type'>> = (props)
   <EmptyState
     {...props}
     type="filter"
-    secondaryAction={props.secondaryAction || {
-      text: "Clear Filters",
-      icon: <FilterOutlined />,
-      onClick: () => console.log("Clear filters clicked")
-    }}
+    secondaryAction={props.secondaryAction}
   />
 );

@@ -185,8 +185,8 @@ export default function RiskPage() {
     setIsAddRiskModalVisible(true)
   }
 
-  // Handle Create Assessment
-  const handleCreateAssessment = () => {
+  // Assessment creation depends on an imported control catalogue.
+  const handleAssessmentSetup = () => {
     router.push('/assessments')
   }
 
@@ -388,8 +388,8 @@ export default function RiskPage() {
             <Button icon={<PlusOutlined />} onClick={handleAddRisk}>
               Add Risk
             </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateAssessment}>
-              Create Assessment
+            <Button type="primary" onClick={handleAssessmentSetup}>
+              Assessment setup
             </Button>
           </Space>
         }
@@ -419,12 +419,12 @@ export default function RiskPage() {
           <Card hoverable>
             <Space direction="vertical" size={8}>
               <ExclamationCircleOutlined style={{ fontSize: '24px', color: '#E5484D' }} />
-              <Text strong>Risk Assessment</Text>
+              <Text strong>Assessment catalogue</Text>
               <Text type="secondary" style={{ fontSize: '12px' }}>
-                Conduct comprehensive risk evaluations
+                Import the controls needed before assigning assessment work
               </Text>
-              <Button type="link" style={{ padding: 0 }} onClick={handleCreateAssessment}>
-                Start Assessment →
+              <Button type="link" style={{ padding: 0 }} onClick={handleAssessmentSetup}>
+                Open setup →
               </Button>
             </Space>
           </Card>
