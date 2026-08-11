@@ -372,6 +372,27 @@ class TestBillingAPI:
             for module in response.data["module_catalog"]
         )
 
+    def test_current_subscription_provisions_free_plan_when_missing(self, api_client, test_tenant):
+        """A new local tenant can load the shell before plan setup has been run manually."""
+        with schema_context("public"):
+            Plan.objects.filter(slug="free").delete()
+
+        with tenant_context(test_tenant):
+            user = User.objects.create_user(
+                username="free-plan-user",
+                email="free-plan-user@example.com",
+                password="testpass123",
+            )
+
+        api_client.defaults["HTTP_HOST"] = f"{test_tenant.schema_name}.localhost"
+        api_client.force_authenticate(user=user)
+
+        response = api_client.get("/api/billing/current_subscription/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["plan"]["slug"] == "free"
+        assert response.data["enabled_module_keys"] == ["frameworks"]
+
     def test_single_module_trial_blocks_direct_api_bypass(self, test_tenant):
         """Test trial tenants cannot reach APIs outside the selected module."""
         with schema_context("public"):
