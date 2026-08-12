@@ -189,7 +189,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             : '0 2px 8px rgba(0,0,0,0.06)'
         }}>
           <SearchBar
-            placeholder="Search controls, vendors, risks, policies..."
+            placeholder="Search risks, vendors and training..."
             style={{ maxWidth: 440 }}
             size="large"
           />

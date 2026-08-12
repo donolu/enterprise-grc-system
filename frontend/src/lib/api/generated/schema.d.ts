@@ -5181,6 +5181,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Search records in the current tenant that have a canonical product route. */
+        get: operations["search_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tenant-email-settings/": {
         parameters: {
             query?: never;
@@ -6905,6 +6922,13 @@ export interface components {
             push_service?: components["schemas"]["PushServiceEnum"];
         };
         /**
+         * @description * `risk` - risk
+         *     * `vendor` - vendor
+         *     * `training` - training
+         * @enum {string}
+         */
+        EntityTypeEnum: "risk" | "vendor" | "training";
+        /**
          * @description * `deadline` - Deadline
          *     * `review` - Review
          *     * `meeting` - Meeting
@@ -7087,6 +7111,18 @@ export interface components {
          * @enum {string}
          */
         FrequencyEnum: "manual" | "daily" | "weekly" | "monthly";
+        GlobalSearchResponse: {
+            query: string;
+            results: components["schemas"]["GlobalSearchResult"][];
+        };
+        /** @description A compact, canonical result returned by the tenant global search. */
+        GlobalSearchResult: {
+            id: string;
+            entity_type: components["schemas"]["EntityTypeEnum"];
+            title: string;
+            context: string;
+            href: string;
+        };
         GovernanceArtefact: {
             readonly id: number;
             readonly artefact_id: string;
@@ -22794,6 +22830,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditEvent"];
+                };
+            };
+        };
+    };
+    search_retrieve: {
+        parameters: {
+            query: {
+                /** @description Search text; at least two characters. */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalSearchResponse"];
                 };
             };
         };

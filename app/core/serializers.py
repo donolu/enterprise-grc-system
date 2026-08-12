@@ -6,6 +6,21 @@ from rest_framework import serializers
 from .models import AuditEvent, Document, DocumentAccess, Tenant, User
 
 
+class GlobalSearchResultSerializer(serializers.Serializer):
+    """A compact, canonical result returned by the tenant global search."""
+
+    id = serializers.CharField()
+    entity_type = serializers.ChoiceField(choices=["risk", "vendor", "training"])
+    title = serializers.CharField()
+    context = serializers.CharField(allow_blank=True)
+    href = serializers.CharField()
+
+
+class GlobalSearchResponseSerializer(serializers.Serializer):
+    query = serializers.CharField()
+    results = GlobalSearchResultSerializer(many=True)
+
+
 class DocumentSerializer(serializers.ModelSerializer):
     """
     Serializer for document uploads with file validation and metadata.
