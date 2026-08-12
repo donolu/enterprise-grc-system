@@ -95,6 +95,12 @@ const vendor = {
     email: "ada@example.com",
   },
   relationship_start_date: "2025-01-15",
+  primary_contract_number: "CONT-001",
+  contract_start_date: "2025-01-15",
+  contract_end_date: "2026-09-15",
+  auto_renewal: false,
+  renewal_notice_days: 90,
+  days_until_contract_expiry: 34,
   created_at: "2025-01-15T09:00:00Z",
   updated_at: "2026-07-01T09:00:00Z",
   created_by: {

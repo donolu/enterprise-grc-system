@@ -137,6 +137,11 @@ def test_serializer_validation():
     assert "status" in list_fields
     assert "risk_level" in list_fields
     assert "assigned_to" in list_fields
+    assert "primary_contract_number" in list_fields
+    assert "contract_start_date" in list_fields
+    assert "contract_end_date" in list_fields
+    assert "auto_renewal" in list_fields
+    assert "renewal_notice_days" in list_fields
 
     detail_fields = VendorDetailSerializer().get_fields().keys()
     assert "contacts" in detail_fields

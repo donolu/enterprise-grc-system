@@ -25669,10 +25669,25 @@ components:
           type: integer
           description: Get the number of services for this vendor.
           readOnly: true
+        primary_contract_number:
+          type: string
+          maxLength: 100
+        contract_start_date:
+          type: string
+          format: date
+          nullable: true
         contract_end_date:
           type: string
           format: date
           nullable: true
+        auto_renewal:
+          type: boolean
+          description: Contract has automatic renewal clause
+        renewal_notice_days:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: Days notice required for contract renewal/termination
         is_contract_expiring_soon:
           type: boolean
           readOnly: true
@@ -25743,10 +25758,25 @@ components:
           type: integer
           nullable: true
           description: Primary relationship manager for this vendor
+        primary_contract_number:
+          type: string
+          maxLength: 100
+        contract_start_date:
+          type: string
+          format: date
+          nullable: true
         contract_end_date:
           type: string
           format: date
           nullable: true
+        auto_renewal:
+          type: boolean
+          description: Contract has automatic renewal clause
+        renewal_notice_days:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: Days notice required for contract renewal/termination
         performance_score:
           type: string
           format: decimal

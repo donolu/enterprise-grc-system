@@ -10861,8 +10861,15 @@ export interface components {
             readonly contact_count: number;
             /** @description Get the number of services for this vendor. */
             readonly service_count: number;
+            primary_contract_number?: string;
+            /** Format: date */
+            contract_start_date?: string | null;
             /** Format: date */
             contract_end_date?: string | null;
+            /** @description Contract has automatic renewal clause */
+            auto_renewal?: boolean;
+            /** @description Days notice required for contract renewal/termination */
+            renewal_notice_days?: number;
             readonly is_contract_expiring_soon: boolean;
             readonly days_until_contract_expiry: number | null;
             /**
@@ -10895,8 +10902,15 @@ export interface components {
             risk_score?: string | null;
             /** @description Primary relationship manager for this vendor */
             assigned_to?: number | null;
+            primary_contract_number?: string;
+            /** Format: date */
+            contract_start_date?: string | null;
             /** Format: date */
             contract_end_date?: string | null;
+            /** @description Contract has automatic renewal clause */
+            auto_renewal?: boolean;
+            /** @description Days notice required for contract renewal/termination */
+            renewal_notice_days?: number;
             /**
              * Format: decimal
              * @description Overall performance score (0-100)
