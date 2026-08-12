@@ -3880,6 +3880,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vendors/vendors/choices/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get vendor field choices
+         * @description Retrieve the current vendor status, type, and risk-level choices.
+         */
+        get: operations["vendors_vendors_choices_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/vendors/vendors/contract_renewals/": {
         parameters: {
             query?: never;
@@ -20151,6 +20171,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VendorDetail"];
+                };
+            };
+        };
+    };
+    vendors_vendors_choices_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

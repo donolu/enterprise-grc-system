@@ -50,12 +50,17 @@ test("global search uses tenant data and opens the selected record", async ({ pa
   const search = page.getByRole("combobox", { name: "Global search" });
   await search.fill("supplier");
 
-  await expect(page.getByText("Supplier access review overdue")).toBeVisible();
+  const searchResult = page
+    .locator(".ant-select-dropdown .ant-select-item-option")
+    .filter({ hasText: "Supplier access review overdue" });
+  await expect(searchResult).toBeVisible();
   await expect.poll(() => searchRequestSent).toBe(true);
-  await page.locator(".ant-select-dropdown").getByText("Supplier access review overdue", { exact: true }).click();
+  await searchResult.click();
 
   await expect(page).toHaveURL(/\/risk\/1/);
-  await expect(page.getByText("Supplier access review overdue")).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "Supplier access review overdue" }).getByRole("strong"),
+  ).toBeVisible();
 });
 
 test("global search makes an unavailable service explicit", async ({ page }) => {

@@ -111,12 +111,25 @@ const vendor = {
   },
 };
 
-const vendorAnalytics = {
-  totalVendors: 1,
-  contractsExpiring: 0,
-  highRiskVendors: 1,
-  avgPerformance: 86,
-  performanceTrend: 4,
+const vendorSummary = {
+  total_vendors: 1,
+  active_vendors: 1,
+  inactive_vendors: 0,
+  under_review_vendors: 0,
+  critical_risk_vendors: 0,
+  high_risk_vendors: 1,
+  medium_risk_vendors: 0,
+  low_risk_vendors: 0,
+  contracts_expiring_soon: 1,
+  expired_contracts: 0,
+  auto_renewal_contracts: 0,
+  vendors_by_category: { "Cloud Services": 1 },
+  total_annual_spend: "120000.00",
+  average_performance_score: "86.00",
+  vendors_with_dpa: 1,
+  vendors_with_security_assessment: 1,
+  total_services: 0,
+  active_services: 0,
 };
 
 const executiveDashboard = {
@@ -313,8 +326,8 @@ export async function mockAuthenticatedGrcApi(page: Page) {
       return;
     }
 
-    if (path === "/api/vendors/analytics/dashboard/" && request.method() === "GET") {
-      await fulfilJson(route, vendorAnalytics);
+    if (path === "/api/vendors/vendors/summary/" && request.method() === "GET") {
+      await fulfilJson(route, vendorSummary);
       return;
     }
 
@@ -328,7 +341,7 @@ export async function mockAuthenticatedGrcApi(page: Page) {
       return;
     }
 
-    if (path === "/api/vendors/choices/" && request.method() === "GET") {
+    if (path === "/api/vendors/vendors/choices/" && request.method() === "GET") {
       await fulfilJson(route, {
         status_choices: [{ value: "active", label: "Active" }],
         vendor_type_choices: [{ value: "service_provider", label: "Service Provider" }],

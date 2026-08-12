@@ -119,6 +119,48 @@ test("users can open a vendor profile from the vendor directory", async ({ page 
   await expect(page.getByText("Ada Lovelace")).toBeVisible();
 });
 
+test("vendor directory makes an unavailable service explicit instead of showing fabricated vendors", async ({ page }) => {
+  await mockAuthenticatedGrcApi(page);
+  await page.route("**/api/vendors/vendors/**", async (route) => {
+    if (new URL(route.request().url()).pathname !== "/api/vendors/vendors/") {
+      await route.fallback();
+      return;
+    }
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "Vendor service unavailable." }),
+    });
+  });
+  await signIn(page);
+
+  await page.goto("/vendors?tenant=demo");
+
+  await expect(page.getByRole("heading", { name: "Vendors could not be loaded" })).toBeVisible();
+  await expect(page.getByText("Vendor service unavailable.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  await expect(page.getByText("Microsoft Corporation")).toHaveCount(0);
+});
+
+test("vendor detail makes an unavailable service explicit instead of redirecting away", async ({ page }) => {
+  await mockAuthenticatedGrcApi(page);
+  await page.route("**/api/vendors/vendors/1/", async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "Vendor service unavailable." }),
+    });
+  });
+  await signIn(page);
+
+  await page.goto("/vendors/1?tenant=demo");
+
+  await expect(page.getByRole("heading", { name: "Vendor could not be loaded" })).toBeVisible();
+  await expect(page.getByText("Vendor service unavailable.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  await expect(page).toHaveURL(/\/vendors\/1/);
+});
+
 test("vendor contracts load from tenant vendor records and open the vendor profile", async ({ page }) => {
   await mockAuthenticatedGrcApi(page);
   await signIn(page);

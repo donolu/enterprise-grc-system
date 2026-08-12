@@ -251,10 +251,25 @@ def test_vendor_api_structure():
     assert "add_note" in vendor_actions
     assert "bulk_create" in vendor_actions
     assert "summary" in vendor_actions
+    assert "choices" in vendor_actions
     assert "by_category" in vendor_actions
     assert "contract_renewals" in vendor_actions
 
     print("✓ Vendor API structure tests passed")
+
+
+def test_vendor_choices_are_owned_by_the_model():
+    """The vendor choices endpoint must not depend on client-side fallback data."""
+    from vendors.views import VendorViewSet
+
+    response = VendorViewSet().choices(None)
+
+    assert {"value": "active", "label": "Active"} in response.data["status_choices"]
+    assert {
+        "value": "service_provider",
+        "label": "Service Provider",
+    } in response.data["vendor_type_choices"]
+    assert {"value": "high", "label": "High"} in response.data["risk_level_choices"]
 
 
 def test_filter_structure():

@@ -10373,6 +10373,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/VendorDetail'
           description: ''
+  /api/vendors/vendors/choices/:
+    get:
+      operationId: vendors_vendors_choices_retrieve
+      description: Retrieve the current vendor status, type, and risk-level choices.
+      summary: Get vendor field choices
+      tags:
+      - Vendors
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/vendors/vendors/contract_renewals/:
     get:
       operationId: vendors_vendors_contract_renewals_retrieve

@@ -448,6 +448,27 @@ class VendorViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @extend_schema(
+        summary="Get vendor field choices",
+        description="Retrieve the current vendor status, type, and risk-level choices.",
+        responses={200: OpenApiTypes.OBJECT},
+        tags=["Vendors"],
+    )
+    @action(detail=False, methods=["get"])
+    def choices(self, request):
+        """Return model-owned choices used by vendor filters and forms."""
+
+        def serialize_choices(choice_set):
+            return [{"value": value, "label": label} for value, label in choice_set]
+
+        return Response(
+            {
+                "status_choices": serialize_choices(Vendor.STATUS_CHOICES),
+                "vendor_type_choices": serialize_choices(Vendor.VENDOR_TYPE_CHOICES),
+                "risk_level_choices": serialize_choices(Vendor.RISK_LEVEL_CHOICES),
+            }
+        )
+
+    @extend_schema(
         summary="Get vendors by category",
         description="Retrieve vendors grouped by category with optional filtering.",
         parameters=[
