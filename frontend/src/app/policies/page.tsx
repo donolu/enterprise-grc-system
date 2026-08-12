@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Card, Row, Col, Typography, Button, message, Badge, Tag } from 'antd'
 import { FileTextOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { api, getErrorMessage } from '@/lib/api'
@@ -36,82 +36,28 @@ interface PolicyForAcknowledgment {
 export default function PoliciesPage() {
   const [policies, setPolicies] = useState<PolicyForAcknowledgment[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [acknowledging, setAcknowledging] = useState<string | null>(null)
   const { mode } = useTheme()
   const isDark = mode === 'dark'
 
-  useEffect(() => {
-    fetchMyPolicies()
-  }, [])
-
-  const fetchMyPolicies = async () => {
+  const fetchMyPolicies = useCallback(async () => {
     try {
       setLoading(true)
-
-      // Mock data for development
-      const mockPolicies = [
-        {
-          distribution_id: '1',
-          policy: {
-            id: '1',
-            title: 'Information Security Policy',
-            policy_code: 'ISP-001',
-            category: 'Security',
-            policy_type: 'Mandatory'
-          },
-          version: {
-            id: '1',
-            version_number: '2.1',
-            effective_date: '2024-01-15',
-            summary: 'Updated security policy with new remote work guidelines and multi-factor authentication requirements.',
-            document: null
-          },
-          distribution: {
-            distributed_at: '2024-08-15T10:00:00Z',
-            reminder_count: 1,
-            last_reminder_sent: '2024-08-22T10:00:00Z',
-            is_overdue: true
-          }
-        },
-        {
-          distribution_id: '2',
-          policy: {
-            id: '2',
-            title: 'Data Privacy & Protection Policy',
-            policy_code: 'DPP-001',
-            category: 'Privacy',
-            policy_type: 'Mandatory'
-          },
-          version: {
-            id: '2',
-            version_number: '1.3',
-            effective_date: '2024-03-01',
-            summary: 'Comprehensive data privacy policy aligned with GDPR and CCPA requirements.',
-            document: '/documents/privacy-policy-v1.3.pdf'
-          },
-          distribution: {
-            distributed_at: '2024-08-10T09:00:00Z',
-            reminder_count: 0,
-            last_reminder_sent: null,
-            is_overdue: false
-          }
-        }
-      ]
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 600))
-      setPolicies(mockPolicies)
-
-      // Uncomment when backend is ready:
-      // const response = await api.get('/policies/policies/my_policies/')
-      // setPolicies(response.data.policies || [])
-    } catch (error) {
-      console.error('Failed to fetch policies:', error)
-      message.error('Backend not available - showing demo data')
+      setLoadError(null)
+      const response = await api.get<{ policies?: PolicyForAcknowledgment[] }>('/policies/policies/my_policies/')
+      setPolicies(response.data.policies || [])
+    } catch (error: unknown) {
+      setPolicies([])
+      setLoadError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void fetchMyPolicies()
+  }, [fetchMyPolicies])
 
   const handleAcknowledge = async (policyId: string) => {
     try {
@@ -146,7 +92,7 @@ export default function PoliciesPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  return new Date(dateString).toLocaleDateString('en-GB', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
@@ -171,7 +117,14 @@ export default function PoliciesPage() {
         icon={<FileTextOutlined />}
       />
 
-      {policies.length === 0 ? (
+      {loadError ? (
+        <EmptyState
+          type="error"
+          title="Policies could not be loaded"
+          description={loadError}
+          action={{ text: "Try again", onClick: () => void fetchMyPolicies() }}
+        />
+      ) : policies.length === 0 ? (
         <EmptyState
           title="All caught up"
           description="You have no policies requiring acknowledgment. New assignments will appear here."

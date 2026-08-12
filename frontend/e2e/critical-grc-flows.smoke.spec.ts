@@ -14,8 +14,12 @@ test("users can acknowledge assigned policies", async ({ page }) => {
   await signIn(page);
 
   let acknowledgementRequestSent = false;
+  let pendingPoliciesRequestSent = false;
   page.on("request", (request) => {
     const url = new URL(request.url());
+    if (url.pathname === "/api/policies/policies/my_policies/" && request.method() === "GET") {
+      pendingPoliciesRequestSent = true;
+    }
     if (url.pathname === "/api/policies/policies/1/acknowledge/" && request.method() === "POST") {
       acknowledgementRequestSent = true;
     }
@@ -25,14 +29,34 @@ test("users can acknowledge assigned policies", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Policy Acknowledgments" })).toBeVisible();
   await expect(page.getByText("Information Security Policy")).toBeVisible();
-  await expect(page.getByText("2 policies require your acknowledgment")).toBeVisible();
+  await expect(page.getByText("1 policies require your acknowledgment")).toBeVisible();
+  await expect.poll(() => pendingPoliciesRequestSent).toBe(true);
 
   const policyCard = page.locator(".ant-card").filter({ hasText: "Information Security Policy" });
   await policyCard.getByRole("button", { name: "Acknowledge" }).click();
 
   await expect.poll(() => acknowledgementRequestSent).toBe(true);
   await expect(page.getByText("Information Security Policy")).toHaveCount(0);
-  await expect(page.getByText("1 policies require your acknowledgment")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "All caught up" })).toBeVisible();
+});
+
+test("policy acknowledgements show a retryable error when the API is unavailable", async ({ page }) => {
+  await mockAuthenticatedGrcApi(page);
+  await page.route("**/api/policies/policies/my_policies/", async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "Policy service unavailable." }),
+    });
+  });
+  await signIn(page);
+
+  await page.goto("/policies?tenant=demo");
+
+  await expect(page.getByRole("heading", { name: "Policies could not be loaded" })).toBeVisible();
+  await expect(page.getByText("Policy service unavailable.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  await expect(page.getByText("Information Security Policy")).toHaveCount(0);
 });
 
 test("users can open a vendor profile from the vendor directory", async ({ page }) => {

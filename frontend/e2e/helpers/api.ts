@@ -126,6 +126,32 @@ const executiveDashboard = {
   recent_activities: [],
 };
 
+const pendingPolicies = [
+  {
+    distribution_id: "1",
+    policy: {
+      id: "1",
+      title: "Information Security Policy",
+      policy_code: "ISP-001",
+      category: "Security",
+      policy_type: "Mandatory",
+    },
+    version: {
+      id: "1",
+      version_number: "2.1",
+      effective_date: "2026-07-15",
+      summary: "Security requirements for workforce access and business operations.",
+      document: null,
+    },
+    distribution: {
+      distributed_at: "2026-07-10T10:00:00Z",
+      reminder_count: 1,
+      last_reminder_sent: "2026-08-01T10:00:00Z",
+      is_overdue: true,
+    },
+  },
+];
+
 async function fulfilJson(route: Route, body: unknown, status = 200) {
   await route.fulfill({
     status,
@@ -263,6 +289,11 @@ export async function mockAuthenticatedGrcApi(page: Page) {
         vendor_type_choices: [{ value: "service_provider", label: "Service Provider" }],
         risk_level_choices: [{ value: "high", label: "High" }],
       });
+      return;
+    }
+
+    if (path === "/api/policies/policies/my_policies/" && request.method() === "GET") {
+      await fulfilJson(route, { count: pendingPolicies.length, policies: pendingPolicies });
       return;
     }
 
