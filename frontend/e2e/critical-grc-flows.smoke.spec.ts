@@ -119,6 +119,49 @@ test("users can open a vendor profile from the vendor directory", async ({ page 
   await expect(page.getByText("Ada Lovelace")).toBeVisible();
 });
 
+test("vendor contracts load from tenant vendor records and open the vendor profile", async ({ page }) => {
+  await mockAuthenticatedGrcApi(page);
+  await signIn(page);
+
+  let contractRequestSent = false;
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === "/api/vendors/vendors/" && url.searchParams.get("page_size") === "100") {
+      contractRequestSent = true;
+    }
+  });
+
+  await page.goto("/vendors/contracts?tenant=demo");
+
+  await expect(page.getByRole("heading", { name: "Contract management" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "CONT-001" })).toBeVisible();
+  await expect(page.getByText("Renewal due")).toBeVisible();
+  await expect.poll(() => contractRequestSent).toBe(true);
+
+  await page.getByRole("button", { name: "CONT-001" }).click();
+  await expect(page).toHaveURL(/\/vendors\/1/);
+  await expect(page.getByText("Axim Cloud Services Ltd")).toBeVisible();
+});
+
+test("vendor contracts show a retryable error when the API is unavailable", async ({ page }) => {
+  await mockAuthenticatedGrcApi(page);
+  await page.route("**/api/vendors/vendors/**", async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "Vendor service unavailable." }),
+    });
+  });
+  await signIn(page);
+
+  await page.goto("/vendors/contracts?tenant=demo");
+
+  await expect(page.getByRole("heading", { name: "Contracts could not be loaded" })).toBeVisible();
+  await expect(page.getByText("Vendor service unavailable.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  await expect(page.getByText("CONT-001")).toHaveCount(0);
+});
+
 test("assessment and treatment setup never simulate saved work", async ({ page }) => {
   await mockAuthenticatedGrcApi(page);
   await signIn(page);
