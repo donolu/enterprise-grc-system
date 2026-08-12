@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import { Card, Row, Col, Typography, Button, Select, Input, Tag, message } from 'antd'
+import React, { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Card, Row, Col, Typography, Button, Select, Input, Tag } from 'antd'
 import { PlayCircleOutlined, SearchOutlined, ClockCircleOutlined, UserOutlined } from '@ant-design/icons'
-import { api } from '@/lib/api'
+import { api, getErrorMessage } from '@/lib/api'
 import { EmptyState, Loading, PageHeader } from '@/components/ui'
 
 const { Text, Paragraph } = Typography
@@ -34,151 +35,42 @@ interface TrainingVideo {
 }
 
 export default function TrainingPage() {
+  const router = useRouter()
   const [videos, setVideos] = useState<TrainingVideo[]>([])
   const [categories, setCategories] = useState<TrainingCategory[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('')
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true)
-
-      // Mock data for development
-      const mockCategories = [
-        {
-          id: '1',
-          name: 'Security Awareness',
-          description: 'General security awareness training',
-          color: '#f5222d',
-          videos_count: 12
-        },
-        {
-          id: '2',
-          name: 'Phishing Prevention',
-          description: 'How to identify and avoid phishing attacks',
-          color: '#fa8c16',
-          videos_count: 8
-        },
-        {
-          id: '3',
-          name: 'Data Protection',
-          description: 'Data handling and privacy best practices',
-          color: '#1890ff',
-          videos_count: 15
-        },
-        {
-          id: '4',
-          name: 'Incident Response',
-          description: 'How to respond to security incidents',
-          color: '#722ed1',
-          videos_count: 10
-        }
-      ]
-
-      const mockVideos = [
-        {
-          id: '1',
-          title: 'Introduction to Cybersecurity',
-          description: 'Learn the fundamentals of cybersecurity and why it matters for every employee.',
-          category_name: 'Security Awareness',
-          category_color: '#f5222d',
-          video_provider: 'internal',
-          duration_minutes: 15,
-          difficulty_level: 'beginner',
-          view_count: 234,
-          created_by_name: 'Security Team',
-          created_at: '2024-08-01T10:00:00Z'
-        },
-        {
-          id: '2',
-          title: 'Spotting Phishing Emails',
-          description: 'Learn to identify common phishing techniques and protect yourself from email-based attacks.',
-          category_name: 'Phishing Prevention',
-          category_color: '#fa8c16',
-          video_provider: 'internal',
-          duration_minutes: 22,
-          difficulty_level: 'intermediate',
-          view_count: 189,
-          created_by_name: 'Training Team',
-          created_at: '2024-07-28T14:30:00Z'
-        },
-        {
-          id: '3',
-          title: 'Password Security Best Practices',
-          description: 'Create strong passwords and use multi-factor authentication to secure your accounts.',
-          category_name: 'Security Awareness',
-          category_color: '#f5222d',
-          video_provider: 'internal',
-          duration_minutes: 18,
-          difficulty_level: 'beginner',
-          view_count: 312,
-          created_by_name: 'Security Team',
-          created_at: '2024-07-25T09:15:00Z'
-        },
-        {
-          id: '4',
-          title: 'Data Classification Guidelines',
-          description: 'Understand how to properly classify and handle sensitive organizational data.',
-          category_name: 'Data Protection',
-          category_color: '#1890ff',
-          video_provider: 'internal',
-          duration_minutes: 28,
-          difficulty_level: 'intermediate',
-          view_count: 156,
-          created_by_name: 'Compliance Team',
-          created_at: '2024-07-20T11:45:00Z'
-        }
-      ]
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 700))
-
-      // Try to fetch from API first, fallback to mock data
-      try {
-        const [videosResponse, categoriesResponse] = await Promise.all([
-          api.get('/training/videos/'),
-          api.get('/training/categories/')
-        ])
-
-        setVideos(videosResponse.data.results || videosResponse.data)
-        setCategories(categoriesResponse.data.results || categoriesResponse.data)
-      } catch (apiError) {
-        console.log('API not available, using mock data:', apiError)
-        setVideos(mockVideos)
-        setCategories(mockCategories)
-      }
-    } catch (error) {
-      console.error('Failed to fetch training data:', error)
-      message.error('Backend not available - showing demo data')
+      setLoadError(null)
+      const [videosResponse, categoriesResponse] = await Promise.all([
+        api.get<{ results?: TrainingVideo[] } | TrainingVideo[]>('/training/videos/'),
+        api.get<{ results?: TrainingCategory[] } | TrainingCategory[]>('/training/categories/')
+      ])
+      const videoData = videosResponse.data
+      const categoryData = categoriesResponse.data
+      setVideos(Array.isArray(videoData) ? videoData : videoData.results || [])
+      setCategories(Array.isArray(categoryData) ? categoryData : categoryData.results || [])
+    } catch (error: unknown) {
+      setVideos([])
+      setCategories([])
+      setLoadError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void fetchData()
+  }, [fetchData])
 
   const handleVideoClick = (video: TrainingVideo) => {
-    // Track video view
-    trackVideoView(video.id)
-
-    // Navigate to video player page
-    window.location.href = `/training/video/${video.id}`
-  }
-
-  const trackVideoView = async (videoId: string) => {
-    try {
-      await api.post(`/training/videos/${videoId}/track_view/`, {
-        duration_watched: 0,
-        completed: false,
-        completion_percentage: 0
-      })
-    } catch (error) {
-      console.error('Failed to track video view:', error)
-    }
+    router.push(`/training/video/${video.id}`)
   }
 
   const filteredVideos = videos.filter(video => {
@@ -223,6 +115,15 @@ export default function TrainingPage() {
         icon={<PlayCircleOutlined />}
       />
 
+      {loadError ? (
+        <EmptyState
+          type="error"
+          title="Training content could not be loaded"
+          description={loadError}
+          action={{ text: 'Try again', onClick: () => void fetchData() }}
+        />
+      ) : (
+        <>
       {/* Category Overview */}
       {categories.length > 0 && (
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
@@ -384,6 +285,8 @@ export default function TrainingPage() {
             </Col>
           ))}
         </Row>
+      )}
+        </>
       )}
     </div>
   )
