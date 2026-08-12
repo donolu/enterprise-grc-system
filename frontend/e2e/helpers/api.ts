@@ -152,6 +152,29 @@ const pendingPolicies = [
   },
 ];
 
+const trainingCategory = {
+  id: "training-category-1",
+  name: "Security Awareness",
+  description: "Practical training for everyone in the organisation.",
+  color: "#0F766E",
+  is_active: true,
+  videos_count: 1,
+};
+
+const trainingVideo = {
+  id: "training-video-1",
+  title: "Recognising phishing attempts",
+  description: "Identify suspicious messages and report them promptly.",
+  category_name: trainingCategory.name,
+  category_color: trainingCategory.color,
+  video_provider: "custom",
+  duration_minutes: 12,
+  difficulty_level: "beginner",
+  view_count: 24,
+  created_by_name: "Security team",
+  created_at: "2026-08-01T09:00:00Z",
+};
+
 async function fulfilJson(route: Route, body: unknown, status = 200) {
   await route.fulfill({
     status,
@@ -299,6 +322,27 @@ export async function mockAuthenticatedGrcApi(page: Page) {
 
     if (path === "/api/policies/policies/1/acknowledge/" && request.method() === "POST") {
       await fulfilJson(route, { status: "acknowledged" });
+      return;
+    }
+
+    if (path === "/api/training/videos/" && request.method() === "GET") {
+      await fulfilJson(route, { results: [trainingVideo], count: 1, next: null, previous: null });
+      return;
+    }
+
+    if (path === "/api/training/categories/" && request.method() === "GET") {
+      await fulfilJson(route, { results: [trainingCategory], count: 1, next: null, previous: null });
+      return;
+    }
+
+    if (path === "/api/training/videos/training-video-1/" && request.method() === "GET") {
+      await fulfilJson(route, {
+        ...trainingVideo,
+        category_details: trainingCategory,
+        video_url: "https://example.test/training/phishing",
+        embed_url: "https://example.test/training/phishing",
+        created_by_details: { name: "Security team", email: "security@example.test" },
+      });
       return;
     }
 

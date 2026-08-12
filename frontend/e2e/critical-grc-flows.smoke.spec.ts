@@ -59,6 +59,48 @@ test("policy acknowledgements show a retryable error when the API is unavailable
   await expect(page.getByText("Information Security Policy")).toHaveCount(0);
 });
 
+test("training library loads live content and routes to the selected video", async ({ page }) => {
+  await mockAuthenticatedGrcApi(page);
+  await signIn(page);
+
+  let videosRequestSent = false;
+  let categoriesRequestSent = false;
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    videosRequestSent ||= url.pathname === "/api/training/videos/" && request.method() === "GET";
+    categoriesRequestSent ||= url.pathname === "/api/training/categories/" && request.method() === "GET";
+  });
+
+  await page.goto("/training?tenant=demo");
+
+  await expect(page.getByRole("heading", { name: "Training library" })).toBeVisible();
+  await expect(page.getByText("Recognising phishing attempts")).toBeVisible();
+  await expect.poll(() => videosRequestSent && categoriesRequestSent).toBe(true);
+
+  await page.getByText("Recognising phishing attempts").click();
+  await expect(page).toHaveURL(/\/training\/video\/training-video-1/);
+  await expect(page.getByRole("heading", { name: "Recognising phishing attempts" })).toBeVisible();
+});
+
+test("training library shows a retryable error when the API is unavailable", async ({ page }) => {
+  await mockAuthenticatedGrcApi(page);
+  await page.route("**/api/training/videos/", async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "Training service unavailable." }),
+    });
+  });
+  await signIn(page);
+
+  await page.goto("/training?tenant=demo");
+
+  await expect(page.getByRole("heading", { name: "Training content could not be loaded" })).toBeVisible();
+  await expect(page.getByText("Training service unavailable.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  await expect(page.getByText("Recognising phishing attempts")).toHaveCount(0);
+});
+
 test("users can open a vendor profile from the vendor directory", async ({ page }) => {
   await mockAuthenticatedGrcApi(page);
   await signIn(page);
