@@ -5,6 +5,7 @@ import { Card, Typography, Space, Button, Row, Col, Descriptions, Tag, Progress,
 import { TeamOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined, GlobalOutlined } from '@ant-design/icons'
 import { useRouter, useParams } from 'next/navigation'
 import { Breadcrumb, EmptyState, PageHeader, StatusTag, PriorityTag, Loading } from '@/components/ui'
+import { getErrorMessage } from '@/lib/api'
 import { vendorService, type Vendor } from '@/lib/services/vendorService'
 
 const { Title, Text, Paragraph } = Typography
@@ -12,6 +13,7 @@ const { Title, Text, Paragraph } = Typography
 export default function VendorDetailPage() {
   const [loading, setLoading] = useState(true)
   const [vendor, setVendor] = useState<Vendor | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [isEditModalVisible, setIsEditModalVisible] = useState(false)
   const [editForm] = Form.useForm()
   const router = useRouter()
@@ -21,18 +23,17 @@ export default function VendorDetailPage() {
   const fetchVendor = useCallback(async () => {
     try {
       setLoading(true)
+      setLoadError(null)
       const data = await vendorService.getVendor(params.id as string)
       setVendor(data)
       editForm.setFieldsValue(data) // Pre-populate edit form
     } catch (error) {
-      message.error('Failed to load vendor details')
-      console.error('Error fetching vendor:', error)
-      // Redirect back to vendor list if vendor not found
-      setTimeout(() => router.push('/vendors'), 2000)
+      setVendor(null)
+      setLoadError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }
-  }, [editForm, params.id, router])
+  }, [editForm, params.id])
 
   useEffect(() => {
     fetchVendor()
@@ -51,8 +52,7 @@ export default function VendorDetailPage() {
       message.success('Vendor updated successfully')
       setIsEditModalVisible(false)
     } catch (error) {
-      message.error('Failed to update vendor')
-      console.error('Error updating vendor:', error)
+      message.error(getErrorMessage(error))
     }
   }
 
@@ -70,8 +70,7 @@ export default function VendorDetailPage() {
           message.success('Vendor deleted successfully')
           router.push('/vendors')
         } catch (error) {
-          message.error('Failed to delete vendor')
-          console.error('Error deleting vendor:', error)
+          message.error(getErrorMessage(error))
         }
       }
     })
@@ -82,6 +81,9 @@ export default function VendorDetailPage() {
   }
 
   if (!vendor) {
+    if (loadError) {
+      return <EmptyState type="error" title="Vendor could not be loaded" description={loadError} action={{ text: "Try again", onClick: () => void fetchVendor() }} />
+    }
     return <EmptyState type="vendors" title="Vendor not found" description="The selected vendor does not exist or has been deleted." action={{ text: "Back to vendor management", onClick: () => router.push('/vendors') }} />
   }
 

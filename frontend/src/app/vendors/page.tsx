@@ -1,22 +1,15 @@
 'use client'
 
 import React, { useCallback, useState, useEffect } from 'react'
-import { Card, Typography, Space, Button, Row, Col, Table, Tag, Progress, Avatar, message, Modal, Form, Input, Select } from 'antd'
+import { Alert, Card, Typography, Space, Button, Row, Col, Table, Tag, Progress, Avatar, message, Modal, Form, Input, Select } from 'antd'
 import { TeamOutlined, PlusOutlined, WarningOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
-import { Breadcrumb, VendorKPICard, KPICard, StatusTag, PriorityTag, Loading, ExportButton, FilterPanel, PageHeader } from '@/components/ui'
+import { Breadcrumb, EmptyState, VendorKPICard, KPICard, StatusTag, PriorityTag, Loading, ExportButton, FilterPanel, PageHeader } from '@/components/ui'
 import type { FilterValues } from '@/components/ui/FilterPanel'
-import { vendorService, type Vendor, type VendorCategory, type VendorFilters } from '@/lib/services/vendorService'
+import { getErrorMessage } from '@/lib/api'
+import { vendorService, type Vendor, type VendorAnalytics, type VendorCategory, type VendorFilters } from '@/lib/services/vendorService'
 
 const { Text } = Typography
-
-interface VendorAnalytics {
-  totalVendors: number
-  contractsExpiring: number
-  highRiskVendors: number
-  avgPerformance: number
-  performanceTrend: number
-}
 
 interface ChoiceOption {
   value: string
@@ -33,13 +26,15 @@ type PaginationConfig = { current?: number; pageSize?: number }
 
 export default function VendorsPage() {
   const [loading, setLoading] = useState(true)
+  const [directoryError, setDirectoryError] = useState<string | null>(null)
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null)
+  const [filterError, setFilterError] = useState<string | null>(null)
   const [vendorData, setVendorData] = useState<Vendor[]>([])
   const [analytics, setAnalytics] = useState<VendorAnalytics>({
     totalVendors: 0,
     contractsExpiring: 0,
     highRiskVendors: 0,
     avgPerformance: 0,
-    performanceTrend: 0
   })
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 })
   const [filters, setFilters] = useState<FilterValues>({})
@@ -60,6 +55,7 @@ export default function VendorsPage() {
   const fetchVendors = useCallback(async (currentFilters: VendorFilters = {}, page = 1, pageSize = 10) => {
     try {
       setLoading(true)
+      setDirectoryError(null)
       const response = await vendorService.getVendors({
         ...currentFilters,
         page,
@@ -73,8 +69,9 @@ export default function VendorsPage() {
         total: response.count
       })
     } catch (error) {
-      message.error('Failed to load vendor data')
-      console.error('Error fetching vendors:', error)
+      setVendorData([])
+      setPagination({ current: page, pageSize, total: 0 })
+      setDirectoryError(getErrorMessage(error))
     } finally {
       setLoading(false)
     }
@@ -83,16 +80,18 @@ export default function VendorsPage() {
   // Fetch analytics
   const fetchAnalytics = useCallback(async () => {
     try {
+      setAnalyticsError(null)
       const data = await vendorService.getVendorAnalytics()
       setAnalytics(data)
     } catch (error) {
-      console.error('Error fetching analytics:', error)
+      setAnalyticsError(getErrorMessage(error))
     }
   }, [])
 
   // Fetch dynamic filter data
   const fetchDynamicData = useCallback(async () => {
     try {
+      setFilterError(null)
       const [categories, choices] = await Promise.all([
         vendorService.getVendorCategories(),
         vendorService.getVendorChoices()
@@ -137,8 +136,9 @@ export default function VendorsPage() {
 
       setDynamicFilters(filters)
     } catch (error) {
-      console.error('Error fetching dynamic filter data:', error)
-      // Set fallback filters if API fails
+      setVendorCategories([])
+      setVendorChoices({})
+      setFilterError(getErrorMessage(error))
       setDynamicFilters([
         {
           key: 'search',
@@ -191,8 +191,7 @@ export default function VendorsPage() {
       addVendorForm.resetFields()
       fetchVendors() // Refresh the list
     } catch (error) {
-      message.error('Failed to create vendor')
-      console.error('Error creating vendor:', error)
+      message.error(getErrorMessage(error))
     }
   }
 
@@ -355,13 +354,33 @@ export default function VendorsPage() {
             suffix="%"
             icon={<CheckCircleOutlined />}
             color="#0EB57D"
-            trend={{ value: Math.abs(analytics.performanceTrend || 0), isPositive: (analytics.performanceTrend || 0) > 0, period: "vs last quarter" }}
             description="Vendor performance score"
           />
         </Col>
       </Row>
 
+      {analyticsError ? (
+        <Alert
+          type="warning"
+          showIcon
+          message="Vendor metrics could not be loaded"
+          description={analyticsError}
+          action={<Button size="small" onClick={() => void fetchAnalytics()}>Retry</Button>}
+          style={{ marginBottom: 24 }}
+        />
+      ) : null}
+
       {/* Filters */}
+      {filterError ? (
+        <Alert
+          type="warning"
+          showIcon
+          message="Some vendor filters are unavailable"
+          description={filterError}
+          action={<Button size="small" onClick={() => void fetchDynamicData()}>Retry</Button>}
+          style={{ marginBottom: 24 }}
+        />
+      ) : null}
       {dynamicFilters.length > 0 && (
         <FilterPanel
           filters={dynamicFilters}
@@ -396,6 +415,13 @@ export default function VendorsPage() {
       >
         {loading ? (
           <Loading message="Loading vendor data..." />
+        ) : directoryError ? (
+          <EmptyState
+            type="error"
+            title="Vendors could not be loaded"
+            description={directoryError}
+            action={{ text: 'Try again', onClick: () => void fetchVendors(filters as VendorFilters, pagination.current, pagination.pageSize) }}
+          />
         ) : (
           <Table
             columns={columns}
