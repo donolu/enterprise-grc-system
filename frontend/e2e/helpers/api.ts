@@ -224,6 +224,22 @@ export async function mockAuthenticatedGrcApi(page: Page) {
       return;
     }
 
+    if (path === "/api/search/" && request.method() === "GET") {
+      await fulfilJson(route, {
+        query: url.searchParams.get("q") || "",
+        results: [
+          {
+            id: String(risk.id),
+            entity_type: "risk",
+            title: risk.title,
+            context: risk.risk_id,
+            href: `/risk/${risk.id}`,
+          },
+        ],
+      });
+      return;
+    }
+
     if (path === "/api/billing/current_subscription/" && request.method() === "GET") {
       await fulfilJson(route, {
         enabled_module_keys: [

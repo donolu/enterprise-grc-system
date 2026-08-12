@@ -1,17 +1,38 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Input, AutoComplete, Space, Tag, Typography } from 'antd'
-import { SearchOutlined, FileTextOutlined, TeamOutlined, SafetyOutlined, CheckSquareOutlined, VideoCameraOutlined } from '@ant-design/icons'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { AutoComplete, Input, Space, Tag, Typography } from 'antd'
+import {
+  SafetyOutlined,
+  SearchOutlined,
+  TeamOutlined,
+  VideoCameraOutlined,
+} from '@ant-design/icons'
+import { api, getErrorMessage } from '@/lib/api'
 import { useTheme } from '@/theme'
 
 const { Text } = Typography
 
+type SearchEntityType = 'risk' | 'vendor' | 'training'
+
+interface SearchResult {
+  id: string
+  entity_type: SearchEntityType
+  title: string
+  context: string
+  href: string
+}
+
+interface SearchResponse {
+  query: string
+  results: SearchResult[]
+}
+
 interface SearchOption {
   value: string
   label: React.ReactNode
-  category: string
-  href: string
+  result: SearchResult
 }
 
 interface SearchBarProps {
@@ -21,149 +42,125 @@ interface SearchBarProps {
   size?: 'small' | 'middle' | 'large'
 }
 
+const labels: Record<SearchEntityType, string> = {
+  risk: 'Risk',
+  vendor: 'Vendor',
+  training: 'Training',
+}
+
+const icons: Record<SearchEntityType, React.ReactNode> = {
+  risk: <SafetyOutlined />,
+  vendor: <TeamOutlined />,
+  training: <VideoCameraOutlined />,
+}
+
+const colours: Record<SearchEntityType, string> = {
+  risk: '#E5484D',
+  vendor: '#2F6FED',
+  training: '#0F766E',
+}
+
 export const SearchBar: React.FC<SearchBarProps> = ({
-  placeholder = "Search controls, vendors, risks, policies...",
+  placeholder = 'Search risks, vendors and training...',
   onSelect,
   style,
-  size = 'large'
+  size = 'large',
 }) => {
+  const router = useRouter()
   const { mode } = useTheme()
   const isDark = mode === 'dark'
   const [searchValue, setSearchValue] = useState('')
-  const [options, setOptions] = useState<SearchOption[]>([])
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock search data - replace with real API calls
-  const mockSearchData: SearchOption[] = [
-    // Policies
-    { value: 'Information Security Policy', label: 'Information Security Policy', category: 'Policies', href: '/policies' },
-    { value: 'Data Privacy Policy', label: 'Data Privacy Policy', category: 'Policies', href: '/policies' },
-    { value: 'Access Control Policy', label: 'Access Control Policy', category: 'Policies', href: '/policies' },
-
-    // Vendors
-    { value: 'Microsoft Corporation', label: 'Microsoft Corporation', category: 'Vendors', href: '/vendors' },
-    { value: 'Amazon Web Services', label: 'Amazon Web Services', category: 'Vendors', href: '/vendors' },
-    { value: 'Salesforce Inc', label: 'Salesforce Inc', category: 'Vendors', href: '/vendors' },
-
-    // Risks
-    { value: 'Data Breach Risk', label: 'Data Breach Risk', category: 'Risks', href: '/risk' },
-    { value: 'Third Party Risk', label: 'Third Party Risk', category: 'Risks', href: '/risk' },
-    { value: 'Compliance Risk', label: 'Compliance Risk', category: 'Risks', href: '/risk' },
-
-    // Controls/Assessments
-    { value: 'Access Management', label: 'Access Management', category: 'Controls', href: '/assessments' },
-    { value: 'Incident Response', label: 'Incident Response', category: 'Controls', href: '/assessments' },
-    { value: 'Data Classification', label: 'Data Classification', category: 'Controls', href: '/assessments' },
-
-    // Training
-    { value: 'Phishing Awareness', label: 'Phishing Awareness', category: 'Training', href: '/training' },
-    { value: 'Security Fundamentals', label: 'Security Fundamentals', category: 'Training', href: '/training' },
-  ]
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Policies': return <FileTextOutlined />
-      case 'Vendors': return <TeamOutlined />
-      case 'Risks': return <SafetyOutlined />
-      case 'Controls': return <CheckSquareOutlined />
-      case 'Training': return <VideoCameraOutlined />
-      default: return <SearchOutlined />
-    }
-  }
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'Policies': return '#FFB020'
-      case 'Vendors': return '#3B82F6'
-      case 'Risks': return '#E5484D'
-      case 'Controls': return '#0EB57D'
-      case 'Training': return '#722ED1'
-      default: return '#2F6FED'
-    }
-  }
-
-  const handleSearch = (value: string) => {
-    setSearchValue(value)
-
-    if (!value.trim()) {
-      setOptions([])
+  useEffect(() => {
+    const query = searchValue.trim()
+    if (query.length < 2) {
+      setResults([])
+      setError(null)
+      setLoading(false)
       return
     }
 
-    // Filter options based on search value
-    const filteredOptions = mockSearchData
-      .filter(item =>
-        item.value.toLowerCase().includes(value.toLowerCase())
-      )
-      .slice(0, 10) // Limit to 10 results
-      .map(item => ({
-        ...item,
-        label: (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '4px 0'
-          }}>
-            <Space>
-              {getCategoryIcon(item.category)}
-              <Text style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}>
-                {item.value}
-              </Text>
-            </Space>
-            <Tag
-              color={getCategoryColor(item.category)}
-              style={{
-                fontSize: '11px',
-                margin: 0,
-                borderRadius: 4
-              }}
-            >
-              {item.category}
-            </Tag>
-          </div>
-        )
-      }))
+    const controller = new AbortController()
+    const timeout = window.setTimeout(async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await api.get<SearchResponse>('/search/', {
+          params: { q: query },
+          signal: controller.signal,
+        })
+        setResults(response.data.results)
+      } catch (requestError: unknown) {
+        if (!controller.signal.aborted) {
+          setResults([])
+          setError(getErrorMessage(requestError))
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false)
+      }
+    }, 250)
 
-    setOptions(filteredOptions)
-  }
+    return () => {
+      controller.abort()
+      window.clearTimeout(timeout)
+    }
+  }, [searchValue])
+
+  const options = useMemo<SearchOption[]>(() => results.map((result) => ({
+    value: `${result.entity_type}:${result.id}`,
+    result,
+    label: (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '4px 0' }}>
+        <Space size={8}>
+          {icons[result.entity_type]}
+          <span>
+            <Text style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}>{result.title}</Text>
+            {result.context && (
+              <Text type="secondary" style={{ display: 'block', fontSize: 12 }}>{result.context}</Text>
+            )}
+          </span>
+        </Space>
+        <Tag color={colours[result.entity_type]} style={{ margin: 0 }}>{labels[result.entity_type]}</Tag>
+      </div>
+    ),
+  })), [isDark, results])
 
   const handleSelect = (value: string) => {
-    const selectedOption = mockSearchData.find(item => item.value === value)
-    if (selectedOption) {
-      // Navigate to the selected item's page
-      window.location.href = selectedOption.href
-      if (onSelect) {
-        onSelect(value, selectedOption)
-      }
-    }
+    const option = options.find((candidate) => candidate.value === value)
+    if (!option) return
+
+    router.push(option.result.href)
+    onSelect?.(value, option)
     setSearchValue('')
-    setOptions([])
+    setResults([])
   }
+
+  const query = searchValue.trim()
+  const notFoundContent = query.length < 2
+    ? 'Enter at least two characters'
+    : loading
+      ? 'Searching your organisation...'
+      : error
+        ? `Search is unavailable: ${error}`
+        : 'No matching records'
 
   return (
     <AutoComplete
       value={searchValue}
       options={options}
-      onSearch={handleSearch}
+      onSearch={setSearchValue}
       onSelect={handleSelect}
-      style={{
-        width: '100%',
-        maxWidth: 440,
-        ...style
-      }}
+      notFoundContent={notFoundContent}
+      style={{ width: '100%', maxWidth: 440, ...style }}
     >
-      <Input.Search
+      <Input
         placeholder={placeholder}
         size={size}
-        style={{
-          borderRadius: 8,
-        }}
-        suffix={
-          <SearchOutlined style={{
-            color: isDark ? '#64748B' : '#94A3B8',
-            fontSize: 16
-          }} />
-        }
+        aria-label="Global search"
+        suffix={<SearchOutlined style={{ color: isDark ? '#64748B' : '#94A3B8', fontSize: 16 }} />}
       />
     </AutoComplete>
   )

@@ -11,6 +11,7 @@ from .views import (
     TenantEmailVerificationConfirmView,
     TenantEmailVerificationRequestView,
     TenantTaxProfileView,
+    GlobalSearchView,
 )
 from .health import (
     HealthCheckView,
@@ -30,6 +31,7 @@ router.register("audit-events", AuditEventViewSet, basename="audit-events")
 urlpatterns = [
     # API endpoints
     path("api/", include(router.urls)),
+    path("api/search/", GlobalSearchView.as_view(), name="global-search"),
     path(
         "api/tenant-email-settings/",
         TenantEmailSettingsView.as_view(),

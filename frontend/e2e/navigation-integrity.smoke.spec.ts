@@ -1,6 +1,14 @@
 import { expect, test } from "@playwright/test";
 import { mockAuthenticatedGrcApi } from "./helpers/api";
 
+async function signIn(page: import("@playwright/test").Page) {
+  await page.goto("/login?tenant=demo");
+  await page.getByLabel("Email").fill("user@example.com");
+  await page.getByLabel("Password").fill("E2ePassw0rd!");
+  await page.getByRole("button", { name: "Login" }).click();
+  await expect(page).toHaveURL(/\/$/);
+}
+
 test("assessment setup and account menu expose only working actions", async ({ page }) => {
   await mockAuthenticatedGrcApi(page);
 
@@ -25,4 +33,43 @@ test("assessment setup and account menu expose only working actions", async ({ p
   await page.getByText("TU", { exact: true }).click();
   await page.getByRole("menuitem", { name: "Sign Out" }).click();
   await expect(page).toHaveURL(/\/login$/);
+});
+
+test("global search uses tenant data and opens the selected record", async ({ page }) => {
+  await mockAuthenticatedGrcApi(page);
+  await signIn(page);
+
+  let searchRequestSent = false;
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === "/api/search/" && url.searchParams.get("q") === "supplier") {
+      searchRequestSent = true;
+    }
+  });
+
+  const search = page.getByRole("combobox", { name: "Global search" });
+  await search.fill("supplier");
+
+  await expect(page.getByText("Supplier access review overdue")).toBeVisible();
+  await expect.poll(() => searchRequestSent).toBe(true);
+  await page.locator(".ant-select-dropdown").getByText("Supplier access review overdue", { exact: true }).click();
+
+  await expect(page).toHaveURL(/\/risk\/1/);
+  await expect(page.getByText("Supplier access review overdue")).toBeVisible();
+});
+
+test("global search makes an unavailable service explicit", async ({ page }) => {
+  await mockAuthenticatedGrcApi(page);
+  await page.route("**/api/search/**", async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "Search service unavailable." }),
+    });
+  });
+  await signIn(page);
+
+  await page.getByRole("combobox", { name: "Global search" }).fill("supplier");
+
+  await expect(page.getByText("Search is unavailable: Search service unavailable.")).toBeVisible();
 });

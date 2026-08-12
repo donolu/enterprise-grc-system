@@ -4,6 +4,7 @@ Views for document management and storage testing.
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 from rest_framework import filters, viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -33,7 +34,12 @@ from .serializers import (
     SenderVerificationConfirmSerializer,
     SenderVerificationResponseSerializer,
     TenantTaxProfileSerializer,
+    GlobalSearchResultSerializer,
+    GlobalSearchResponseSerializer,
 )
+from risk.models import Risk
+from training.models import TrainingVideo
+from vendors.models import Vendor
 from billing.decorators import check_document_limits
 from billing.services import PlanEnforcementService
 from drf_spectacular.utils import (
@@ -45,6 +51,122 @@ from drf_spectacular.utils import (
 )
 from drf_spectacular.types import OpenApiTypes
 from rest_framework.views import APIView
+
+
+class GlobalSearchView(APIView):
+    """Search records in the current tenant that have a canonical product route."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    minimum_query_length = 2
+    maximum_query_length = 100
+    maximum_results = 12
+    results_per_entity = 4
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="q",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description="Search text; at least two characters.",
+            ),
+        ],
+        responses=GlobalSearchResponseSerializer,
+        tags=["Search"],
+    )
+    def get(self, request):
+        query = request.query_params.get("q", "").strip()
+        if len(query) < self.minimum_query_length:
+            return Response(
+                {"detail": "Enter at least two characters to search."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if len(query) > self.maximum_query_length:
+            return Response(
+                {"detail": "Search text must be 100 characters or fewer."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        enabled_modules = self._enabled_modules(request)
+        results = [
+            *(self._risk_results(query) if "risk" in enabled_modules else []),
+            *(self._vendor_results(query) if "vendors" in enabled_modules else []),
+            *(self._training_results(query) if "training" in enabled_modules else []),
+        ][: self.maximum_results]
+        serializer = GlobalSearchResultSerializer(results, many=True)
+        return Response({"query": query, "results": serializer.data})
+
+    @staticmethod
+    def _enabled_modules(request):
+        subscription = PlanEnforcementService.get_tenant_subscription(request.tenant)
+        # Match the plan middleware: legacy tenants without subscription setup
+        # retain access to their tenant data.
+        if subscription is None:
+            return {"risk", "vendors", "training"}
+        return set(subscription.get_enabled_modules())
+
+    def _risk_results(self, query):
+        risks = (
+            Risk.objects.filter(
+                Q(risk_id__icontains=query)
+                | Q(title__icontains=query)
+                | Q(description__icontains=query)
+            )
+            .only("id", "risk_id", "title")
+            .order_by("title")[: self.results_per_entity]
+        )
+        return [
+            {
+                "id": str(risk.id),
+                "entity_type": "risk",
+                "title": risk.title,
+                "context": risk.risk_id,
+                "href": f"/risk/{risk.id}",
+            }
+            for risk in risks
+        ]
+
+    def _vendor_results(self, query):
+        vendors = (
+            Vendor.objects.filter(
+                Q(vendor_id__icontains=query)
+                | Q(name__icontains=query)
+                | Q(legal_name__icontains=query)
+                | Q(business_description__icontains=query)
+            )
+            .only("id", "vendor_id", "name")
+            .order_by("name")[: self.results_per_entity]
+        )
+        return [
+            {
+                "id": str(vendor.id),
+                "entity_type": "vendor",
+                "title": vendor.name,
+                "context": vendor.vendor_id,
+                "href": f"/vendors/{vendor.id}",
+            }
+            for vendor in vendors
+        ]
+
+    def _training_results(self, query):
+        videos = (
+            TrainingVideo.objects.filter(is_published=True)
+            .filter(Q(title__icontains=query) | Q(description__icontains=query))
+            .select_related("category")
+            .only("id", "title", "category__name")
+            .order_by("title")[: self.results_per_entity]
+        )
+        return [
+            {
+                "id": str(video.id),
+                "entity_type": "training",
+                "title": video.title,
+                "context": video.category.name,
+                "href": f"/training/video/{video.id}",
+            }
+            for video in videos
+        ]
 
 
 class TenantEmailSettingsView(APIView):

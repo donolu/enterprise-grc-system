@@ -13827,6 +13827,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuditEvent'
           description: ''
+  /api/search/:
+    get:
+      operationId: search_retrieve
+      description: Search records in the current tenant that have a canonical product
+        route.
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Search text; at least two characters.
+        required: true
+      tags:
+      - Search
+      security:
+      - cookieAuth: []
+      - SessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalSearchResponse'
+          description: ''
   /api/tenant-email-settings/:
     get:
       operationId: tenant_email_settings_retrieve
@@ -17233,6 +17257,16 @@ components:
       required:
       - method
       - password
+    EntityTypeEnum:
+      enum:
+      - risk
+      - vendor
+      - training
+      type: string
+      description: |-
+        * `risk` - risk
+        * `vendor` - vendor
+        * `training` - training
     EventTypeEnum:
       enum:
       - deadline
@@ -17604,6 +17638,38 @@ components:
         * `daily` - Daily
         * `weekly` - Weekly
         * `monthly` - Monthly
+    GlobalSearchResponse:
+      type: object
+      properties:
+        query:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/GlobalSearchResult'
+      required:
+      - query
+      - results
+    GlobalSearchResult:
+      type: object
+      description: A compact, canonical result returned by the tenant global search.
+      properties:
+        id:
+          type: string
+        entity_type:
+          $ref: '#/components/schemas/EntityTypeEnum'
+        title:
+          type: string
+        context:
+          type: string
+        href:
+          type: string
+      required:
+      - context
+      - entity_type
+      - href
+      - id
+      - title
     GovernanceArtefact:
       type: object
       properties:
