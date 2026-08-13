@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-grc}
       POSTGRES_USER: ${POSTGRES_USER:-grc}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or your shell}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-grc}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:

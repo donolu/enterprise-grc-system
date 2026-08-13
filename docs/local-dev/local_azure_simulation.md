@@ -36,6 +36,7 @@ The `compose.yml` file includes the following services:
       cp .env.dev.example .env.dev
       ```
     *   Review the `.env.dev` file. No changes are needed to get started.
+    *   The example is preconfigured for the Compose services: PostgreSQL uses the local `grc` account and Azurite is addressed as `azurite` from inside the Django container. Do not use `UseDevelopmentStorage=true` for this Compose stack because it resolves to the API container itself. The Compose files include matching local defaults; override them only for a local isolation requirement, never for deployment.
 
 3.  **Build and Start the Services:**
     *   Use the following command to build the Docker images and start all services in the background:

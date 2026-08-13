@@ -172,7 +172,7 @@ export const KPICard: React.FC<KPICardProps> = ({
               showInfo={progress.showInfo}
               status={progress.status}
               strokeColor={progress.strokeColor || color}
-              trailColor={isDark ? '#2A3441' : '#F1F5F9'}
+              railColor={isDark ? '#2A3441' : '#F1F5F9'}
               size={size === 'small' ? 'small' : 'default'}
               style={{ marginBottom: trend ? 6 : 0 }}
             />
