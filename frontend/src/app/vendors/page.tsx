@@ -363,7 +363,7 @@ export default function VendorsPage() {
         <Alert
           type="warning"
           showIcon
-          message="Vendor metrics could not be loaded"
+          title="Vendor metrics could not be loaded"
           description={analyticsError}
           action={<Button size="small" onClick={() => void fetchAnalytics()}>Retry</Button>}
           style={{ marginBottom: 24 }}
@@ -375,7 +375,7 @@ export default function VendorsPage() {
         <Alert
           type="warning"
           showIcon
-          message="Some vendor filters are unavailable"
+          title="Some vendor filters are unavailable"
           description={filterError}
           action={<Button size="small" onClick={() => void fetchDynamicData()}>Retry</Button>}
           style={{ marginBottom: 24 }}
