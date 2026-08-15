@@ -1,3 +1,8 @@
+PYTHON ?= python3.12
+VENV ?= .venv312
+
+.PHONY: up down logs migrate createsuper shell test bootstrap setup-hooks
+
 up:
 	docker compose up -d --build
 down:
@@ -12,5 +17,12 @@ shell:
 	docker compose exec web python manage.py shell_plus || docker compose exec web python manage.py shell
 test:
 	docker compose exec web pytest -q
+bootstrap:
+	$(PYTHON) -m venv $(VENV)
+	$(VENV)/bin/python -m pip install --upgrade pip
+	$(VENV)/bin/python -m pip install -r requirements-dev.txt
+	(cd frontend && npm ci --legacy-peer-deps)
+	$(MAKE) setup-hooks
+
 setup-hooks:
-	python -m pre_commit install --install-hooks
+	$(VENV)/bin/pre-commit install --install-hooks --hook-type pre-commit --hook-type pre-push

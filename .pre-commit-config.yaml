@@ -9,6 +9,14 @@ repos:
         always_run: true
         stages: [pre-push]
 
+      - id: frontend-checks
+        name: frontend lint, type-check and unit tests
+        language: script
+        entry: .github/scripts/run-frontend-checks.sh
+        pass_filenames: false
+        files: ^frontend/
+        stages: [pre-push]
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
